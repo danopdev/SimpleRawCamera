@@ -90,5 +90,5 @@ class CameraHandler(
         }
     }
 
-    val areDimensionsSwapped = sensorOrientation == 90 || sensorOrientation == 270
+    val areDimensionsSwapped = sensorOrientation == 0 || sensorOrientation == 180
 }
