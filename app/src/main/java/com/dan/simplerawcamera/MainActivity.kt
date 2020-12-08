@@ -14,6 +14,7 @@ import android.view.View
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlin.system.exitProcess
 
@@ -112,6 +113,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        if (1 == cameraList.size) {
+            binding.txtCamera.isVisible = false
+            binding.btnCamera.isVisible = false
+        }
+
         window.decorView.systemUiVisibility =
             (View.SYSTEM_UI_FLAG_IMMERSIVE
                 or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -127,6 +133,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun selectCamera(index: Int) {
         camera = cameraList[index]
+
+        binding.txtCamera.text = index.toString()
     }
 
     private fun askPermissions(): Boolean {
