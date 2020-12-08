@@ -37,12 +37,11 @@ class MainActivity : AppCompatActivity() {
 
         const val REQUEST_PERMISSIONS = 1
 
-        fun getBestResolution( targetWidth: Int, targetHeight: Int, sizes: Array<Size> ): Size {
+        fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
-            val targetRatio = targetWidth.toFloat() / targetHeight
 
             for (size in sizes) {
-                if (size.width > targetWidth || size.height > targetHeight) continue
+                if (size.width > targetWidth) continue
                 val ratio = size.width.toFloat() / size.height
                 if (abs(ratio - targetRatio) < 0.2) {
                     if (bestSize.width < size.width)
@@ -57,6 +56,7 @@ class MainActivity : AppCompatActivity() {
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val cameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val cameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(cameraManager) }
+    private var cameraIndex = 0
     private lateinit var cameraHandler: CameraHandler
     private var cameraDevice: CameraDevice? = null
     private var cameraCaptureSession: CameraCaptureSession? = null
@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
     private val surfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(p0: SurfaceHolder) {
-            selectCamera(0)
+            selectCamera(cameraIndex)
         }
 
         override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
@@ -112,7 +112,10 @@ class MainActivity : AppCompatActivity() {
 
             val sizes = cameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
             if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
-            val previewSize = getBestResolution( binding.surfaceView.width, binding.surfaceView.height, sizes )
+            val previewSize = getBestResolution(
+                binding.surfaceView.width,
+                cameraHandler.resolutionWidth.toFloat() / cameraHandler.resolutionHeight,
+                sizes )
 
             val rotatedPreviewWidth = if (cameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
             val rotatedPreviewHeight = if (cameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
@@ -196,11 +199,6 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (1 == cameraList.size) {
-            binding.txtCamera.isVisible = false
-            binding.btnCamera.isVisible = false
-        }
-
         window.decorView.systemUiVisibility =
             (View.SYSTEM_UI_FLAG_IMMERSIVE
                 or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -209,14 +207,36 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
 
-        setContentView(binding.root)
+        if (1 == cameraList.size) {
+            binding.txtCamera.isVisible = false
+            binding.btnCamera.isVisible = false
+        }
 
         binding.surfaceView.holder.addCallback( surfaceHolderCallback )
+
+        binding.btnCamera.setOnClickListener {
+            selectCamera((cameraIndex + 1) % cameraList.size)
+        }
+
+        setContentView(binding.root)
     }
 
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
+        cameraIndex = index
         cameraHandler = cameraList[index]
+
+        val cameraCaptureSession = this.cameraCaptureSession
+        if (null != cameraCaptureSession) {
+            cameraCaptureSession.close()
+            this.cameraCaptureSession = null
+        }
+
+        val cameraDevice = this.cameraDevice
+        if (null != cameraDevice) {
+            cameraDevice.close()
+            this.cameraDevice = null
+        }
 
         binding.txtCamera.text = index.toString()
 
