@@ -13,6 +13,7 @@ import android.os.Handler
 import android.util.Size
 import android.view.SurfaceHolder
 import android.view.View
+import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
@@ -69,12 +70,15 @@ class MainActivity : AppCompatActivity() {
 
     private var exposureCompensationValue = 0
 
+    private var rotatedPreviewWidth = 4
+    private var rotatedPreviewHeight = 3
+
     private val surfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(p0: SurfaceHolder) {
             selectCamera(cameraIndex)
         }
 
-        override fun surfaceChanged(p0: SurfaceHolder, p1: Int, p2: Int, p3: Int) {
+        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         }
 
         override fun surfaceDestroyed(p0: SurfaceHolder) {
@@ -117,8 +121,8 @@ class MainActivity : AppCompatActivity() {
                 cameraHandler.resolutionWidth.toFloat() / cameraHandler.resolutionHeight,
                 sizes )
 
-            val rotatedPreviewWidth = if (cameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
-            val rotatedPreviewHeight = if (cameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
+            rotatedPreviewWidth = if (cameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
+            rotatedPreviewHeight = if (cameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
 
             binding.surfaceView.holder.setFixedSize(rotatedPreviewWidth, rotatedPreviewHeight)
             cameraDevice_.createCaptureSession(mutableListOf(binding.surfaceView.holder.surface), cameraCaptureSessionCallback, Handler { true })
@@ -199,26 +203,28 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        window.decorView.systemUiVisibility =
-            (View.SYSTEM_UI_FLAG_IMMERSIVE
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_FULLSCREEN)
-
         if (1 == cameraList.size) {
             binding.txtCamera.isVisible = false
             binding.btnCamera.isVisible = false
         }
+
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        window.decorView.systemUiVisibility =
+            (View.SYSTEM_UI_FLAG_IMMERSIVE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
+
+        setContentView(binding.root)
 
         binding.surfaceView.holder.addCallback( surfaceHolderCallback )
 
         binding.btnCamera.setOnClickListener {
             selectCamera((cameraIndex + 1) % cameraList.size)
         }
-
-        setContentView(binding.root)
     }
 
     @SuppressLint("MissingPermission")
