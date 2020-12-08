@@ -3,6 +3,7 @@ package com.dan.simplerawcamera
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Camera
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -10,9 +11,11 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Range
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -25,8 +28,18 @@ class MainActivity : AppCompatActivity() {
         const val REQUEST_PERMISSIONS = 1
     }
 
-    private lateinit var binding: ActivityMainBinding
-    private lateinit var cameraManager: CameraManager
+    private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+    private val cameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
+    private val cameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(cameraManager) }
+    private lateinit var camera: CameraHandler
+
+    private var isoValue = 100
+    private var isoAuto = false
+
+    private var speedValue = 1/125f
+    private var speedAuto = false
+
+    private var exposureCompensationValue = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,6 +74,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun exitApp() {
+        setResult(0)
+        finish()
+        exitProcess(0)
+    }
+
     private fun handleRequestPermissions( requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         var allowedAll = grantResults.size >= PERMISSIONS.size
 
@@ -76,84 +95,22 @@ class MainActivity : AppCompatActivity() {
         if( allowedAll ) {
             onPermissionsAllowed()
         } else {
-            setResult(0);
-            finish();
+            exitApp()
         }
     }
 
     private fun onPermissionsAllowed() {
-        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        if (cameraList.size <= 0) {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.app_name))
+                .setMessage("No valid camara found !")
+                .setIcon(android.R.drawable.stat_notify_error)
+                .setCancelable(false)
+                .setPositiveButton("OK") { _, _ -> exitApp() }
+                .show()
 
-        binding = ActivityMainBinding.inflate(layoutInflater)
-
-        var str = ""
-        val cameras = cameraManager.cameraIdList
-        for (camera in cameras) {
-            str += camera + "\n"
-
-            val characteristics = cameraManager.getCameraCharacteristics(camera)
-            val keys = characteristics.keys
-
-            if (CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES in keys) {
-                str += "AE: "
-                val values = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES) as IntArray
-                for (i in values)
-                    str += i.toString() + " "
-                str += "\n"
-            }
-
-            if (CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE in keys) {
-                val values = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
-                str += "AE Range: ${values.lower} - ${values.upper}\n"
-            }
-
-            if (CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES in keys) {
-                str += "AF: "
-                val values = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) as IntArray
-                for (i in values)
-                    str += i.toString() + " "
-                str += "\n"
-            }
-
-            if (CameraCharacteristics.FLASH_INFO_AVAILABLE in keys) {
-                val value = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) as Boolean
-                str += "Flash: ${value}\n"
-            }
-
-            if (CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL in keys) {
-                val value = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int
-                str += "Support HW: ${value}\n"
-            }
-
-            if (CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE in keys) {
-                val values = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
-                str += "ISO: ${values.lower} - ${values.upper}\n"
-            }
-
-            if (CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE in keys) {
-                val values = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
-                str += "Speed: ${values.lower} - ${values.upper}\n"
-            }
-
-            if (CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE in keys) {
-                val value = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) as Rect
-                val w = value.width()
-                val h = value.height()
-                str += "Resolution: ${w} x ${h}\n"
-            }
-
-            if (CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES in keys) {
-                val values = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES) as IntArray
-                str += "Face detections: "
-                for (i in values)
-                    str += i.toString() + " "
-                str += "\n"
-            }
-
-            str += "\n"
+            return
         }
-
-        //binding.txt.text = str
 
         window.decorView.systemUiVisibility =
             (View.SYSTEM_UI_FLAG_IMMERSIVE
@@ -162,7 +119,6 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
-        //setSystemUiVisibility()
 
         setContentView(binding.root)
     }
