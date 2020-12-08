@@ -121,6 +121,12 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
 
         setContentView(binding.root)
+
+        selectCamera(0)
+    }
+
+    private fun selectCamera(index: Int) {
+        camera = cameraList[index]
     }
 
     private fun askPermissions(): Boolean {
