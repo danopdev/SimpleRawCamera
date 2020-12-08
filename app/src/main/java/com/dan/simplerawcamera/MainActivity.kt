@@ -3,20 +3,18 @@ package com.dan.simplerawcamera
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Camera
-import android.graphics.Rect
-import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Range
 import android.view.View
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlin.system.exitProcess
+
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -32,8 +30,10 @@ class MainActivity : AppCompatActivity() {
 
     private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val cameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
-    private val cameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(cameraManager) }
-    private lateinit var camera: CameraHandler
+    private val cameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(
+        cameraManager
+    ) }
+    private lateinit var cameraHandler: CameraHandler
 
     private var isoValue = 100
     private var isoAuto = false
@@ -70,9 +70,13 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
     }
 
-    override fun onRequestPermissionsResult( requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
         when (requestCode) {
-            REQUEST_PERMISSIONS -> handleRequestPermissions( requestCode, permissions, grantResults )
+            REQUEST_PERMISSIONS -> handleRequestPermissions(requestCode, permissions, grantResults)
         }
     }
 
@@ -82,7 +86,11 @@ class MainActivity : AppCompatActivity() {
         exitProcess(0)
     }
 
-    private fun handleRequestPermissions( requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    private fun handleRequestPermissions(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
         var allowedAll = grantResults.size >= PERMISSIONS.size
 
         if (grantResults.size >= PERMISSIONS.size) {
@@ -133,9 +141,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectCamera(index: Int) {
-        camera = cameraList[index]
+        cameraHandler = cameraList[index]
 
         binding.txtCamera.text = index.toString()
+
+        val set = ConstraintSet()
+        set.clone(binding.layoutView)
+        set.setDimensionRatio(binding.surfaceView.getId(), "${cameraHandler.resolutionWidth}:${cameraHandler.resolutionHeight}")
+        set.applyTo(binding.layoutView)
+
+        /*
+        cameraManager.openCamera(
+            cameraHandler.id,
+            object: CameraDevice.StateCallback() {
+                override fun onDisconnected(p0: CameraDevice) {}
+                override fun onError(p0: CameraDevice, p1: Int) {}
+                override fun onOpened(cameraDevice: CameraDevice) {
+                    val cameraCharacteristics = cameraManager.getCameraCharacteristics(cameraDevice.id)
+                    cameraCharacteristics[CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP]?.let { streamConfigurationMap ->
+                        streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)?.let { yuvSizes ->
+                            val previewSize = yuvSizes.last()
+                        }
+                    }
+                }
+            },
+            Handler { true })
+
+         */
     }
 
     private fun askPermissions(): Boolean {
