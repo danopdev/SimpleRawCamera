@@ -76,10 +76,18 @@ class MainActivity : AppCompatActivity() {
     private var rotatedPreviewWidth = 4
     private var rotatedPreviewHeight = 3
 
+    private var firstCall = true
+
     private val surfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            Timer().schedule( 1000 )  {
-                selectCamera(cameraIndex)
+            selectCamera(cameraIndex)
+
+            if (firstCall) {
+                Timer().schedule(1000) {
+                    runOnUiThread {
+                        selectCamera(cameraIndex)
+                    }
+                }
             }
         }
 
