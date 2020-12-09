@@ -22,6 +22,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import java.lang.Exception
+import java.util.Timer
+import kotlin.collections.ArrayList
+import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.system.exitProcess
 
@@ -74,14 +77,16 @@ class MainActivity : AppCompatActivity() {
     private var rotatedPreviewHeight = 3
 
     private val surfaceHolderCallback = object: SurfaceHolder.Callback {
-        override fun surfaceCreated(p0: SurfaceHolder) {
-            selectCamera(cameraIndex)
+        override fun surfaceCreated(holder: SurfaceHolder) {
+            Timer().schedule( 1000 )  {
+                selectCamera(cameraIndex)
+            }
         }
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         }
 
-        override fun surfaceDestroyed(p0: SurfaceHolder) {
+        override fun surfaceDestroyed(holder: SurfaceHolder) {
         }
     }
 
