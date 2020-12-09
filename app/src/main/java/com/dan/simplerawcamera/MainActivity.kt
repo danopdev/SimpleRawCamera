@@ -296,8 +296,10 @@ class MainActivity : AppCompatActivity() {
 
         showIso(value)
 
-        if (isFinal)
+        if (isFinal) {
             mIsoValue = value
+            setupCaptureRequest()
+        }
     }
 
     private fun showIso( value: Int ) {
@@ -338,7 +340,7 @@ class MainActivity : AppCompatActivity() {
                 value.toString()
     }
 
-    private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 1000000000L * numerator / denominator
+    private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 100000000L * numerator / denominator
 
     private fun trackSpeed( delta: Int, isFinal: Boolean) {
         if (!mSpeedIsManual) return
@@ -352,7 +354,7 @@ class MainActivity : AppCompatActivity() {
             val speed = speedToNanoseconds(numerator, denominator)
 
             if (increase) {
-                if ((2*speed) > mCameraHandler.speedRange.upper || numerator >= 4) break
+                if ((2*speed) > mCameraHandler.speedRange.upper || numerator >= 40) break
                 if (denominator > 1) {
                     denominator /= 2
                 } else {
@@ -374,6 +376,7 @@ class MainActivity : AppCompatActivity() {
         if (isFinal) {
             mSpeedValueNumerator = numerator
             mSpeedValueDenominator = denominator
+            setupCaptureRequest()
         }
     }
 
@@ -408,6 +411,14 @@ class MainActivity : AppCompatActivity() {
         mBinding.seekBarSpeed.visibility = if (mSpeedIsManual) View.VISIBLE else View.INVISIBLE
         mBinding.txtExpComponsation.visibility = if (!mIsoIsManual || !mSpeedIsManual) View.VISIBLE else View.INVISIBLE
         mBinding.seekBarExpComponsation.visibility = mBinding.txtExpComponsation.visibility
+
+        if (mIsoIsManual)
+            showIso(mIsoValue)
+
+        if (mSpeedIsManual)
+            showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
+
+        setupCaptureRequest()
     }
 
     @SuppressLint("MissingPermission")
@@ -465,16 +476,19 @@ class MainActivity : AppCompatActivity() {
         captureRequestBuilder.set( CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY )
         captureRequestBuilder.set( CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO )
         captureRequestBuilder.set( CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO )
+        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
 
         if (!mIsoIsManual && !mSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue)
+        } else {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mIsoValue )
+            captureRequestBuilder.set(
+                CaptureRequest.SENSOR_EXPOSURE_TIME,
+                ((mSpeedValueNumerator / mSpeedValueDenominator.toFloat()) * 1000000000L).toLong()
+            )
         }
-
-        //captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-
-        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
-        captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
 
         val captureRequest = captureRequestBuilder.build()
         mCaptureRequest = captureRequest
