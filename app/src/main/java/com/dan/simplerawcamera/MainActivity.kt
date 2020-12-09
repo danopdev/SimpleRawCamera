@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
 
             return bestSize
         }
+
+        fun calculateExpDeviation( visibleIso: Int, visibleSpeed: Long, expectedIso: Int, exptectedSpeed: Long ): Float
+            = ((visibleIso.toDouble() * visibleSpeed) / (expectedIso.toDouble() * exptectedSpeed)).toFloat()
     }
 
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
@@ -118,12 +121,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getCaptureEA() : Pair<Int, Long> {
+    private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (!mIsoIsManual && !mSpeedIsManual)
-            return Pair(mIsoMeasuredValue, mSpeedMeasuredValue)
+            return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 1f)
 
-        if (mIsoIsManual && mSpeedIsManual)
-            return Pair(mIsoValue, speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator))
+        if (mIsoIsManual && mSpeedIsManual) {
+            val manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
+            return Triple(
+                mIsoValue,
+                manualSpeed,
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, manualSpeed))
+        }
 
         if (mIsoIsManual) {
             val isoRatio = mIsoMeasuredValue.toFloat() / mIsoValue
@@ -134,10 +142,14 @@ class MainActivity : AppCompatActivity() {
             else if (suggestedSpeed > mCameraHandler.speedRange.upper)
                 suggestedSpeed = mCameraHandler.speedRange.upper
 
-            return Pair(mIsoValue, suggestedSpeed)
+            return Triple(
+                mIsoValue,
+                suggestedSpeed,
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, suggestedSpeed))
         }
 
-        val speedRatio = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator) / mSpeedMeasuredValue
+        val manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
+        val speedRatio = manualSpeed / mSpeedMeasuredValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
         if (suggestedIso < mCameraHandler.isoRange.lower)
@@ -145,7 +157,10 @@ class MainActivity : AppCompatActivity() {
         else if (suggestedIso > mCameraHandler.isoRange.upper)
             suggestedIso = mCameraHandler.isoRange.upper
 
-        return Pair(suggestedIso, mSpeedMeasuredValue)
+        return Triple(
+            suggestedIso,
+            mSpeedMeasuredValue,
+            calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, manualSpeed))
     }
 
     private val mCameraCaptureSessionCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
