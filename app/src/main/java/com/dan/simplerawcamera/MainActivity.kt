@@ -5,18 +5,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.ImageFormat
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
-import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.*
 import android.os.Bundle
 import android.os.Handler
 import android.util.Size
-import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
-import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
@@ -67,12 +62,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mCameraHandler: CameraHandler
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
+    private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
 
     private var mIsoValue = 100
     private var mIsoIsManual = false
 
-    private var mSpeedValueNumerator = 1
+    private var mSpeedValueNumerator = 10
     private var mSpeedValueDenominator = 128
     private var mSpeedIsManual = false
 
@@ -104,7 +100,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    val mCameraCaptureSessionCallback = object : CameraCaptureSession.StateCallback() {
+    private val mCameraCaptureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigureFailed(session: CameraCaptureSession) {}
 
         override fun onConfigured(session: CameraCaptureSession) {
@@ -114,21 +110,30 @@ class MainActivity : AppCompatActivity() {
 
             val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
-
-            val captureRequest = captureRequestBuilder.build()
-            mCaptureRequest = captureRequest
+            mCaptureRequestBuilder = captureRequestBuilder
 
             setupCaptureRequest()
-
-            session.setRepeatingRequest(
-                captureRequest,
-                object : CameraCaptureSession.CaptureCallback() {},
-                Handler { true }
-            )
         }
     }
 
-    private val mCameraStateCallback = object: CameraDevice.StateCallback() {
+    private val mCameraCaptureSessionCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+            super.onCaptureCompleted(session, request, result)
+
+            if (!mIsoIsManual)
+                showIso(result.get(CaptureResult.SENSOR_SENSITIVITY) as Int)
+
+            if (!mSpeedIsManual) {
+                val speedInNanoseconds = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
+                if (speedInNanoseconds >= 1000000000L)
+                    showSpeed((speedInNanoseconds/100000000L).toInt(), 1)
+                else
+                    showSpeed(1, (1000000000L / speedInNanoseconds).toInt())
+            }
+        }
+    }
+
+    private val mCameraDeviceStateCallback = object: CameraDevice.StateCallback() {
         override fun onDisconnected(p0: CameraDevice) {}
 
         override fun onError(p0: CameraDevice, p1: Int) {}
@@ -147,7 +152,11 @@ class MainActivity : AppCompatActivity() {
             mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
-            cameraDevice.createCaptureSession(mutableListOf(mBinding.surfaceView.holder.surface), mCameraCaptureSessionCallback, Handler { true })
+            cameraDevice.createCaptureSession(
+                mutableListOf(mBinding.surfaceView.holder.surface),
+                mCameraCaptureSessionStateCallback,
+                Handler { true }
+            )
         }
     }
 
@@ -315,8 +324,10 @@ class MainActivity : AppCompatActivity() {
 
         showExpComponsation(value)
 
-        if (isFinal)
+        if (isFinal) {
             mExposureCompensationValue = value
+            setupCaptureRequest()
+        }
     }
 
     private fun showExpComponsation( value: Int ) {
@@ -345,12 +356,12 @@ class MainActivity : AppCompatActivity() {
                 if (denominator > 1) {
                     denominator /= 2
                 } else {
-                    numerator += 1
+                    numerator += 10
                 }
             } else {
                 if ((speed/2) < mCameraHandler.speedRange.lower || denominator >= 32768) break
-                if (numerator > 1) {
-                    numerator -= 1
+                if (numerator > 10) {
+                    numerator -= 10
                 } else {
                     denominator *= 2
                 }
@@ -367,25 +378,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSpeed( numerator: Int, denominator: Int ) {
-        val roundedDenominator =
-            if (denominator >= 1000)
-                (denominator / 1000) * 1000
-            else if (denominator >= 500 )
-                (denominator / 100) * 100
-            else if (128 == denominator)
-                125
-            else if (denominator >= 30 )
-                (denominator / 10) * 10
-            else if (16 == denominator)
-                15
+        if (1 == denominator) {
+            val rest = numerator % 10
+            if (0 == rest)
+                mBinding.txtSpeed.text = "${numerator/10}\""
             else
-                denominator
+                mBinding.txtSpeed.text = "${numerator/10}.${rest}\""
+        } else {
+            val roundedDenominator =
+                if (denominator >= 1000)
+                    (denominator / 1000) * 1000
+                else if (denominator >= 500)
+                    (denominator / 100) * 100
+                else if (128 == denominator)
+                    125
+                else if (denominator >= 30)
+                    (denominator / 10) * 10
+                else if (16 == denominator)
+                    15
+                else
+                    denominator
 
-        mBinding.txtSpeed.text =
-            if (1 == denominator)
-                "${numerator}\""
-            else
-                "1/${roundedDenominator}"
+            mBinding.txtSpeed.text = "1/${roundedDenominator}"
+        }
     }
 
     private fun updateSliders() {
@@ -424,7 +439,7 @@ class MainActivity : AppCompatActivity() {
         )
         set.applyTo(mBinding.layoutView)
 
-        mCameraManager.openCamera(mCameraHandler.id, mCameraStateCallback, Handler { true } )
+        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
 
         updateSliders()
     }
@@ -441,6 +456,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupCaptureRequest() {
+        val captureRequestBuilder = mCaptureRequestBuilder ?: return
+        val cameraCaptureSession = mCameraCaptureSession ?: return
 
+        if (mCameraHandler.supportLensStabilisation)
+            captureRequestBuilder.set( CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON )
+
+        captureRequestBuilder.set( CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY )
+        captureRequestBuilder.set( CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO )
+        captureRequestBuilder.set( CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO )
+
+        if (!mIsoIsManual && !mSpeedIsManual) {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue)
+        }
+
+        //captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+
+        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+        captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
+
+        val captureRequest = captureRequestBuilder.build()
+        mCaptureRequest = captureRequest
+
+        cameraCaptureSession.setRepeatingRequest(
+            captureRequest,
+            mCameraCaptureSessionCaptureCallback /*object : CameraCaptureSession.CaptureCallback() {}*/,
+            Handler { true }
+        )
     }
 }
