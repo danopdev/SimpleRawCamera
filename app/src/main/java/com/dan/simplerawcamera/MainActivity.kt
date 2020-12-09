@@ -11,9 +11,11 @@ import android.hardware.camera2.CameraManager
 import android.os.Bundle
 import android.os.Handler
 import android.util.Size
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
+import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
@@ -22,7 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import java.lang.Exception
-import java.util.Timer
+import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
 import kotlin.math.abs
@@ -68,7 +70,8 @@ class MainActivity : AppCompatActivity() {
     private var isoValue = 100
     private var isoAuto = false
 
-    private var speedValue = 1/125f
+    private var speedValueNumerator = 1
+    private var speedValueDenominator = 128
     private var speedAuto = false
 
     private var exposureCompensationValue = 0
@@ -238,6 +241,97 @@ class MainActivity : AppCompatActivity() {
         binding.btnCamera.setOnClickListener {
             selectCamera((cameraIndex + 1) % cameraList.size)
         }
+
+        showIso(isoValue)
+        showSpeed(speedValueNumerator, speedValueDenominator)
+
+        SeekBarDirectionTracker.track( binding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
+        SeekBarDirectionTracker.track( binding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
+    }
+
+    private fun trackIso( delta: Int, isFinal: Boolean) {
+        val increase = delta > 0
+        var counter = abs(delta)
+        var value = isoValue
+
+        while (counter > 0) {
+            if (increase) {
+                if (value >= cameraHandler.isoRange.upper) break
+                value *= 2
+            } else {
+                if (value <= cameraHandler.isoRange.lower) break
+                value /= 2
+            }
+            counter -= 1
+        }
+
+        showIso(value)
+
+        if (isFinal)
+            isoValue = value
+    }
+
+    private fun showIso( value: Int ) {
+        binding.txtIso.text = "ISO: ${value}"
+    }
+
+    private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 1000000000L * numerator / denominator
+
+    private fun trackSpeed( delta: Int, isFinal: Boolean) {
+        val increase = delta > 0
+        var counter = abs(delta)
+        var numerator = speedValueNumerator
+        var denominator = speedValueDenominator
+
+        while (counter > 0) {
+            val speed = speedToNanoseconds(numerator, denominator)
+
+            if (increase) {
+                if ((2*speed) > cameraHandler.speedRange.upper || numerator >= 4) break
+                if (denominator > 1) {
+                    denominator /= 2
+                } else {
+                    numerator += 1
+                }
+            } else {
+                if ((speed/2) < cameraHandler.speedRange.lower || denominator >= 32768) break
+                if (numerator > 1) {
+                    numerator -= 1
+                } else {
+                    denominator *= 2
+                }
+            }
+            counter -= 1
+        }
+
+        showSpeed(numerator, denominator)
+
+        if (isFinal) {
+            speedValueNumerator = numerator
+            speedValueDenominator = denominator
+        }
+    }
+
+    private fun showSpeed( numerator: Int, denominator: Int ) {
+        val roundedDenominator =
+            if (denominator >= 1000)
+                (denominator / 1000) * 1000
+            else if (denominator >= 500 )
+                (denominator / 100) * 100
+            else if (128 == denominator)
+                125
+            else if (denominator >= 30 )
+                (denominator / 10) * 10
+            else if (16 == denominator)
+                15
+            else
+                denominator
+
+        binding.txtSpeed.text = "Speed: " +
+            if (1 == denominator)
+                "${numerator}\""
+            else
+                "1/${roundedDenominator}"
     }
 
     @SuppressLint("MissingPermission")
