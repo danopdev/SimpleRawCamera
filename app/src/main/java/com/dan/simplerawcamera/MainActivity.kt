@@ -244,9 +244,11 @@ class MainActivity : AppCompatActivity() {
 
         showIso(isoValue)
         showSpeed(speedValueNumerator, speedValueDenominator)
+        showExpComponsation(exposureCompensationValue)
 
         SeekBarDirectionTracker.track( binding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
         SeekBarDirectionTracker.track( binding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
+        SeekBarDirectionTracker.track( binding.seekBarExpComponsation ) { delta, isFinal -> trackExpComponsation( delta, isFinal ) }
     }
 
     private fun trackIso( delta: Int, isFinal: Boolean) {
@@ -273,6 +275,32 @@ class MainActivity : AppCompatActivity() {
 
     private fun showIso( value: Int ) {
         binding.txtIso.text = "ISO: ${value}"
+    }
+
+    private fun trackExpComponsation( delta: Int, isFinal: Boolean) {
+        val increase = delta > 0
+        var counter = abs(delta)
+        var value = exposureCompensationValue
+
+        while (counter > 0) {
+            if (increase) {
+                if (value >= cameraHandler.exposureCompensantionRange.upper) break
+                value++
+            } else {
+                if (value <= cameraHandler.exposureCompensantionRange.lower) break
+                value--
+            }
+            counter -= 1
+        }
+
+        showExpComponsation(value)
+
+        if (isFinal)
+            exposureCompensationValue = value
+    }
+
+    private fun showExpComponsation( value: Int ) {
+        binding.txtExpComponsation.text = "Exp: ${value}"
     }
 
     private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 1000000000L * numerator / denominator
