@@ -522,24 +522,12 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
         }
 
-        /*
-        if (preview || (!mIsoIsManual && !mSpeedIsManual)) {
-        } else {
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mIsoValue )
-            captureRequestBuilder.set(
-                CaptureRequest.SENSOR_EXPOSURE_TIME,
-                ((mSpeedValueNumerator / mSpeedValueDenominator.toFloat()) * 1000000000L).toLong()
-            )
-        }
-         */
-
         val captureRequest = captureRequestBuilder.build()
         mCaptureRequest = captureRequest
 
         cameraCaptureSession.setRepeatingRequest(
             captureRequest,
-            mCameraCaptureSessionCaptureCallback /*object : CameraCaptureSession.CaptureCallback() {}*/,
+            mCameraCaptureSessionCaptureCallback,
             Handler { true }
         )
     }
