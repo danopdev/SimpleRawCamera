@@ -3,7 +3,7 @@ package com.dan.simplerawcamera
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
-import android.hardware.camera2.params.RecommendedStreamConfigurationMap
+import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Range
 
@@ -19,7 +19,8 @@ class CameraHandler(
     val focusHyperfocalDistance: Float,
     val hasFlash: Boolean,
     val sensorOrientation: Int,
-    val streamConfigurationMap: StreamConfigurationMap
+    val streamConfigurationMap: StreamConfigurationMap,
+    val supportLensStabilisation: Boolean
 ) {
 
     companion object {
@@ -37,17 +38,12 @@ class CameraHandler(
 
                         if ((characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int) < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
 
-                        val isoRange =
-                            characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
-                        val exposureCompensantionRange =
-                            characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
-                        val speedRange =
-                            characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
+                        val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
+                        val exposureCompensantionRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
+                        val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
 
-                        val focusMinDistance =
-                            characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
-                        val focusHyperfocalDistance =
-                            characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
+                        val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
+                        val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
                         val focusRange = Range(0f, focusMinDistance)
 
                         val hasFlash =
@@ -56,14 +52,14 @@ class CameraHandler(
                             else
                                 false
 
-                        val resolutionRect =
-                            characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) as Rect
+                        val resolutionRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) as Rect
+                        val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) as Int
+                        val streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
 
-                        val sensorOrientation =
-                            characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) as Int
+                        val supportLensStabilisation =
+                            (characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION) as IntArray)
+                                .contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
-                        val streamConfigurationMap =
-                            characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
                         validCameras.add(
                             CameraHandler(
                                 cameraManager,
@@ -77,7 +73,8 @@ class CameraHandler(
                                 focusHyperfocalDistance,
                                 hasFlash,
                                 sensorOrientation,
-                                streamConfigurationMap
+                                streamConfigurationMap,
+                                supportLensStabilisation
                             )
                         )
                     } catch (e: Exception) {

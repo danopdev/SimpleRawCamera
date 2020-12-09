@@ -5,9 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.ImageFormat
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
+import android.hardware.camera2.*
 import android.os.Bundle
 import android.os.Handler
 import android.util.Size
@@ -22,7 +20,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import java.lang.Exception
-import java.util.Timer
+import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
 import kotlin.math.abs
@@ -57,29 +55,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val binding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-    private val cameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
-    private val cameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(cameraManager) }
-    private var cameraIndex = 0
-    private lateinit var cameraHandler: CameraHandler
-    private var cameraDevice: CameraDevice? = null
-    private var cameraCaptureSession: CameraCaptureSession? = null
+    private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+    private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
+    private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
+    private var mCameraIndex = 0
+    private lateinit var mCameraHandler: CameraHandler
+    private var mCameraDevice: CameraDevice? = null
+    private var mCameraCaptureSession: CameraCaptureSession? = null
+    private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
+    private var mCaptureRequest: CaptureRequest? = null
 
-    private var isoValue = 100
-    private var isoAuto = false
+    private var mIsoValue = 100
+    private var mIsoIsManual = false
 
-    private var speedValue = 1/125f
-    private var speedAuto = false
+    private var mSpeedValueNumerator = 10
+    private var mSpeedValueDenominator = 128
+    private var mSpeedIsManual = false
 
-    private var exposureCompensationValue = 0
+    private var mExposureCompensationValue = 0
 
-    private var rotatedPreviewWidth = 4
-    private var rotatedPreviewHeight = 3
+    private var mRotatedPreviewWidth = 4
+    private var mRotatedPreviewHeight = 3
 
-    private val surfaceHolderCallback = object: SurfaceHolder.Callback {
+    private var mFirstCall = true
+
+    private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            Timer().schedule( 1000 )  {
-                selectCamera(cameraIndex)
+            selectCamera(mCameraIndex)
+
+            if (mFirstCall) {
+                mFirstCall = false
+                Timer().schedule(500) {
+                    runOnUiThread {
+                        selectCamera(mCameraIndex)
+                    }
+                }
             }
         }
 
@@ -90,47 +100,63 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    val cameraCaptureSessionCallback = object : CameraCaptureSession.StateCallback() {
+    private val mCameraCaptureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigureFailed(session: CameraCaptureSession) {}
 
         override fun onConfigured(session: CameraCaptureSession) {
-            val cameraDevice_ = cameraDevice ?: return
+            val cameraDevice = mCameraDevice ?: return
 
-            cameraCaptureSession = session
+            mCameraCaptureSession = session
 
-            val previewRequestBuilder =
-                cameraDevice_.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
-                    addTarget(binding.surfaceView.holder.surface)
-                }
+            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
+            mCaptureRequestBuilder = captureRequestBuilder
 
-            session.setRepeatingRequest(
-                previewRequestBuilder.build(),
-                object : CameraCaptureSession.CaptureCallback() {},
-                Handler { true }
-            )
+            setupCaptureRequest()
         }
     }
 
-    private val cameraStateCallback = object: CameraDevice.StateCallback() {
+    private val mCameraCaptureSessionCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+            super.onCaptureCompleted(session, request, result)
+
+            if (!mIsoIsManual)
+                showIso(result.get(CaptureResult.SENSOR_SENSITIVITY) as Int)
+
+            if (!mSpeedIsManual) {
+                val speedInNanoseconds = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
+                if (speedInNanoseconds >= 1000000000L)
+                    showSpeed((speedInNanoseconds/100000000L).toInt(), 1)
+                else
+                    showSpeed(1, (1000000000L / speedInNanoseconds).toInt())
+            }
+        }
+    }
+
+    private val mCameraDeviceStateCallback = object: CameraDevice.StateCallback() {
         override fun onDisconnected(p0: CameraDevice) {}
 
         override fun onError(p0: CameraDevice, p1: Int) {}
 
-        override fun onOpened(cameraDevice_: CameraDevice) {
-            cameraDevice = cameraDevice_
+        override fun onOpened(cameraDevice: CameraDevice) {
+            mCameraDevice = cameraDevice
 
-            val sizes = cameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
+            val sizes = mCameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
             if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
             val previewSize = getBestResolution(
-                binding.surfaceView.width,
-                cameraHandler.resolutionWidth.toFloat() / cameraHandler.resolutionHeight,
+                mBinding.surfaceView.width,
+                mCameraHandler.resolutionWidth.toFloat() / mCameraHandler.resolutionHeight,
                 sizes )
 
-            rotatedPreviewWidth = if (cameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
-            rotatedPreviewHeight = if (cameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
+            mRotatedPreviewWidth = if (mCameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
+            mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
 
-            binding.surfaceView.holder.setFixedSize(rotatedPreviewWidth, rotatedPreviewHeight)
-            cameraDevice_.createCaptureSession(mutableListOf(binding.surfaceView.holder.surface), cameraCaptureSessionCallback, Handler { true })
+            mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
+            cameraDevice.createCaptureSession(
+                mutableListOf(mBinding.surfaceView.holder.surface),
+                mCameraCaptureSessionStateCallback,
+                Handler { true }
+            )
         }
     }
 
@@ -203,14 +229,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onPermissionsAllowed() {
-        if (cameraList.size <= 0) {
+        if (mCameraList.size <= 0) {
             fatalError("No valid camera found !")
             return
         }
 
-        if (1 == cameraList.size) {
-            binding.txtCamera.isVisible = false
-            binding.btnCamera.isVisible = false
+        if (1 == mCameraList.size) {
+            mBinding.txtCamera.isVisible = false
+            mBinding.btnCamera.isVisible = false
         }
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -223,43 +249,210 @@ class MainActivity : AppCompatActivity() {
                     or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                     or View.SYSTEM_UI_FLAG_FULLSCREEN)
 
-        setContentView(binding.root)
+        setContentView(mBinding.root)
 
-        binding.surfaceView.holder.addCallback( surfaceHolderCallback )
+        mBinding.surfaceView.holder.addCallback( mSurfaceHolderCallback )
 
-        binding.btnCamera.setOnClickListener {
-            selectCamera((cameraIndex + 1) % cameraList.size)
+        mBinding.btnCamera.setOnClickListener {
+            selectCamera((mCameraIndex + 1) % mCameraList.size)
         }
+
+        showIso(mIsoValue)
+        showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
+        showExpComponsation(mExposureCompensationValue)
+
+        SeekBarDirectionTracker.track( mBinding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
+        SeekBarDirectionTracker.track( mBinding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
+        SeekBarDirectionTracker.track( mBinding.seekBarExpComponsation ) { delta, isFinal -> trackExpComponsation( delta, isFinal ) }
+
+        mBinding.txtIso.setOnClickListener {
+            mIsoIsManual = !mIsoIsManual
+            updateSliders()
+        }
+
+        mBinding.txtSpeed.setOnClickListener {
+            mSpeedIsManual = !mSpeedIsManual
+            updateSliders()
+        }
+    }
+
+    private fun trackIso( delta: Int, isFinal: Boolean) {
+        if (!mIsoIsManual) return
+
+        val increase = delta > 0
+        var counter = abs(delta)
+        var value = mIsoValue
+
+        while (counter > 0) {
+            if (increase) {
+                if (value >= mCameraHandler.isoRange.upper) break
+                value *= 2
+            } else {
+                if (value <= mCameraHandler.isoRange.lower) break
+                value /= 2
+            }
+            counter -= 1
+        }
+
+        showIso(value)
+
+        if (isFinal) {
+            mIsoValue = value
+            setupCaptureRequest()
+        }
+    }
+
+    private fun showIso( value: Int ) {
+        mBinding.txtIso.text = "${value} ISO"
+    }
+
+    private fun trackExpComponsation( delta: Int, isFinal: Boolean) {
+        if (mIsoIsManual && mSpeedIsManual) return
+
+        val increase = delta > 0
+        var counter = abs(delta)
+        var value = mExposureCompensationValue
+
+        while (counter > 0) {
+            if (increase) {
+                if (value >= mCameraHandler.exposureCompensantionRange.upper) break
+                value++
+            } else {
+                if (value <= mCameraHandler.exposureCompensantionRange.lower) break
+                value--
+            }
+            counter -= 1
+        }
+
+        showExpComponsation(value)
+
+        if (isFinal) {
+            mExposureCompensationValue = value
+            setupCaptureRequest()
+        }
+    }
+
+    private fun showExpComponsation( value: Int ) {
+        mBinding.txtExpComponsation.text = "Exp: " +
+            if (value >= 0)
+                "+${value}"
+            else
+                value.toString()
+    }
+
+    private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 100000000L * numerator / denominator
+
+    private fun trackSpeed( delta: Int, isFinal: Boolean) {
+        if (!mSpeedIsManual) return
+
+        val increase = delta > 0
+        var counter = abs(delta)
+        var numerator = mSpeedValueNumerator
+        var denominator = mSpeedValueDenominator
+
+        while (counter > 0) {
+            val speed = speedToNanoseconds(numerator, denominator)
+
+            if (increase) {
+                if ((2*speed) > mCameraHandler.speedRange.upper || numerator >= 40) break
+                if (denominator > 1) {
+                    denominator /= 2
+                } else {
+                    numerator += 10
+                }
+            } else {
+                if ((speed/2) < mCameraHandler.speedRange.lower || denominator >= 32768) break
+                if (numerator > 10) {
+                    numerator -= 10
+                } else {
+                    denominator *= 2
+                }
+            }
+            counter -= 1
+        }
+
+        showSpeed(numerator, denominator)
+
+        if (isFinal) {
+            mSpeedValueNumerator = numerator
+            mSpeedValueDenominator = denominator
+            setupCaptureRequest()
+        }
+    }
+
+    private fun showSpeed( numerator: Int, denominator: Int ) {
+        if (1 == denominator) {
+            val rest = numerator % 10
+            if (0 == rest)
+                mBinding.txtSpeed.text = "${numerator/10}\""
+            else
+                mBinding.txtSpeed.text = "${numerator/10}.${rest}\""
+        } else {
+            val roundedDenominator =
+                if (denominator >= 1000)
+                    (denominator / 1000) * 1000
+                else if (denominator >= 500)
+                    (denominator / 100) * 100
+                else if (128 == denominator)
+                    125
+                else if (denominator >= 30)
+                    (denominator / 10) * 10
+                else if (16 == denominator)
+                    15
+                else
+                    denominator
+
+            mBinding.txtSpeed.text = "1/${roundedDenominator}"
+        }
+    }
+
+    private fun updateSliders() {
+        mBinding.seekBarIso.visibility = if (mIsoIsManual) View.VISIBLE else View.INVISIBLE
+        mBinding.seekBarSpeed.visibility = if (mSpeedIsManual) View.VISIBLE else View.INVISIBLE
+        mBinding.txtExpComponsation.visibility = if (!mIsoIsManual || !mSpeedIsManual) View.VISIBLE else View.INVISIBLE
+        mBinding.seekBarExpComponsation.visibility = mBinding.txtExpComponsation.visibility
+
+        if (mIsoIsManual)
+            showIso(mIsoValue)
+
+        if (mSpeedIsManual)
+            showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
+
+        setupCaptureRequest()
     }
 
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
-        cameraIndex = index
-        cameraHandler = cameraList[index]
+        mCameraIndex = index
+        mCameraHandler = mCameraList[index]
 
-        val cameraCaptureSession = this.cameraCaptureSession
+        val cameraCaptureSession = mCameraCaptureSession
         if (null != cameraCaptureSession) {
             cameraCaptureSession.close()
-            this.cameraCaptureSession = null
+            mCameraCaptureSession = null
         }
 
-        val cameraDevice = this.cameraDevice
+        val cameraDevice = mCameraDevice
         if (null != cameraDevice) {
             cameraDevice.close()
-            this.cameraDevice = null
+            mCameraDevice = null
         }
 
-        binding.txtCamera.text = index.toString()
+        mCaptureRequest = null
+
+        mBinding.txtCamera.text = index.toString()
 
         val set = ConstraintSet()
-        set.clone(binding.layoutView)
+        set.clone(mBinding.layoutView)
         set.setDimensionRatio(
-            binding.frameView.getId(),
-            "${cameraHandler.resolutionWidth}:${cameraHandler.resolutionHeight}"
+            mBinding.frameView.getId(),
+            "${mCameraHandler.resolutionWidth}:${mCameraHandler.resolutionHeight}"
         )
-        set.applyTo(binding.layoutView)
+        set.applyTo(mBinding.layoutView)
 
-        cameraManager.openCamera(cameraHandler.id, cameraStateCallback, Handler { true } )
+        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
+
+        updateSliders()
     }
 
     private fun askPermissions(): Boolean {
@@ -271,5 +464,39 @@ class MainActivity : AppCompatActivity() {
         }
 
         return false
+    }
+
+    private fun setupCaptureRequest() {
+        val captureRequestBuilder = mCaptureRequestBuilder ?: return
+        val cameraCaptureSession = mCameraCaptureSession ?: return
+
+        if (mCameraHandler.supportLensStabilisation)
+            captureRequestBuilder.set( CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON )
+
+        captureRequestBuilder.set( CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY )
+        captureRequestBuilder.set( CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO )
+        captureRequestBuilder.set( CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO )
+        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+
+        if (!mIsoIsManual && !mSpeedIsManual) {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue)
+        } else {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mIsoValue )
+            captureRequestBuilder.set(
+                CaptureRequest.SENSOR_EXPOSURE_TIME,
+                ((mSpeedValueNumerator / mSpeedValueDenominator.toFloat()) * 1000000000L).toLong()
+            )
+        }
+
+        val captureRequest = captureRequestBuilder.build()
+        mCaptureRequest = captureRequest
+
+        cameraCaptureSession.setRepeatingRequest(
+            captureRequest,
+            mCameraCaptureSessionCaptureCallback /*object : CameraCaptureSession.CaptureCallback() {}*/,
+            Handler { true }
+        )
     }
 }

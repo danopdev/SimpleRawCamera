@@ -122,6 +122,7 @@
                 android:id="@+id/imageButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:backgroundTint="#FF0000"
                 app:srcCompat="@android:drawable/ic_menu_camera" />
 
             <LinearLayout
@@ -204,8 +205,8 @@
                     style="@style/Widget.AppCompat.SeekBar.Discrete"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:max="4"
-                    android:progress="2"
+                    android:max="6"
+                    android:progress="3"
                     android:progressBackgroundTint="@color/teal_200"
                     android:progressBackgroundTintMode="add"
                     android:progressTint="@color/teal_200"
