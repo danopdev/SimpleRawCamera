@@ -68,11 +68,11 @@ class MainActivity : AppCompatActivity() {
     private var cameraCaptureSession: CameraCaptureSession? = null
 
     private var isoValue = 100
-    private var isoAuto = false
+    private var isoManual = false
 
     private var speedValueNumerator = 1
     private var speedValueDenominator = 128
-    private var speedAuto = false
+    private var speedManual = false
 
     private var exposureCompensationValue = 0
 
@@ -252,6 +252,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun trackIso( delta: Int, isFinal: Boolean) {
+        if (!isoManual) return
+
         val increase = delta > 0
         var counter = abs(delta)
         var value = isoValue
@@ -278,6 +280,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun trackExpComponsation( delta: Int, isFinal: Boolean) {
+        if (isoManual && speedManual) return
+
         val increase = delta > 0
         var counter = abs(delta)
         var value = exposureCompensationValue
@@ -306,6 +310,8 @@ class MainActivity : AppCompatActivity() {
     private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 1000000000L * numerator / denominator
 
     private fun trackSpeed( delta: Int, isFinal: Boolean) {
+        if (!speedManual) return
+
         val increase = delta > 0
         var counter = abs(delta)
         var numerator = speedValueNumerator
