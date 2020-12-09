@@ -3,7 +3,7 @@ package com.dan.simplerawcamera
 import android.widget.SeekBar
 import java.util.*
 
-class SeekBarDirectionTracker( val l: (Int, Boolean)->Unit ) : SeekBar.OnSeekBarChangeListener {
+class SeekBarDirectionTracker( private val mListener: (Int, Boolean)->Unit ) : SeekBar.OnSeekBarChangeListener {
 
     companion object {
         fun track( seekBar: SeekBar, l: (Int, Boolean)->Unit ) {
@@ -11,44 +11,44 @@ class SeekBarDirectionTracker( val l: (Int, Boolean)->Unit ) : SeekBar.OnSeekBar
         }
     }
 
-    private var tracking = false
-    private var firstValue = true
-    private var value = 0
-    private var startTime = 0L
-    private var delta = 0
+    private var mTracking = false
+    private var mFirstValue = true
+    private var mValue = 0
+    private var mStartTime = 0L
+    private var mDelta = 0
 
     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
         if (null == seekBar) return
         if (!fromUser) return
-        if (!tracking) return
+        if (!mTracking) return
 
-        if (firstValue) {
-            firstValue = false
-            var deltaTime = Date().time - startTime
+        if (mFirstValue) {
+            mFirstValue = false
+            var deltaTime = Date().time - mStartTime
             if (deltaTime < 100) {
-                value = seekBar.progress
+                mValue = seekBar.progress
                 return
             }
         }
 
-        delta = progress - value
-        l.invoke(delta, false)
+        mDelta = progress - mValue
+        mListener.invoke(mDelta, false)
     }
 
     override fun onStartTrackingTouch(seekBar: SeekBar?) {
         if (null != seekBar) {
-            startTime = Date().time
-            tracking = true
-            value = seekBar.progress
-            firstValue = true
-            delta = 0
+            mStartTime = Date().time
+            mTracking = true
+            mValue = seekBar.progress
+            mFirstValue = true
+            mDelta = 0
         }
     }
 
     override fun onStopTrackingTouch(seekBar: SeekBar?) {
-        tracking = false
+        mTracking = false
         if (null != seekBar)
             seekBar.progress = seekBar.max / 2
-        l.invoke(delta, true)
+        mListener.invoke(mDelta, true)
     }
 }
