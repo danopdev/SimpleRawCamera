@@ -67,10 +67,12 @@ class MainActivity : AppCompatActivity() {
 
     private var mIsoValue = 100
     private var mIsoIsManual = false
+    private var mIsoMeasuredValue = 100
 
     private var mSpeedValueNumerator = 10
     private var mSpeedValueDenominator = 128
     private var mSpeedIsManual = false
+    private var mSpeedMeasuredValue = 1L
 
     private var mExposureCompensationValue = 0
 
@@ -116,19 +118,56 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getCaptureEA() : Pair<Int, Long> {
+        if (!mIsoIsManual && !mSpeedIsManual)
+            return Pair(mIsoMeasuredValue, mSpeedMeasuredValue)
+
+        if (mIsoIsManual && mSpeedIsManual)
+            return Pair(mIsoValue, speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator))
+
+        if (mIsoIsManual) {
+            val isoRatio = mIsoMeasuredValue.toFloat() / mIsoValue
+
+            var suggestedSpeed = (mSpeedMeasuredValue * isoRatio).toLong()
+            if (suggestedSpeed < mCameraHandler.speedRange.lower)
+                suggestedSpeed = mCameraHandler.speedRange.lower
+            else if (suggestedSpeed > mCameraHandler.speedRange.upper)
+                suggestedSpeed = mCameraHandler.speedRange.upper
+
+            return Pair(mIsoValue, suggestedSpeed)
+        }
+
+        val speedRatio = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator) / mSpeedMeasuredValue
+
+        var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
+        if (suggestedIso < mCameraHandler.isoRange.lower)
+            suggestedIso = mCameraHandler.isoRange.lower
+        else if (suggestedIso > mCameraHandler.isoRange.upper)
+            suggestedIso = mCameraHandler.isoRange.upper
+
+        return Pair(suggestedIso, mSpeedMeasuredValue)
+    }
+
     private val mCameraCaptureSessionCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
 
+            mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
+            mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
+
+            if (mIsoIsManual && mSpeedIsManual) return
+
+            val captureEA = getCaptureEA()
+
             if (!mIsoIsManual)
-                showIso(result.get(CaptureResult.SENSOR_SENSITIVITY) as Int)
+                showIso(captureEA.first)
 
             if (!mSpeedIsManual) {
-                val speedInNanoseconds = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
-                if (speedInNanoseconds >= 1000000000L)
-                    showSpeed((speedInNanoseconds/100000000L).toInt(), 1)
+                val speed = captureEA.second
+                if (speed >= 1000000000L)
+                    showSpeed((speed/100000000L).toInt(), 1)
                 else
-                    showSpeed(1, (1000000000L / speedInNanoseconds).toInt())
+                    showSpeed(1, (1000000000L / speed).toInt())
             }
         }
     }
@@ -466,7 +505,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun setupCaptureRequest() {
+    private fun setupCaptureRequest(preview: Boolean = true) {
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
@@ -478,9 +517,13 @@ class MainActivity : AppCompatActivity() {
         captureRequestBuilder.set( CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO )
         captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
 
-        if (!mIsoIsManual && !mSpeedIsManual) {
+        if (preview) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
+        }
+
+        /*
+        if (preview || (!mIsoIsManual && !mSpeedIsManual)) {
         } else {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mIsoValue )
@@ -489,6 +532,7 @@ class MainActivity : AppCompatActivity() {
                 ((mSpeedValueNumerator / mSpeedValueDenominator.toFloat()) * 1000000000L).toLong()
             )
         }
+         */
 
         val captureRequest = captureRequestBuilder.build()
         mCaptureRequest = captureRequest
