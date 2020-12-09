@@ -249,6 +249,16 @@ class MainActivity : AppCompatActivity() {
         SeekBarDirectionTracker.track( binding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
         SeekBarDirectionTracker.track( binding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
         SeekBarDirectionTracker.track( binding.seekBarExpComponsation ) { delta, isFinal -> trackExpComponsation( delta, isFinal ) }
+
+        binding.txtIso.setOnClickListener {
+            isoManual = !isoManual
+            updateSliders()
+        }
+
+        binding.txtSpeed.setOnClickListener {
+            speedManual = !speedManual
+            updateSliders()
+        }
     }
 
     private fun trackIso( delta: Int, isFinal: Boolean) {
@@ -276,7 +286,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showIso( value: Int ) {
-        binding.txtIso.text = "ISO: ${value}"
+        binding.txtIso.text = "${value} ISO"
     }
 
     private fun trackExpComponsation( delta: Int, isFinal: Boolean) {
@@ -304,7 +314,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showExpComponsation( value: Int ) {
-        binding.txtExpComponsation.text = "Exp: ${value}"
+        binding.txtExpComponsation.text = "Exp: " +
+            if (value >= 0)
+                "+${value}"
+            else
+                value.toString()
     }
 
     private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 1000000000L * numerator / denominator
@@ -361,11 +375,18 @@ class MainActivity : AppCompatActivity() {
             else
                 denominator
 
-        binding.txtSpeed.text = "Speed: " +
+        binding.txtSpeed.text =
             if (1 == denominator)
                 "${numerator}\""
             else
                 "1/${roundedDenominator}"
+    }
+
+    private fun updateSliders() {
+        binding.seekBarIso.visibility = if (isoManual) View.VISIBLE else View.INVISIBLE
+        binding.seekBarSpeed.visibility = if (speedManual) View.VISIBLE else View.INVISIBLE
+        binding.txtExpComponsation.visibility = if (!isoManual || !speedManual) View.VISIBLE else View.INVISIBLE
+        binding.seekBarExpComponsation.visibility = binding.txtExpComponsation.visibility
     }
 
     @SuppressLint("MissingPermission")
@@ -396,6 +417,8 @@ class MainActivity : AppCompatActivity() {
         set.applyTo(binding.layoutView)
 
         cameraManager.openCamera(cameraHandler.id, cameraStateCallback, Handler { true } )
+
+        updateSliders()
     }
 
     private fun askPermissions(): Boolean {
