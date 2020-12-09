@@ -83,7 +83,7 @@ class MainActivity : AppCompatActivity() {
             selectCamera(cameraIndex)
 
             if (firstCall) {
-                Timer().schedule(1000) {
+                Timer().schedule(500) {
                     runOnUiThread {
                         selectCamera(cameraIndex)
                     }
