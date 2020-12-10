@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mCameraHandler: CameraHandler
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
-    private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
+    private var mCaptureRequestBuilderPreview: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
 
     private var mIsoValue = 100
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
 
             val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
-            mCaptureRequestBuilder = captureRequestBuilder
+            mCaptureRequestBuilderPreview = captureRequestBuilder
 
             setupCaptureRequest()
         }
@@ -521,7 +521,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupCaptureRequest(preview: Boolean = true) {
-        val captureRequestBuilder = mCaptureRequestBuilder ?: return
+        val captureRequestBuilder = mCaptureRequestBuilderPreview ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
         if (mCameraHandler.supportLensStabilisation)
@@ -534,7 +534,7 @@ class MainActivity : AppCompatActivity() {
 
         if (preview) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
         }
 
         val captureRequest = captureRequestBuilder.build()

@@ -6,6 +6,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Range
+import android.util.Rational
 
 class CameraHandler(
     val cameraManager: CameraManager,
@@ -15,6 +16,7 @@ class CameraHandler(
     val isoRange: Range<Int>,
     val speedRange: Range<Long>,
     val exposureCompensantionRange: Range<Int>,
+    val exposureCompensantionMulitplyFactor: Int,
     val focusRange: Range<Float>,
     val focusHyperfocalDistance: Float,
     val hasFlash: Boolean,
@@ -39,8 +41,15 @@ class CameraHandler(
                         if ((characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int) < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
 
                         val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
-                        val exposureCompensantionRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
+
+                        val exposureCompensantionRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
+                        val exposureCompensantionStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
+                        val exposureCompensantionMulitplyFactor = exposureCompensantionStep.denominator
+                        val exposureCompensantionRange = Range(
+                            exposureCompensantionRangeFull.lower / exposureCompensantionMulitplyFactor,
+                            exposureCompensantionRangeFull.upper / exposureCompensantionMulitplyFactor
+                        )
 
                         val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
                         val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
@@ -69,6 +78,7 @@ class CameraHandler(
                                 isoRange,
                                 speedRange,
                                 exposureCompensantionRange,
+                                exposureCompensantionMulitplyFactor,
                                 focusRange,
                                 focusHyperfocalDistance,
                                 hasFlash,
