@@ -257,6 +257,12 @@
                 android:layout_weight="1"
                 android:orientation="vertical"></LinearLayout>
 
+            <ImageView
+                android:id="@+id/imgHistogram"
+                android:layout_width="140dp"
+                android:layout_height="80dp"
+                app:srcCompat="@drawable/ic_launcher_foreground" />
+
         </LinearLayout>
     </LinearLayout>
 

@@ -4,8 +4,9 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.ImageFormat
+import android.graphics.*
 import android.hardware.camera2.*
+import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
 import android.util.Size
@@ -24,6 +25,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.system.exitProcess
 
 
@@ -38,6 +40,10 @@ class MainActivity : AppCompatActivity() {
         )
 
         const val REQUEST_PERMISSIONS = 1
+
+        const val HISTOGRAM_BITMAP_WIDTH = 64
+        const val HISTOGRAM_BITMAP_HEIGHT = 50
+        const val HISTOGRAM_FREQUENCY = 500
 
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
@@ -59,6 +65,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
     private var mCameraIndex = 0
@@ -67,6 +74,66 @@ class MainActivity : AppCompatActivity() {
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilderPreview: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
+    private var lastHistogramUpdate = 0L
+
+    private val mImageReaderThumb = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
+    private val mImageReaderThumbListener = object: ImageReader.OnImageAvailableListener {
+        override fun onImageAvailable(imageReader: ImageReader?) {
+            if (null == imageReader) return
+            val image = imageReader.acquireLatestImage() ?: return
+
+            var now = System.currentTimeMillis()
+            if (now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)) {
+                lastHistogramUpdate = now
+                val imageW = image.width
+                val imageH = image.height
+
+                val yPlane = image.planes[0]
+                val yPlaneBuffer = yPlane.buffer
+                val yBytes = ByteArray(yPlaneBuffer.capacity())
+                yPlaneBuffer.get(yBytes)
+
+                val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
+                for (line in 0 until imageH) {
+                    var index = line * yPlane.rowStride
+                    for (column in 0 until imageW) {
+                        var yValue = yBytes[index].toInt()
+                        if (yValue < 0) yValue += 256
+                        values[(HISTOGRAM_BITMAP_WIDTH-1)*yValue/255]++
+                        index++
+                    }
+                }
+
+                var maxHeight = 10
+                for (value in values)
+                    maxHeight = max(maxHeight, value)
+                maxHeight++
+
+                val color = Color.rgb(192, 192, 192)
+                val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT )
+
+                for (x in values.indices) {
+                    val value = values[x]
+                    val fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+
+                    var y = 0
+                    while (y < fill) {
+                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
+                        y++
+                    }
+                    while (y < HISTOGRAM_BITMAP_HEIGHT) {
+                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
+                        y++
+                    }
+                }
+
+                val bitmap = Bitmap.createBitmap(colors, 0, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_HEIGHT, Bitmap.Config.ARGB_8888)
+                mBinding.imgHistogram.setImageBitmap(bitmap)
+            }
+
+            image.close()
+        }
+    }
 
     private var mIsoValue = 100
     private var mIsoIsManual = false
@@ -115,6 +182,7 @@ class MainActivity : AppCompatActivity() {
 
             val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
+            captureRequestBuilder.addTarget(mImageReaderThumb.surface)
             mCaptureRequestBuilderPreview = captureRequestBuilder
 
             setupCaptureRequest()
@@ -207,7 +275,7 @@ class MainActivity : AppCompatActivity() {
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
             cameraDevice.createCaptureSession(
-                mutableListOf(mBinding.surfaceView.holder.surface),
+                mutableListOf(mBinding.surfaceView.holder.surface, mImageReaderThumb.surface),
                 mCameraCaptureSessionStateCallback,
                 Handler { true }
             )
@@ -292,6 +360,8 @@ class MainActivity : AppCompatActivity() {
             mBinding.txtCamera.isVisible = false
             mBinding.btnCamera.isVisible = false
         }
+
+        mImageReaderThumb.setOnImageAvailableListener(mImageReaderThumbListener, Handler{true})
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
