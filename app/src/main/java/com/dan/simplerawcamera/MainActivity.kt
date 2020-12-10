@@ -499,7 +499,7 @@ class MainActivity : AppCompatActivity() {
         val set = ConstraintSet()
         set.clone(mBinding.layoutView)
         set.setDimensionRatio(
-            mBinding.frameView.getId(),
+            mBinding.layoutWithRatio.getId(),
             "${mCameraHandler.resolutionWidth}:${mCameraHandler.resolutionHeight}"
         )
         set.applyTo(mBinding.layoutView)
