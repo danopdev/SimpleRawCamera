@@ -78,6 +78,7 @@ class MainActivity : AppCompatActivity() {
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilderPreview: CaptureRequest.Builder? = null
+    private var mCaptureRequestBuilderPhoto: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
     private var lastHistogramUpdate = 0L
 
@@ -140,6 +141,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var mImageReaderJpeg: ImageReader
+    private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
+        override fun onImageAvailable(imageReader: ImageReader?) {
+            if (null == imageReader) return
+            val image = imageReader.acquireLatestImage() ?: return
+            image.close()
+        }
+    }
+
+    private lateinit var mImageReaderDng: ImageReader
+    private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
+        override fun onImageAvailable(imageReader: ImageReader?) {
+            if (null == imageReader) return
+            val image = imageReader.acquireLatestImage() ?: return
+            image.close()
+        }
+    }
+
     private var mIsoValue = 100
     private var mIsoIsManual = false
     private var mIsoMeasuredValue = 100
@@ -185,10 +204,15 @@ class MainActivity : AppCompatActivity() {
 
             mCameraCaptureSession = session
 
-            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
-            captureRequestBuilder.addTarget(mImageReaderHisto.surface)
-            mCaptureRequestBuilderPreview = captureRequestBuilder
+            val captureRequestBuilderPreview = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            captureRequestBuilderPreview.addTarget(mBinding.surfaceView.holder.surface)
+            captureRequestBuilderPreview.addTarget(mImageReaderHisto.surface)
+            mCaptureRequestBuilderPreview = captureRequestBuilderPreview
+
+            val captureRequestBuilderPhoto = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_ZERO_SHUTTER_LAG)
+            captureRequestBuilderPhoto.addTarget(mImageReaderDng.surface)
+            captureRequestBuilderPhoto.addTarget(mImageReaderJpeg.surface)
+            mCaptureRequestBuilderPhoto = captureRequestBuilderPhoto
 
             setupCaptureRequest()
         }
@@ -281,7 +305,12 @@ class MainActivity : AppCompatActivity() {
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
             cameraDevice.createCaptureSession(
-                mutableListOf(mBinding.surfaceView.holder.surface, mImageReaderHisto.surface),
+                mutableListOf(
+                    mBinding.surfaceView.holder.surface,
+                    mImageReaderHisto.surface,
+                    mImageReaderJpeg.surface,
+                    mImageReaderDng.surface,
+                ),
                 mCameraCaptureSessionStateCallback,
                 Handler { true }
             )
@@ -579,6 +608,12 @@ class MainActivity : AppCompatActivity() {
             "${mCameraHandler.resolutionWidth}:${mCameraHandler.resolutionHeight}"
         )
         set.applyTo(mBinding.layoutView)
+
+        mImageReaderJpeg = ImageReader.newInstance( mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1 )
+        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, Handler{true})
+
+        mImageReaderDng = ImageReader.newInstance( mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1 )
+        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler{true})
 
         mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
 
