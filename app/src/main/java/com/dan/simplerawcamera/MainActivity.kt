@@ -60,8 +60,11 @@ class MainActivity : AppCompatActivity() {
             return bestSize
         }
 
-        fun calculateExpDeviation( visibleIso: Int, visibleSpeed: Long, expectedIso: Int, exptectedSpeed: Long ): Float
-            = ((visibleIso.toDouble() * visibleSpeed) / (expectedIso.toDouble() * exptectedSpeed)).toFloat()
+        fun calculateExpDeviation( visibleIso: Int, visibleSpeed: Long, expectedIso: Int, expectedSpeed: Long ): Float {
+            var deltaExpIso: Float = (expectedIso - visibleIso).toFloat() / expectedIso
+            var deltaExpSpeed: Float = (expectedSpeed - visibleSpeed).toFloat() / expectedSpeed
+            return deltaExpIso + deltaExpSpeed
+        }
     }
 
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
@@ -191,7 +194,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (!mIsoIsManual && !mSpeedIsManual)
-            return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 1f)
+            return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
 
         if (mIsoIsManual && mSpeedIsManual) {
             val manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
@@ -238,9 +241,10 @@ class MainActivity : AppCompatActivity() {
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
-            if (mIsoIsManual && mSpeedIsManual) return
-
             val captureEA = getCaptureEA()
+            mBinding.txtExpComponsation2.text = "%.2f".format(captureEA.third)
+
+            if (mIsoIsManual && mSpeedIsManual) return
 
             if (!mIsoIsManual)
                 showIso(captureEA.first)
