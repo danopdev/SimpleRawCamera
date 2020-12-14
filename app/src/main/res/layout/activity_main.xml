@@ -208,15 +208,6 @@
                     android:textColor="@color/teal_200"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/txtExpComponsation2"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Exp"
-                    android:textAlignment="center"
-                    android:textColor="@color/teal_200"
-                    android:textStyle="bold" />
-
                 <SeekBar
                     android:id="@+id/seekBarExpComponsation"
                     style="@style/Widget.AppCompat.SeekBar.Discrete"
@@ -271,6 +262,15 @@
                 android:layout_width="140dp"
                 android:layout_height="80dp"
                 app:srcCompat="@drawable/ic_launcher_foreground" />
+
+            <TextView
+                android:id="@+id/txtExpDelta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Exp"
+                android:textAlignment="center"
+                android:textColor="@android:color/holo_red_dark"
+                android:textStyle="bold" />
 
         </LinearLayout>
     </LinearLayout>

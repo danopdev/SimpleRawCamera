@@ -45,6 +45,8 @@ class MainActivity : AppCompatActivity() {
         const val HISTOGRAM_BITMAP_HEIGHT = 50
         const val HISTOGRAM_FREQUENCY = 500
 
+        const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
+
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
 
@@ -79,8 +81,8 @@ class MainActivity : AppCompatActivity() {
     private var mCaptureRequest: CaptureRequest? = null
     private var lastHistogramUpdate = 0L
 
-    private val mImageReaderThumb = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
-    private val mImageReaderThumbListener = object: ImageReader.OnImageAvailableListener {
+    private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
+    private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             if (null == imageReader) return
             val image = imageReader.acquireLatestImage() ?: return
@@ -185,7 +187,7 @@ class MainActivity : AppCompatActivity() {
 
             val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
-            captureRequestBuilder.addTarget(mImageReaderThumb.surface)
+            captureRequestBuilder.addTarget(mImageReaderHisto.surface)
             mCaptureRequestBuilderPreview = captureRequestBuilder
 
             setupCaptureRequest()
@@ -242,7 +244,7 @@ class MainActivity : AppCompatActivity() {
             mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
             val captureEA = getCaptureEA()
-            mBinding.txtExpComponsation2.text = "%.2f".format(captureEA.third)
+            mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
             if (mIsoIsManual && mSpeedIsManual) return
 
@@ -279,7 +281,7 @@ class MainActivity : AppCompatActivity() {
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
             cameraDevice.createCaptureSession(
-                mutableListOf(mBinding.surfaceView.holder.surface, mImageReaderThumb.surface),
+                mutableListOf(mBinding.surfaceView.holder.surface, mImageReaderHisto.surface),
                 mCameraCaptureSessionStateCallback,
                 Handler { true }
             )
@@ -365,7 +367,7 @@ class MainActivity : AppCompatActivity() {
             mBinding.btnCamera.isVisible = false
         }
 
-        mImageReaderThumb.setOnImageAvailableListener(mImageReaderThumbListener, Handler{true})
+        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, Handler{true})
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -606,9 +608,24 @@ class MainActivity : AppCompatActivity() {
         captureRequestBuilder.set( CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO )
         captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
 
-        if (preview) {
+        if (!mIsoIsManual || !mSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
+        } else {
+            var manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
+            var manualISO = mIsoValue
+            if (preview && manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
+                while (manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
+                    if ((2*manualISO) > mCameraHandler.isoRange.upper)
+                        break
+
+                    manualISO *= 2
+                    manualSpeed /= 2
+                }
+            }
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
         }
 
         val captureRequest = captureRequestBuilder.build()
