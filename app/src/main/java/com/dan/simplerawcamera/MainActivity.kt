@@ -9,6 +9,7 @@ import android.hardware.camera2.*
 import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
+import android.provider.Settings
 import android.util.Size
 import android.view.SurfaceHolder
 import android.view.View
@@ -20,6 +21,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.lang.Exception
 import java.util.*
 import kotlin.collections.ArrayList
@@ -46,6 +50,11 @@ class MainActivity : AppCompatActivity() {
         const val HISTOGRAM_FREQUENCY = 500
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
+
+        const val FOCUS_CONTINOUS = 0
+        const val FOCUS_SELECT = 1
+        const val FOCUS_HYPERFOCAL = 2
+        const val FOCUS_MANUAL = 3
 
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
@@ -84,12 +93,15 @@ class MainActivity : AppCompatActivity() {
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
+        private var isBusy = false
+
         override fun onImageAvailable(imageReader: ImageReader?) {
             if (null == imageReader) return
             val image = imageReader.acquireLatestImage() ?: return
 
             var now = System.currentTimeMillis()
-            if (now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)) {
+            if (!isBusy && now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)) {
+                isBusy = true
                 lastHistogramUpdate = now
                 val imageW = image.width
                 val imageH = image.height
@@ -99,42 +111,58 @@ class MainActivity : AppCompatActivity() {
                 val yBytes = ByteArray(yPlaneBuffer.capacity())
                 yPlaneBuffer.get(yBytes)
 
-                val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
-                for (line in 0 until imageH) {
-                    var index = line * yPlane.rowStride
-                    for (column in 0 until imageW) {
-                        var yValue = yBytes[index].toInt()
-                        if (yValue < 0) yValue += 256
-                        values[(HISTOGRAM_BITMAP_WIDTH-1)*yValue/255]++
-                        index++
+                val rowStride = yPlane.rowStride
+
+                GlobalScope.launch(Dispatchers.Main) {
+                    val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
+                    for (line in 0 until imageH) {
+                        var index = line * rowStride
+                        for (column in 0 until imageW) {
+                            var yValue = yBytes[index].toInt()
+                            if (yValue < 0) yValue += 256
+                            values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 255]++
+                            index++
+                        }
+                    }
+
+                    var maxHeight = 10
+                    for (value in values)
+                        maxHeight = max(maxHeight, value)
+                    maxHeight++
+
+                    val color = Color.rgb(192, 192, 192)
+                    val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT)
+
+                    for (x in values.indices) {
+                        val value = values[x]
+                        val fill =
+                            HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+
+                        var y = 0
+                        while (y < fill) {
+                            colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
+                            y++
+                        }
+                        while (y < HISTOGRAM_BITMAP_HEIGHT) {
+                            colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
+                            y++
+                        }
+                    }
+
+                    val bitmap = Bitmap.createBitmap(
+                        colors,
+                        0,
+                        HISTOGRAM_BITMAP_WIDTH,
+                        HISTOGRAM_BITMAP_WIDTH,
+                        HISTOGRAM_BITMAP_HEIGHT,
+                        Bitmap.Config.ARGB_8888
+                    )
+
+                    runOnUiThread {
+                        mBinding.imgHistogram.setImageBitmap(bitmap)
+                        isBusy = false
                     }
                 }
-
-                var maxHeight = 10
-                for (value in values)
-                    maxHeight = max(maxHeight, value)
-                maxHeight++
-
-                val color = Color.rgb(192, 192, 192)
-                val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT )
-
-                for (x in values.indices) {
-                    val value = values[x]
-                    val fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
-
-                    var y = 0
-                    while (y < fill) {
-                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
-                        y++
-                    }
-                    while (y < HISTOGRAM_BITMAP_HEIGHT) {
-                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
-                        y++
-                    }
-                }
-
-                val bitmap = Bitmap.createBitmap(colors, 0, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_HEIGHT, Bitmap.Config.ARGB_8888)
-                mBinding.imgHistogram.setImageBitmap(bitmap)
             }
 
             image.close()
@@ -169,6 +197,9 @@ class MainActivity : AppCompatActivity() {
     private var mSpeedMeasuredValue = 1L
 
     private var mExposureCompensationValue = 0
+
+    private var mFocusType = FOCUS_CONTINOUS
+    private var mFocusValue = 0f
 
     private var mRotatedPreviewWidth = 4
     private var mRotatedPreviewHeight = 3
@@ -565,6 +596,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showFocus() {
+        if (mCameraHandler.focusAllowManual) {
+            when(mFocusType) {
+                FOCUS_SELECT -> {
+                    mBinding.txtFocus.text = "Focus: Click"
+                    mBinding.txtFocus.isVisible = true
+                    mBinding.seekBarSpeed.isVisible = false
+                }
+
+                FOCUS_HYPERFOCAL -> {
+                    mBinding.txtFocus.text = "Focus: Hyperfocal"
+                    mBinding.txtFocus.isVisible = true
+                    mBinding.seekBarSpeed.isVisible = false
+                }
+
+                FOCUS_MANUAL -> {
+                    mBinding.txtFocus.text = "Focus: Manual"
+                    mBinding.txtFocus.isVisible = true
+                    mBinding.seekBarSpeed.isVisible = true
+                }
+
+                else -> {
+                    mBinding.txtFocus.text = "Focus: Auto"
+                    mBinding.txtFocus.isVisible = true
+                    mBinding.seekBarSpeed.isVisible = false
+                }
+            }
+
+        } else {
+            mBinding.txtFocus.isVisible = false
+            mBinding.seekBarFocus.isVisible = false
+        }
+    }
+
     private fun updateSliders() {
         mBinding.seekBarIso.visibility = if (mIsoIsManual) View.VISIBLE else View.INVISIBLE
         mBinding.seekBarSpeed.visibility = if (mSpeedIsManual) View.VISIBLE else View.INVISIBLE
@@ -616,6 +681,8 @@ class MainActivity : AppCompatActivity() {
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler{true})
 
         mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
+
+        showFocus()
 
         updateSliders()
     }
