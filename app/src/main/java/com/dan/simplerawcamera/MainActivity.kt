@@ -447,9 +447,12 @@ class MainActivity : AppCompatActivity() {
             selectCamera((mCameraIndex + 1) % mCameraList.size)
         }
 
+        mCameraHandler = mCameraList[0]
+
         showIso(mIsoValue)
         showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
         showExpComponsation(mExposureCompensationValue)
+        showFocus()
 
         SeekBarDirectionTracker.track( mBinding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
         SeekBarDirectionTracker.track( mBinding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
@@ -601,32 +604,32 @@ class MainActivity : AppCompatActivity() {
             when(mFocusType) {
                 FOCUS_SELECT -> {
                     mBinding.txtFocus.text = "Focus: Click"
-                    mBinding.txtFocus.isVisible = true
-                    mBinding.seekBarSpeed.isVisible = false
+                    mBinding.txtFocus.visibility = View.VISIBLE
+                    mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
 
                 FOCUS_HYPERFOCAL -> {
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
-                    mBinding.txtFocus.isVisible = true
-                    mBinding.seekBarSpeed.isVisible = false
+                    mBinding.txtFocus.visibility = View.VISIBLE
+                    mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
 
                 FOCUS_MANUAL -> {
                     mBinding.txtFocus.text = "Focus: Manual"
-                    mBinding.txtFocus.isVisible = true
-                    mBinding.seekBarSpeed.isVisible = true
+                    mBinding.txtFocus.visibility = View.VISIBLE
+                    mBinding.seekBarFocus.visibility = View.VISIBLE
                 }
 
                 else -> {
                     mBinding.txtFocus.text = "Focus: Auto"
-                    mBinding.txtFocus.isVisible = true
-                    mBinding.seekBarSpeed.isVisible = false
+                    mBinding.txtFocus.visibility = View.VISIBLE
+                    mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
             }
 
         } else {
-            mBinding.txtFocus.isVisible = false
-            mBinding.seekBarFocus.isVisible = false
+            mBinding.txtFocus.visibility = View.INVISIBLE
+            mBinding.seekBarFocus.visibility = View.INVISIBLE
         }
     }
 
@@ -641,6 +644,8 @@ class MainActivity : AppCompatActivity() {
 
         if (mSpeedIsManual)
             showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
+
+        showFocus()
 
         setupCaptureRequest()
     }
@@ -680,11 +685,9 @@ class MainActivity : AppCompatActivity() {
         mImageReaderDng = ImageReader.newInstance( mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1 )
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler{true})
 
-        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
-
-        showFocus()
-
         updateSliders()
+
+        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true } )
     }
 
     private fun askPermissions(): Boolean {
