@@ -30,6 +30,7 @@ import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.system.exitProcess
 
 
@@ -719,6 +720,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             var manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
             var manualISO = mIsoValue
+
             if (preview && manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
                 while (manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
                     if ((2*manualISO) > mCameraHandler.isoRange.upper)
@@ -727,7 +729,10 @@ class MainActivity : AppCompatActivity() {
                     manualISO *= 2
                     manualSpeed /= 2
                 }
+
+                manualSpeed = min(MANUAL_MIN_SPEED_PREVIEW, manualSpeed)
             }
+
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
