@@ -5,6 +5,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
+import android.util.Log
 import android.util.Range
 import android.util.Rational
 
@@ -19,6 +20,7 @@ class CameraHandler(
     val exposureCompensantionMulitplyFactor: Int,
     val focusRange: Range<Float>,
     val focusHyperfocalDistance: Float,
+    val focusAllowManual: Boolean,
     val hasFlash: Boolean,
     val sensorOrientation: Int,
     val streamConfigurationMap: StreamConfigurationMap,
@@ -54,6 +56,8 @@ class CameraHandler(
                         val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
                         val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
                         val focusRange = Range(0f, focusMinDistance)
+                        val focusModes = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) as IntArray
+                        val focusMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) as Int
 
                         val hasFlash =
                             if (CameraCharacteristics.FLASH_INFO_AVAILABLE in keys)
@@ -81,6 +85,7 @@ class CameraHandler(
                                 exposureCompensantionMulitplyFactor,
                                 focusRange,
                                 focusHyperfocalDistance,
+                                focusMaxRegions >= 1,
                                 hasFlash,
                                 sensorOrientation,
                                 streamConfigurationMap,
