@@ -45,7 +45,20 @@ class CameraHandler(
                         val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
                         val isoBoostRange = characteristics.get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE) as Range<Int>
 
+                        Log.i("CAM ${cameraId}", "ISO Range: ${isoRange.lower} - ${isoRange.upper}")
+                        Log.i("CAM ${cameraId}", "ISO Boost Range: ${isoBoostRange.lower} - ${isoBoostRange.upper}")
+
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
+
+                        val aeMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE) as Int
+                        Log.i("CAM ${cameraId}", "aeMaxRegions: ${aeMaxRegions}")
+
+                        val faceMax = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT) as Int
+                        val faceModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES) as IntArray
+                        var str = ""
+                        faceModes.forEach { str += " " + it.toString() }
+                        Log.i("CAM ${cameraId}", "faceMax: ${faceMax}")
+                        Log.i("CAM ${cameraId}", "faceModes: ${str}")
 
                         val exposureCompensantionRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
                         val exposureCompensantionStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
