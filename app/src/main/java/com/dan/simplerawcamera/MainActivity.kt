@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity() {
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
         const val HISTOGRAM_FREQUENCY = 500
+        const val HISTOGRAM_LIGHT_MAX_ZONES = 16
+        const val HISTOGRAM_LIGHT_THRESHOLD = 250
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
 
@@ -91,6 +93,7 @@ class MainActivity : AppCompatActivity() {
     private var mCaptureRequestBuilderPhoto: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
     private var lastHistogramUpdate = 0L
+    private var lightestZone = -1
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -115,6 +118,10 @@ class MainActivity : AppCompatActivity() {
                 val rowStride = yPlane.rowStride
 
                 GlobalScope.launch(Dispatchers.Main) {
+                    val lightZones = IntArray( HISTOGRAM_LIGHT_MAX_ZONES * HISTOGRAM_LIGHT_MAX_ZONES)
+                    var lightestZone = -1
+                    var lightestZoneValue = 0
+
                     val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
                     for (line in 0 until imageH) {
                         var index = line * rowStride
@@ -123,6 +130,17 @@ class MainActivity : AppCompatActivity() {
                             if (yValue < 0) yValue += 256
                             values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 255]++
                             index++
+
+                            if (yValue >= HISTOGRAM_LIGHT_THRESHOLD) {
+                                val lightZoneY = HISTOGRAM_LIGHT_MAX_ZONES * line / imageH
+                                val lightZoneX = HISTOGRAM_LIGHT_MAX_ZONES * column / imageW
+                                val lightZone = lightZoneY * HISTOGRAM_LIGHT_MAX_ZONES + lightZoneX
+                                lightZones[lightZone]++
+                                if (lightZones[lightZone] > lightestZoneValue) {
+                                    lightestZoneValue = lightZones[lightZone]
+                                    lightestZone = lightZone
+                                }
+                            }
                         }
                     }
 
