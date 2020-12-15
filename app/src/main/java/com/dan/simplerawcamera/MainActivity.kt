@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
-        const val HISTOGRAM_LIGHT_MAX_ZONES = 10
+        const val HISTOGRAM_LIGHT_MAX_ZONES = 8
         const val HISTOGRAM_LIGHT_THRESHOLD = 250
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
@@ -864,7 +864,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 else -> {
-                    val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
+                    val rectangle = MeteringRectangle( 0, 0, mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, MeteringRectangle.METERING_WEIGHT_MAX)
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                     mBinding.frameView.hideFocusZone()
@@ -873,7 +873,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (-1 == mExposureLightestZone || EXPOSURE_TYPE_NORMAL == mExposureType) {
-            val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
+            val rectangle = MeteringRectangle( 0, 0, mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, MeteringRectangle.METERING_WEIGHT_MAX)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
             mBinding.frameView.hideExpZone()
         } else {
