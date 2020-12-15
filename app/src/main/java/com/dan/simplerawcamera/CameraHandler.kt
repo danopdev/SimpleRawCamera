@@ -8,6 +8,8 @@ import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Log
 import android.util.Range
 import android.util.Rational
+import kotlin.math.max
+import kotlin.math.min
 
 class CameraHandler(
     val cameraManager: CameraManager,
@@ -42,11 +44,12 @@ class CameraHandler(
 
                         if ((characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int) < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
 
-                        val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
+                        val isoRealRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
                         val isoBoostRange = characteristics.get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE) as Range<Int>
 
-                        Log.i("CAM ${cameraId}", "ISO Range: ${isoRange.lower} - ${isoRange.upper}")
+                        Log.i("CAM ${cameraId}", "ISO Range: ${isoRealRange.lower} - ${isoRealRange.upper}")
                         Log.i("CAM ${cameraId}", "ISO Boost Range: ${isoBoostRange.lower} - ${isoBoostRange.upper}")
+                        val isoRange = Range(min(isoRealRange.lower, isoBoostRange.lower), max(isoRealRange.upper, isoBoostRange.upper))
 
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
 
