@@ -111,7 +111,6 @@ class MainActivity : AppCompatActivity() {
             if (null == imageReader) return
             val image = imageReader.acquireLatestImage() ?: return
 
-            var now = System.currentTimeMillis()
             if (!isBusy) {
                 isBusy = true
                 val imageW = image.width
@@ -802,10 +801,12 @@ class MainActivity : AppCompatActivity() {
                 FOCUS_TYPE_HYPERFOCAL -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
+                    mBinding.frameView.hideFocusZone()
                 }
 
                 FOCUS_TYPE_CLICK -> {
                     if (mFocusClick) {
+                        mFocusClick = false
                         val delta = mCameraHandler.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
                         val x = mCameraHandler.resolutionWidth * mFocusClickPosition.x / 100
                         val y = mCameraHandler.resolutionWidth * mFocusClickPosition.y / 100
@@ -820,6 +821,13 @@ class MainActivity : AppCompatActivity() {
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START)
                         }
+
+                        mBinding.frameView.showFocusZone( Rect(
+                            mFocusClickPosition.x - FOCUS_REGION_SIZE_PERCENT,
+                            mFocusClickPosition.y - FOCUS_REGION_SIZE_PERCENT,
+                            mFocusClickPosition.x + FOCUS_REGION_SIZE_PERCENT,
+                            mFocusClickPosition.y + FOCUS_REGION_SIZE_PERCENT
+                        ) )
                     }
                 }
 
@@ -828,12 +836,14 @@ class MainActivity : AppCompatActivity() {
                             (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                    mBinding.frameView.hideFocusZone()
                 }
 
                 else -> {
                     val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                    mBinding.frameView.hideFocusZone()
                 }
             }
         }
