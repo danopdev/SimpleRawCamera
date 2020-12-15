@@ -227,7 +227,6 @@ class MainActivity : AppCompatActivity() {
     private var mExposureType = EXPOSURE_TYPE_NORMAL
 
     private var mFocusType = FOCUS_TYPE_CONTINOUS
-    private var mFocusValue = 0f
     private var mFocusClick = false
     private var mFocusClickPosition = Point(0,0)
 
