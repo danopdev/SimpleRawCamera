@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
             val image = imageReader.acquireLatestImage() ?: return
 
             var now = System.currentTimeMillis()
-            if (!isBusy && now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)) {
+            if (!isBusy /*&& now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)*/) {
                 isBusy = true
                 lastHistogramUpdate = now
                 val imageW = image.width
