@@ -875,7 +875,7 @@ class MainActivity : AppCompatActivity() {
         if (-1 == mExposureLightestZone || EXPOSURE_TYPE_NORMAL == mExposureType) {
             val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
-            mBinding.frameView.hideFocusZone()
+            mBinding.frameView.hideExpZone()
         } else {
             val zoneY = mExposureLightestZone / HISTOGRAM_LIGHT_MAX_ZONES
             val zoneX = mExposureLightestZone % HISTOGRAM_LIGHT_MAX_ZONES
