@@ -28,7 +28,7 @@ class FrameView : View {
     private val mPaintDark = Paint()
     private val mPaintLight = Paint()
 
-    private var mShowRatio = true
+    private var mShowRatio = false
     private var mRatioWidth = 3
     private var mRatioHeight = 2
 
@@ -39,10 +39,6 @@ class FrameView : View {
     private val mShowFocusLight = Paint()
     private var mShowFocusTimer: Timer? = null
 
-    private var mShowExpZone = false
-    private var mShowExpZoneRect = Rect(0, 0, 0, 0)
-    private val mShowExpLight = Paint()
-
     constructor(context: Context) : super(context, null) { init() }
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) { init() }
@@ -50,7 +46,7 @@ class FrameView : View {
     private fun init() {
         with(mPaintDark) {
             strokeWidth = LINE_WIDTH.toFloat()
-            color = Color.rgb(160, 160, 160)
+            color = Color.rgb(0, 0, 0)
             style = Paint.Style.STROKE
         }
 
@@ -63,12 +59,6 @@ class FrameView : View {
         with(mShowFocusLight) {
             strokeWidth = LINE_WIDTH.toFloat()
             color = Color.rgb(255, 255, 0)
-            style = Paint.Style.STROKE
-        }
-
-        with(mShowExpLight) {
-            strokeWidth = LINE_WIDTH.toFloat()
-            color = Color.rgb(128, 255, 255)
             style = Paint.Style.STROKE
         }
     }
@@ -105,21 +95,6 @@ class FrameView : View {
             mShowFocusTimer = null
 
             mShowFocusZone = false
-            invalidate()
-        }
-    }
-
-    fun showExpZone(rect: Rect) {
-        if (!mShowExpZone || !mShowExpZoneRect.equals(rect)) {
-            mShowExpZoneRect = rect
-            mShowExpZone = true
-            invalidate()
-        }
-    }
-
-    fun hideExpZone() {
-        if (mShowExpZone) {
-            mShowExpZone = false
             invalidate()
         }
     }
@@ -232,15 +207,6 @@ class FrameView : View {
             val y2 = mShowFocusZoneRect.bottom * windowHeight / 100
             canvas.drawRect(Rect(x1 - LINE_WIDTH / 2, y1 - LINE_WIDTH / 2, x2 + LINE_WIDTH / 2, y2 + LINE_WIDTH / 2), mPaintDark)
             canvas.drawRect(Rect(x1 + LINE_WIDTH / 2, y1 + LINE_WIDTH / 2, x2 - LINE_WIDTH / 2, y2 - LINE_WIDTH / 2), mShowFocusLight)
-        }
-
-        if (mShowExpZone) {
-            val x1 = mShowExpZoneRect.left * windowWidth / 100
-            val y1 = mShowExpZoneRect.top * windowHeight / 100
-            val x2 = mShowExpZoneRect.right * windowWidth / 100
-            val y2 = mShowExpZoneRect.bottom * windowHeight / 100
-            canvas.drawRect(Rect(x1 - LINE_WIDTH / 2, y1 - LINE_WIDTH / 2, x2 + LINE_WIDTH / 2, y2 + LINE_WIDTH / 2), mPaintDark)
-            canvas.drawRect(Rect(x1 + LINE_WIDTH / 2, y1 + LINE_WIDTH / 2, x2 - LINE_WIDTH / 2, y2 - LINE_WIDTH / 2), mShowExpLight)
         }
     }
 }

@@ -52,8 +52,6 @@ class MainActivity : AppCompatActivity() {
 
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
-        const val HISTOGRAM_LIGHT_MAX_ZONES = 8
-        const val HISTOGRAM_LIGHT_THRESHOLD = 250
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
 
@@ -64,10 +62,6 @@ class MainActivity : AppCompatActivity() {
         const val FOCUS_TYPE_HYPERFOCAL = 2
         const val FOCUS_TYPE_MANUAL = 3
         const val FOCUS_TYPE_MAX = 4
-
-        const val EXPOSURE_TYPE_NORMAL = 0
-        const val EXPOSURE_TYPE_LIGHT = 1
-        const val EXPOSURE_TYPE_MAX = 2
 
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
@@ -124,10 +118,6 @@ class MainActivity : AppCompatActivity() {
                 val rowStride = yPlane.rowStride
 
                 GlobalScope.launch(Dispatchers.Main) {
-                    val lightZones = IntArray( HISTOGRAM_LIGHT_MAX_ZONES * HISTOGRAM_LIGHT_MAX_ZONES)
-                    var lightestZoneValue = 0
-                    var lightestZone = -1
-
                     val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
                     for (line in 0 until imageH) {
                         var index = line * rowStride
@@ -136,22 +126,8 @@ class MainActivity : AppCompatActivity() {
                             if (yValue < 0) yValue += 256
                             values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 255]++
                             index++
-
-                            if (yValue >= HISTOGRAM_LIGHT_THRESHOLD) {
-                                val lightZoneY = HISTOGRAM_LIGHT_MAX_ZONES * line / imageH
-                                val lightZoneX = HISTOGRAM_LIGHT_MAX_ZONES * column / imageW
-                                val lightZone = lightZoneY * HISTOGRAM_LIGHT_MAX_ZONES + lightZoneX
-                                lightZones[lightZone]++
-                                if (lightZones[lightZone] > lightestZoneValue) {
-                                    lightestZoneValue = lightZones[lightZone]
-                                    lightestZone = lightZone
-                                }
-                            }
                         }
                     }
-
-                    if (lightestZoneValue > 0 && mExposureLightestZone >= 0 && lightestZoneValue == lightZones[mExposureLightestZone])
-                        lightestZone = mExposureLightestZone
 
                     var maxHeight = 10
                     for (value in values)
@@ -187,12 +163,6 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     runOnUiThread {
-                        if (lightestZone != mExposureLightestZone) {
-                            mExposureLightestZone = lightestZone
-                            if (EXPOSURE_TYPE_LIGHT == mExposureType)
-                                setupCaptureRequest()
-                        }
-
                         mBinding.imgHistogram.setImageBitmap(bitmap)
                         isBusy = false
                     }
@@ -231,8 +201,6 @@ class MainActivity : AppCompatActivity() {
     private var mSpeedMeasuredValue = 1L
 
     private var mExposureCompensationValue = 0
-    private var mExposureLightestZone = -1
-    private var mExposureType = EXPOSURE_TYPE_NORMAL
 
     private var mFocusType = FOCUS_TYPE_CONTINOUS
     private var mFocusClick = false
@@ -513,12 +481,6 @@ class MainActivity : AppCompatActivity() {
             updateSliders()
         }
 
-        mBinding.txtExpComponsation.setOnClickListener {
-            mExposureType = (mExposureType + 1) % EXPOSURE_TYPE_MAX
-            showExpComponsation(mExposureCompensationValue)
-            setupCaptureRequest()
-        }
-
         mBinding.txtFocus.setOnClickListener {
             if (mCameraHandler.focusAllowManual) {
                 mFocusType = (mFocusType + 1) % FOCUS_TYPE_MAX
@@ -599,13 +561,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showExpComponsation( value: Int ) {
-        var exp = "Exp "
+        var exp = "Exp: "
 
-        when(mExposureType) {
-            EXPOSURE_TYPE_LIGHT -> exp += "(L)"
-        }
-
-        exp += ": "
         if (value >= 0) {
             exp += "+${value}"
         } else {
@@ -843,7 +800,7 @@ class MainActivity : AppCompatActivity() {
                             val rectangle = MeteringRectangle( x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START)
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
                         }
 
                         mBinding.frameView.showFocusZone( Rect(
@@ -870,30 +827,6 @@ class MainActivity : AppCompatActivity() {
                     mBinding.frameView.hideFocusZone()
                 }
             }
-        }
-
-        if (-1 == mExposureLightestZone || EXPOSURE_TYPE_NORMAL == mExposureType) {
-            val rectangle = MeteringRectangle( 0, 0, mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, MeteringRectangle.METERING_WEIGHT_MAX)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
-            mBinding.frameView.hideExpZone()
-        } else {
-            val zoneY = mExposureLightestZone / HISTOGRAM_LIGHT_MAX_ZONES
-            val zoneX = mExposureLightestZone % HISTOGRAM_LIGHT_MAX_ZONES
-
-            val x1Percent = 100 * zoneX / HISTOGRAM_LIGHT_MAX_ZONES
-            val y1Percent = 100 * zoneY / HISTOGRAM_LIGHT_MAX_ZONES
-            val x2Percent = 100 * (zoneX + 1) / HISTOGRAM_LIGHT_MAX_ZONES
-            val y2Percent = 100 * (zoneY + 1) / HISTOGRAM_LIGHT_MAX_ZONES
-
-            val x1 = mCameraHandler.resolutionWidth * x1Percent / 100
-            val y1 = mCameraHandler.resolutionHeight * y1Percent / 100
-            val x2 = mCameraHandler.resolutionWidth * x2Percent / 100
-            val y2 = mCameraHandler.resolutionHeight * y2Percent / 100
-
-            mBinding.frameView.showExpZone( Rect(x1Percent, y1Percent, x2Percent, y2Percent) )
-
-            //val rectangle = MeteringRectangle( x1, y1, x2, y2, MeteringRectangle.METERING_WEIGHT_MIN)
-            //captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
         }
 
         val captureRequest = captureRequestBuilder.build()
