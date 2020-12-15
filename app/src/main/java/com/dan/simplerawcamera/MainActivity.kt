@@ -193,8 +193,6 @@ class MainActivity : AppCompatActivity() {
                                 setupCaptureRequest()
                         }
 
-                        Log.i("LIGHTEST_ZONE", lightestZone.toString())
-
                         mBinding.imgHistogram.setImageBitmap(bitmap)
                         isBusy = false
                     }
