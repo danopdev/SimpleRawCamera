@@ -4,6 +4,7 @@ package com.dan.simplerawcamera
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import java.util.*
 import kotlin.concurrent.timer
@@ -58,7 +59,7 @@ class FrameView : View {
 
         with(mShowExpLight) {
             strokeWidth = 1f
-            color = Color.rgb(0, 255, 255)
+            color = Color.rgb(128, 255, 255)
             style = Paint.Style.STROKE
         }
     }

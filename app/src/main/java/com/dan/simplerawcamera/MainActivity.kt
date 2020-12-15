@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
-        const val HISTOGRAM_LIGHT_MAX_ZONES = 16
+        const val HISTOGRAM_LIGHT_MAX_ZONES = 10
         const val HISTOGRAM_LIGHT_THRESHOLD = 250
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
@@ -125,8 +125,8 @@ class MainActivity : AppCompatActivity() {
 
                 GlobalScope.launch(Dispatchers.Main) {
                     val lightZones = IntArray( HISTOGRAM_LIGHT_MAX_ZONES * HISTOGRAM_LIGHT_MAX_ZONES)
-                    var lightestZone = -1
                     var lightestZoneValue = 0
+                    var lightestZone = -1
 
                     val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
                     for (line in 0 until imageH) {
@@ -149,6 +149,9 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                     }
+
+                    if (lightestZoneValue > 0 && mExposureLightestZone >= 0 && lightestZoneValue == lightZones[mExposureLightestZone])
+                        lightestZone = mExposureLightestZone
 
                     var maxHeight = 10
                     for (value in values)
@@ -184,7 +187,14 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     runOnUiThread {
-                        mExposureLightestZone = lightestZone
+                        if (lightestZone != mExposureLightestZone) {
+                            mExposureLightestZone = lightestZone
+                            if (EXPOSURE_TYPE_LIGHT == mExposureType)
+                                setupCaptureRequest()
+                        }
+
+                        Log.i("LIGHTEST_ZONE", lightestZone.toString())
+
                         mBinding.imgHistogram.setImageBitmap(bitmap)
                         isBusy = false
                     }
@@ -445,6 +455,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun onPermissionsAllowed() {
         if (mCameraList.size <= 0) {
             fatalError("No valid camera found !")
@@ -502,6 +513,12 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtSpeed.setOnClickListener {
             mSpeedIsManual = !mSpeedIsManual
             updateSliders()
+        }
+
+        mBinding.txtExpComponsation.setOnClickListener {
+            mExposureType = (mExposureType + 1) % EXPOSURE_TYPE_MAX
+            showExpComponsation(mExposureCompensationValue)
+            setupCaptureRequest()
         }
 
         mBinding.txtFocus.setOnClickListener {
@@ -584,11 +601,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showExpComponsation( value: Int ) {
-        mBinding.txtExpComponsation.text = "Exp: " +
-            if (value >= 0)
-                "+${value}"
-            else
-                value.toString()
+        var exp = "Exp "
+
+        when(mExposureType) {
+            EXPOSURE_TYPE_LIGHT -> exp += "(L)"
+        }
+
+        exp += ": "
+        if (value >= 0) {
+            exp += "+${value}"
+        } else {
+            exp += value.toString()
+        }
+
+        mBinding.txtExpComponsation.text = exp
     }
 
     private fun speedToNanoseconds( numerator: Int, denominator: Int ): Long = 100000000L * numerator / denominator
@@ -704,6 +730,7 @@ class MainActivity : AppCompatActivity() {
             showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
 
         showFocus()
+        showExpComponsation(mExposureCompensationValue)
 
         setupCaptureRequest()
     }
@@ -845,6 +872,30 @@ class MainActivity : AppCompatActivity() {
                     mBinding.frameView.hideFocusZone()
                 }
             }
+        }
+
+        if (-1 == mExposureLightestZone || EXPOSURE_TYPE_NORMAL == mExposureType) {
+            val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
+            mBinding.frameView.hideFocusZone()
+        } else {
+            val zoneY = mExposureLightestZone / HISTOGRAM_LIGHT_MAX_ZONES
+            val zoneX = mExposureLightestZone % HISTOGRAM_LIGHT_MAX_ZONES
+
+            val x1Percent = 100 * zoneX / HISTOGRAM_LIGHT_MAX_ZONES
+            val y1Percent = 100 * zoneY / HISTOGRAM_LIGHT_MAX_ZONES
+            val x2Percent = 100 * (zoneX + 1) / HISTOGRAM_LIGHT_MAX_ZONES
+            val y2Percent = 100 * (zoneY + 1) / HISTOGRAM_LIGHT_MAX_ZONES
+
+            val x1 = mCameraHandler.resolutionWidth * x1Percent / 100
+            val y1 = mCameraHandler.resolutionHeight * y1Percent / 100
+            val x2 = mCameraHandler.resolutionWidth * x2Percent / 100
+            val y2 = mCameraHandler.resolutionHeight * y2Percent / 100
+
+            mBinding.frameView.showExpZone( Rect(x1Percent, y1Percent, x2Percent, y2Percent) )
+
+            //val rectangle = MeteringRectangle( x1, y1, x2, y2, MeteringRectangle.METERING_WEIGHT_MIN)
+            //captureRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, arrayOf(rectangle))
         }
 
         val captureRequest = captureRequestBuilder.build()
