@@ -6,11 +6,14 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.hardware.camera2.*
+import android.hardware.camera2.params.MeteringRectangle
 import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
+import android.util.Log
 import android.util.Size
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
@@ -55,8 +58,10 @@ class MainActivity : AppCompatActivity() {
 
         const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
 
+        const val FOCUS_REGION_SIZE_PERCENT = 5
+
         const val FOCUS_CONTINOUS = 0
-        const val FOCUS_SELECT = 1
+        const val FOCUS_CLICK = 1
         const val FOCUS_HYPERFOCAL = 2
         const val FOCUS_MANUAL = 3
         const val FOCUS_MAX = 4
@@ -221,6 +226,8 @@ class MainActivity : AppCompatActivity() {
 
     private var mFocusType = FOCUS_CONTINOUS
     private var mFocusValue = 0f
+    private var mFocusClick = false
+    private var mFocusClickPosition = Point(0,0)
 
     private var mRotatedPreviewWidth = 4
     private var mRotatedPreviewHeight = 3
@@ -499,9 +506,24 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtFocus.setOnClickListener {
             if (mCameraHandler.focusAllowManual) {
                 mFocusType = (mFocusType + 1) % FOCUS_MAX
+                mFocusClick = false
                 showFocus()
                 setupCaptureRequest()
             }
+        }
+
+        mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
+            if (mCameraHandler.focusAllowManual && FOCUS_CLICK == mFocusType) {
+                if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
+                    mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
+                    mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
+                    mFocusClick = true
+                    Log.i("FOCUS_CLICK", "( ${mFocusClickPosition.x}, ${mFocusClickPosition.y} )")
+                    setupCaptureRequest()
+                }
+            }
+
+            false
         }
     }
 
@@ -638,7 +660,7 @@ class MainActivity : AppCompatActivity() {
     private fun showFocus() {
         if (mCameraHandler.focusAllowManual) {
             when(mFocusType) {
-                FOCUS_SELECT -> {
+                FOCUS_CLICK -> {
                     mBinding.txtFocus.text = "Focus: Click"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.INVISIBLE
@@ -780,9 +802,23 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
                 }
 
-                FOCUS_SELECT -> {
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                    //captureRequestBuilder.set(CaptureRequest., mCameraHandler.focusHyperfocalDistance)
+                FOCUS_CLICK -> {
+                    if (mFocusClick) {
+                        val delta = mCameraHandler.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
+                        val x = mCameraHandler.resolutionWidth * mFocusClickPosition.x / 100
+                        val y = mCameraHandler.resolutionWidth * mFocusClickPosition.y / 100
+                        val x1 = max( 0, x - delta )
+                        val y1 = max( 0, y - delta )
+                        val x2 = min( mCameraHandler.resolutionWidth, x + delta )
+                        val y2 = min( mCameraHandler.resolutionHeight, y + delta )
+
+                        if (y2 > y1 && x2 > x1) {
+                            val rectangle = MeteringRectangle( x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START)
+                        }
+                    }
                 }
 
                 FOCUS_MANUAL -> {
@@ -792,7 +828,11 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                 }
 
-                else -> captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                else -> {
+                    val rectangle = MeteringRectangle( 0, 0, 0, 0, MeteringRectangle.METERING_WEIGHT_MIN)
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                }
             }
         }
 
