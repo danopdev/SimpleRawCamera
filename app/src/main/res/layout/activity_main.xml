@@ -159,7 +159,8 @@
                     android:progressBackgroundTintMode="add"
                     android:progressTint="@color/teal_200"
                     android:progressTintMode="add"
-                    android:thumbTint="@color/white" />
+                    android:thumbTint="@color/white"
+                    tools:visibility="invisible" />
 
             </LinearLayout>
 
@@ -189,7 +190,8 @@
                     android:progressBackgroundTintMode="add"
                     android:progressTint="@color/teal_200"
                     android:progressTintMode="add"
-                    android:thumbTint="@color/white" />
+                    android:thumbTint="@color/white"
+                    android:visibility="invisible" />
 
             </LinearLayout>
 
@@ -219,7 +221,8 @@
                     android:progressBackgroundTintMode="add"
                     android:progressTint="@color/teal_200"
                     android:progressTintMode="add"
-                    android:thumbTint="@color/white" />
+                    android:thumbTint="@color/white"
+                    android:visibility="invisible" />
 
             </LinearLayout>
 
@@ -247,7 +250,8 @@
                     android:progressBackgroundTintMode="add"
                     android:progressTint="@color/teal_200"
                     android:progressTintMode="add"
-                    android:thumbTint="@color/white" />
+                    android:thumbTint="@color/white"
+                    android:visibility="invisible" />
 
             </LinearLayout>
 

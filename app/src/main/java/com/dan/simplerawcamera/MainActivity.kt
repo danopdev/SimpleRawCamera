@@ -14,6 +14,7 @@ import android.util.Size
 import android.view.SurfaceHolder
 import android.view.View
 import android.view.WindowManager
+import android.widget.SeekBar
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
@@ -58,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         const val FOCUS_SELECT = 1
         const val FOCUS_HYPERFOCAL = 2
         const val FOCUS_MANUAL = 3
+        const val FOCUS_MAX = 4
 
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
@@ -468,14 +470,21 @@ class MainActivity : AppCompatActivity() {
 
         mCameraHandler = mCameraList[0]
 
-        showIso(mIsoValue)
-        showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
-        showExpComponsation(mExposureCompensationValue)
-        showFocus()
-
         SeekBarDirectionTracker.track( mBinding.seekBarIso ) { delta, isFinal -> trackIso( delta, isFinal ) }
         SeekBarDirectionTracker.track( mBinding.seekBarSpeed ) { delta, isFinal -> trackSpeed( delta, isFinal ) }
         SeekBarDirectionTracker.track( mBinding.seekBarExpComponsation ) { delta, isFinal -> trackExpComponsation( delta, isFinal ) }
+
+        mBinding.seekBarFocus.setOnSeekBarChangeListener( object: SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, user: Boolean) {
+                setupCaptureRequest()
+            }
+
+            override fun onStartTrackingTouch(p0: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(p0: SeekBar?) {
+            }
+        })
 
         mBinding.txtIso.setOnClickListener {
             mIsoIsManual = !mIsoIsManual
@@ -485,6 +494,14 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtSpeed.setOnClickListener {
             mSpeedIsManual = !mSpeedIsManual
             updateSliders()
+        }
+
+        mBinding.txtFocus.setOnClickListener {
+            if (mCameraHandler.focusAllowManual) {
+                mFocusType = (mFocusType + 1) % FOCUS_MAX
+                showFocus()
+                setupCaptureRequest()
+            }
         }
     }
 
@@ -754,6 +771,29 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
+        }
+
+        if (mCameraHandler.focusAllowManual) {
+            when(mFocusType) {
+                FOCUS_HYPERFOCAL -> {
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
+                }
+
+                FOCUS_SELECT -> {
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                    //captureRequestBuilder.set(CaptureRequest., mCameraHandler.focusHyperfocalDistance)
+                }
+
+                FOCUS_MANUAL -> {
+                    val distance = mCameraHandler.focusRange.lower +
+                            (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                }
+
+                else -> captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+            }
         }
 
         val captureRequest = captureRequestBuilder.build()
