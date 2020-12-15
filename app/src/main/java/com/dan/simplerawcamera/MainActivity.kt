@@ -52,7 +52,6 @@ class MainActivity : AppCompatActivity() {
 
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
-        const val HISTOGRAM_FREQUENCY = 500
         const val HISTOGRAM_LIGHT_MAX_ZONES = 16
         const val HISTOGRAM_LIGHT_THRESHOLD = 250
 
@@ -60,11 +59,15 @@ class MainActivity : AppCompatActivity() {
 
         const val FOCUS_REGION_SIZE_PERCENT = 5
 
-        const val FOCUS_CONTINOUS = 0
-        const val FOCUS_CLICK = 1
-        const val FOCUS_HYPERFOCAL = 2
-        const val FOCUS_MANUAL = 3
-        const val FOCUS_MAX = 4
+        const val FOCUS_TYPE_CONTINOUS = 0
+        const val FOCUS_TYPE_CLICK = 1
+        const val FOCUS_TYPE_HYPERFOCAL = 2
+        const val FOCUS_TYPE_MANUAL = 3
+        const val FOCUS_TYPE_MAX = 4
+
+        const val EXPOSURE_TYPE_NORMAL = 0
+        const val EXPOSURE_TYPE_LIGHT = 1
+        const val EXPOSURE_TYPE_MAX = 2
 
         fun getBestResolution( targetWidth: Int, targetRatio: Float, sizes: Array<Size> ): Size {
             var bestSize = sizes.last()
@@ -99,8 +102,6 @@ class MainActivity : AppCompatActivity() {
     private var mCaptureRequestBuilderPreview: CaptureRequest.Builder? = null
     private var mCaptureRequestBuilderPhoto: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
-    private var lastHistogramUpdate = 0L
-    private var lightestZone = -1
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -111,9 +112,8 @@ class MainActivity : AppCompatActivity() {
             val image = imageReader.acquireLatestImage() ?: return
 
             var now = System.currentTimeMillis()
-            if (!isBusy /*&& now > (lastHistogramUpdate + HISTOGRAM_FREQUENCY)*/) {
+            if (!isBusy) {
                 isBusy = true
-                lastHistogramUpdate = now
                 val imageW = image.width
                 val imageH = image.height
 
@@ -185,6 +185,7 @@ class MainActivity : AppCompatActivity() {
                     )
 
                     runOnUiThread {
+                        mExposureLightestZone = lightestZone
                         mBinding.imgHistogram.setImageBitmap(bitmap)
                         isBusy = false
                     }
@@ -223,8 +224,10 @@ class MainActivity : AppCompatActivity() {
     private var mSpeedMeasuredValue = 1L
 
     private var mExposureCompensationValue = 0
+    private var mExposureLightestZone = -1
+    private var mExposureType = EXPOSURE_TYPE_NORMAL
 
-    private var mFocusType = FOCUS_CONTINOUS
+    private var mFocusType = FOCUS_TYPE_CONTINOUS
     private var mFocusValue = 0f
     private var mFocusClick = false
     private var mFocusClickPosition = Point(0,0)
@@ -505,7 +508,7 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.txtFocus.setOnClickListener {
             if (mCameraHandler.focusAllowManual) {
-                mFocusType = (mFocusType + 1) % FOCUS_MAX
+                mFocusType = (mFocusType + 1) % FOCUS_TYPE_MAX
                 mFocusClick = false
                 showFocus()
                 setupCaptureRequest()
@@ -513,12 +516,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
-            if (mCameraHandler.focusAllowManual && FOCUS_CLICK == mFocusType) {
+            if (mCameraHandler.focusAllowManual && FOCUS_TYPE_CLICK == mFocusType) {
                 if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
                     mFocusClick = true
-                    Log.i("FOCUS_CLICK", "( ${mFocusClickPosition.x}, ${mFocusClickPosition.y} )")
                     setupCaptureRequest()
                 }
             }
@@ -660,19 +662,19 @@ class MainActivity : AppCompatActivity() {
     private fun showFocus() {
         if (mCameraHandler.focusAllowManual) {
             when(mFocusType) {
-                FOCUS_CLICK -> {
+                FOCUS_TYPE_CLICK -> {
                     mBinding.txtFocus.text = "Focus: Click"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
 
-                FOCUS_HYPERFOCAL -> {
+                FOCUS_TYPE_HYPERFOCAL -> {
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
 
-                FOCUS_MANUAL -> {
+                FOCUS_TYPE_MANUAL -> {
                     mBinding.txtFocus.text = "Focus: Manual"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.VISIBLE
@@ -797,12 +799,12 @@ class MainActivity : AppCompatActivity() {
 
         if (mCameraHandler.focusAllowManual) {
             when(mFocusType) {
-                FOCUS_HYPERFOCAL -> {
+                FOCUS_TYPE_HYPERFOCAL -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
                 }
 
-                FOCUS_CLICK -> {
+                FOCUS_TYPE_CLICK -> {
                     if (mFocusClick) {
                         val delta = mCameraHandler.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
                         val x = mCameraHandler.resolutionWidth * mFocusClickPosition.x / 100
@@ -821,7 +823,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                FOCUS_MANUAL -> {
+                FOCUS_TYPE_MANUAL -> {
                     val distance = mCameraHandler.focusRange.lower +
                             (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
