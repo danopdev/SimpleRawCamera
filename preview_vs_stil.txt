@@ -1,0 +1,31 @@
+PREVIEW
+
+CaptureRequest.Key(android.colorCorrection.aberrationMode) = 1
+CaptureRequest.Key(android.colorCorrection.mode) = 1
+CaptureRequest.Key(android.control.aeAntibandingMode) = 3
+CaptureRequest.Key(android.control.afMode) = 4
+CaptureRequest.Key(android.control.aeMode) = 1
+CaptureRequest.Key(android.control.awbMode) = 1
+CaptureRequest.Key(android.control.captureIntent) = 1
+CaptureRequest.Key(android.control.mode) = 1
+CaptureRequest.Key(android.edge.mode) = 1
+CaptureRequest.Key(android.hotPixel.mode) = 1
+CaptureRequest.Key(android.noiseReduction.mode) = 1
+CaptureRequest.Key(android.control.aeTargetFpsRange) = [2, 30]
+CaptureRequest.Key(android.control.postRawSensitivityBoost) = 100
+
+STIL CAPTURE
+
+CaptureRequest.Key(android.colorCorrection.aberrationMode) = 2
+CaptureRequest.Key(android.colorCorrection.mode) = 1
+CaptureRequest.Key(android.control.aeAntibandingMode) = 3
+CaptureRequest.Key(android.control.afMode) = 4
+CaptureRequest.Key(android.control.aeMode) = 1
+CaptureRequest.Key(android.control.awbMode) = 1
+CaptureRequest.Key(android.control.captureIntent) = 2
+CaptureRequest.Key(android.control.mode) = 1
+CaptureRequest.Key(android.edge.mode) = 2
+CaptureRequest.Key(android.hotPixel.mode) = 2
+CaptureRequest.Key(android.noiseReduction.mode) = 2
+CaptureRequest.Key(android.control.aeTargetFpsRange) = [2, 30]
+CaptureRequest.Key(android.control.postRawSensitivityBoost) = 100
