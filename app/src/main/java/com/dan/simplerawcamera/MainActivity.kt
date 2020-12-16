@@ -98,9 +98,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mCameraHandler: CameraHandler
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
-    private var mCaptureRequestBuilderPreview: CaptureRequest.Builder? = null
-    private var mCaptureRequestBuilderPhoto: CaptureRequest.Builder? = null
-    private var mCaptureRequestPhoto: CaptureRequest? = null
+    private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
+    private var mCaptureRequest: CaptureRequest? = null
+    private var mCaptureModeIsPhoto = true
 
     private var mPhotoButtonMask = 0
     private var mPhotoTakeMask = 0
@@ -190,7 +190,6 @@ class MainActivity : AppCompatActivity() {
             if (null != imageReader) {
                 val image = imageReader.acquireLatestImage()
                 if (null != image) {
-
                     try {
                         val destFile = File(mDestFolder.absolutePath + "/a.jpg")
                         val buffer = image.planes[0].buffer
@@ -285,17 +284,15 @@ class MainActivity : AppCompatActivity() {
 
             mCameraCaptureSession = session
 
-            val captureRequestBuilderPhoto = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureRequestBuilderPhoto.addTarget(mImageReaderDng.surface)
-            captureRequestBuilderPhoto.addTarget(mImageReaderJpeg.surface)
-            mCaptureRequestBuilderPhoto = captureRequestBuilderPhoto
+            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
+            captureRequestBuilder.addTarget(mImageReaderHisto.surface)
 
-            val captureRequestBuilderPreview = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            captureRequestBuilderPreview.addTarget(mBinding.surfaceView.holder.surface)
-            captureRequestBuilderPreview.addTarget(mImageReaderHisto.surface)
-            mCaptureRequestBuilderPreview = captureRequestBuilderPreview
+            setupCaptureInitRequest(captureRequestBuilder)
 
-            setupCapturePreviewRequest(true)
+            mCaptureRequestBuilder = captureRequestBuilder
+
+            setupCapturePreviewRequest()
         }
     }
 
@@ -345,11 +342,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
 
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
@@ -358,16 +351,6 @@ class MainActivity : AppCompatActivity() {
 
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
-
-            val captureRequestBuilderPhoto = mCaptureRequestBuilderPhoto
-            if (null != captureRequestBuilderPhoto && 0 == mPhotoTakeMask) {
-                captureRequestBuilderPhoto.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                captureRequestBuilderPhoto.set(CaptureRequest.LENS_FOCUS_DISTANCE, mFocusMeasuredDistance)
-
-                captureRequestBuilderPhoto.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-                captureRequestBuilderPhoto.set(CaptureRequest.SENSOR_EXPOSURE_TIME, captureEA.second)
-                captureRequestBuilderPhoto.set(CaptureRequest.SENSOR_SENSITIVITY, captureEA.first)
-            }
 
             if (mIsoIsManual && mSpeedIsManual) return
 
@@ -385,11 +368,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
         }
@@ -455,11 +434,7 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             REQUEST_PERMISSIONS -> handleRequestPermissions(requestCode, permissions, grantResults)
         }
@@ -481,11 +456,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun handleRequestPermissions(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
+    private fun handleRequestPermissions(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         var allowedAll = grantResults.size >= PERMISSIONS.size
 
         if (grantResults.size >= PERMISSIONS.size) {
@@ -506,7 +477,6 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun onPermissionsAllowed() {
-
         if (mCameraList.size <= 0) {
             fatalError("No valid camera found !")
             return
@@ -542,18 +512,9 @@ class MainActivity : AppCompatActivity() {
 
         mCameraHandler = mCameraList[0]
 
-        SeekBarDirectionTracker.track(mBinding.seekBarIso) { delta, isFinal -> trackIso(
-            delta,
-            isFinal
-        ) }
-        SeekBarDirectionTracker.track(mBinding.seekBarSpeed) { delta, isFinal -> trackSpeed(
-            delta,
-            isFinal
-        ) }
-        SeekBarDirectionTracker.track(mBinding.seekBarExpComponsation) { delta, isFinal -> trackExpComponsation(
-            delta,
-            isFinal
-        ) }
+        SeekBarDirectionTracker.track(mBinding.seekBarIso) { delta, isFinal -> trackIso(delta, isFinal) }
+        SeekBarDirectionTracker.track(mBinding.seekBarSpeed) { delta, isFinal -> trackSpeed(delta, isFinal) }
+        SeekBarDirectionTracker.track(mBinding.seekBarExpComponsation) { delta, isFinal -> trackExpComponsation(delta, isFinal) }
 
         mBinding.seekBarFocus.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, user: Boolean) {
@@ -845,7 +806,7 @@ class MainActivity : AppCompatActivity() {
             Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
 
             if (0 == mask) {
-                setupCapturePreviewRequest(true)
+                setupCapturePreviewRequest()
             } else {
                 if (0 == oldMask) {
                     mPhotoTakeMask = 0
@@ -861,12 +822,12 @@ class MainActivity : AppCompatActivity() {
         if (0 != mPhotoTakeMask) return
         if (0 == mPhotoButtonMask) return
 
-        val captureRequestPhoto = mCaptureRequestPhoto ?: return
+        val captureRequestPhoto = mCaptureRequest ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
         Log.i("TAKE_PHOTO", "New photo")
 
-        mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG //or PHOTO_TAKE_SINGLE_SHOT
+        mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_SINGLE_SHOT
         mPhotoTimestamp = System.currentTimeMillis()
 
         cameraCaptureSession.capture(
@@ -893,8 +854,8 @@ class MainActivity : AppCompatActivity() {
             mCameraDevice = null
         }
 
-        mCaptureRequestBuilderPreview = null
-        mCaptureRequestBuilderPhoto = null
+        mCaptureRequestBuilder = null
+        mCaptureRequestBuilder = null
 
         mBinding.txtCamera.text = index.toString()
 
@@ -906,20 +867,10 @@ class MainActivity : AppCompatActivity() {
         )
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(
-            mCameraHandler.resolutionWidth,
-            mCameraHandler.resolutionHeight,
-            ImageFormat.JPEG,
-            1
-        )
+        mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
         mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, Handler { true })
 
-        mImageReaderDng = ImageReader.newInstance(
-            mCameraHandler.resolutionWidth,
-            mCameraHandler.resolutionHeight,
-            ImageFormat.RAW_SENSOR,
-            1
-        )
+        mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler { true })
 
         updateSliders()
@@ -938,66 +889,75 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
-    private fun setupCaptureCommonRequest(captureRequestBuilder: CaptureRequest.Builder) {
-        if (mCameraHandler.supportLensStabilisation)
-            captureRequestBuilder.set(
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
-            )
+    private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
+        mCaptureModeIsPhoto = true //force preview update
 
-        captureRequestBuilder.set(
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
-            CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY
-        )
-        captureRequestBuilder.set(
-            CaptureRequest.CONTROL_AWB_MODE,
-            CaptureRequest.CONTROL_AWB_MODE_AUTO
-        )
-        captureRequestBuilder.set(
-            CaptureRequest.CONTROL_AE_ANTIBANDING_MODE,
-            CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO
-        )
+        if (mCameraHandler.supportLensStabilisation)
+            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
+
+        captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+
+        /*
+        captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
+        captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+        captureRequestBuilder.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO)
         captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+         */
     }
 
     private fun setupCapturePhotoRequest() {
-        val captureRequestBuilder = mCaptureRequestBuilderPhoto ?: return
-        val cameraCaptureSession = mCameraCaptureSession ?: return
-
-        cameraCaptureSession.stopRepeating()
-
-        val captureRequest = captureRequestBuilder.build()
-        mCaptureRequestPhoto = captureRequest
+        setupCaptureRequest(true)
     }
 
-    private fun setupCapturePreviewRequest(firstCall: Boolean = false) {
-        val captureRequestBuilder = mCaptureRequestBuilderPreview ?: return
-        val captureRequestBuilderPhoto = mCaptureRequestBuilderPhoto ?: return
+    private fun setupCapturePreviewRequest() {
+        setupCaptureRequest(false)
+    }
+
+    private fun setupCaptureRequest(photoMode: Boolean = false) {
+        val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
-        if (firstCall) {
-            setupCaptureCommonRequest(captureRequestBuilderPhoto)
-            setupCaptureCommonRequest(captureRequestBuilder)
+        if (photoMode != mCaptureModeIsPhoto) {
+            mCaptureModeIsPhoto = photoMode
+
+            if (photoMode) {
+                cameraCaptureSession.stopRepeating()
+
+                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
+                //captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
+
+                if (mIsoIsManual || mSpeedIsManual) {
+                    val ae = getCaptureEA()
+                    captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
+                    captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
+                }
+
+                captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+
+                mCaptureRequest = captureRequestBuilder.build()
+            } else {
+                mCaptureRequest = null
+
+                captureRequestBuilder.removeTarget(mImageReaderDng.surface)
+                captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
+
+                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
+                //captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
+            }
         }
 
-        if (!mIsoIsManual || !mSpeedIsManual) {
-            captureRequestBuilderPhoto.set(
-                CaptureRequest.CONTROL_AE_MODE,
-                CaptureRequest.CONTROL_AE_MODE_ON
-            )
-            captureRequestBuilderPhoto.set(
-                CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION,
-                mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor
-            )
+        if (photoMode) return
 
-            captureRequestBuilder.set(
-                CaptureRequest.CONTROL_AE_MODE,
-                CaptureRequest.CONTROL_AE_MODE_ON
-            )
-            captureRequestBuilder.set(
-                CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION,
-                mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor
-            )
+        if (!mIsoIsManual || !mSpeedIsManual) {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
         } else {
             var manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
             var manualISO = mIsoValue
@@ -1014,10 +974,7 @@ class MainActivity : AppCompatActivity() {
                 manualSpeed = min(MANUAL_MIN_SPEED_PREVIEW, manualSpeed)
             }
 
-            captureRequestBuilder.set(
-                CaptureRequest.CONTROL_AE_MODE,
-                CaptureRequest.CONTROL_AE_MODE_OFF
-            )
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
         }
@@ -1025,14 +982,8 @@ class MainActivity : AppCompatActivity() {
         if (mCameraHandler.focusAllowManual) {
             when(mFocusType) {
                 FOCUS_TYPE_HYPERFOCAL -> {
-                    captureRequestBuilder.set(
-                        CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_OFF
-                    )
-                    captureRequestBuilder.set(
-                        CaptureRequest.LENS_FOCUS_DISTANCE,
-                        mCameraHandler.focusHyperfocalDistance
-                    )
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
                     mBinding.frameView.hideFocusZone()
                 }
 
@@ -1048,26 +999,10 @@ class MainActivity : AppCompatActivity() {
                         val y2 = min(mCameraHandler.resolutionHeight, y + delta)
 
                         if (y2 > y1 && x2 > x1) {
-                            val rectangle = MeteringRectangle(
-                                x1,
-                                y1,
-                                x2 - x1,
-                                y2 - y1,
-                                MeteringRectangle.METERING_WEIGHT_MAX
-                            )
-                            captureRequestBuilder.set(
-                                CaptureRequest.CONTROL_AF_REGIONS, arrayOf(
-                                    rectangle
-                                )
-                            )
-                            captureRequestBuilder.set(
-                                CaptureRequest.CONTROL_AF_MODE,
-                                CaptureRequest.CONTROL_AF_MODE_AUTO
-                            )
-                            captureRequestBuilder.set(
-                                CaptureRequest.CONTROL_AF_TRIGGER,
-                                CaptureRequest.CONTROL_AF_TRIGGER_START
-                            )
+                            val rectangle = MeteringRectangle(x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
                         }
 
                         mBinding.frameView.showFocusZone(
@@ -1084,20 +1019,14 @@ class MainActivity : AppCompatActivity() {
                 FOCUS_TYPE_MANUAL -> {
                     val distance = mCameraHandler.focusRange.lower +
                             (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
-                    captureRequestBuilder.set(
-                        CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_OFF
-                    )
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                     mBinding.frameView.hideFocusZone()
                 }
 
                 else -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, null)
-                    captureRequestBuilder.set(
-                        CaptureRequest.CONTROL_AF_MODE,
-                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-                    )
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                     mBinding.frameView.hideFocusZone()
                 }
             }
