@@ -8,6 +8,10 @@ class Settings( val activity: Activity) {
     companion object {
     }
 
+    private class SettingValue( val name: String, val value: Any, val defaultValue: Any )
+
+    private val values = arrayOf<SettingValue>()
+
     fun create() {
         val preferences = activity.getPreferences(Context.MODE_PRIVATE)
         //_backupServer = preferences.getString(BACKUP_SERVER_KEY, _backupServer) ?: _backupServer
