@@ -262,8 +262,7 @@ class MainActivity : AppCompatActivity() {
     private var mIsoIsManual = false
     private var mIsoMeasuredValue = 100
 
-    private var mSpeedValueNumerator = 10
-    private var mSpeedValueDenominator = 128
+    private var mSpeedValue = 7812500L
     private var mSpeedIsManual = false
     private var mSpeedMeasuredValue = 1L
 
@@ -328,11 +327,10 @@ class MainActivity : AppCompatActivity() {
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
 
         if (mIsoIsManual && mSpeedIsManual) {
-            val manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
             return Triple(
                 mIsoValue,
-                manualSpeed,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, manualSpeed)
+                mSpeedValue,
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, mSpeedValue)
             )
         }
 
@@ -352,8 +350,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
-        val speedRatio = manualSpeed / mSpeedMeasuredValue
+        val speedRatio = mSpeedValue / mSpeedMeasuredValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
         if (suggestedIso < mCameraHandler.isoRange.lower)
@@ -364,7 +361,7 @@ class MainActivity : AppCompatActivity() {
         return Triple(
             suggestedIso,
             mSpeedMeasuredValue,
-            calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, manualSpeed)
+            calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, mSpeedValue)
         )
     }
 
@@ -381,16 +378,8 @@ class MainActivity : AppCompatActivity() {
 
             if (mIsoIsManual && mSpeedIsManual) return
 
-            if (!mIsoIsManual)
-                showIso(captureEA.first)
-
-            if (!mSpeedIsManual) {
-                val speed = captureEA.second
-                if (speed >= 1000000000L)
-                    showSpeed((speed / 100000000L).toInt(), 1)
-                else
-                    showSpeed(1, (1000000000L / speed).toInt())
-            }
+            if (!mIsoIsManual) showIso(captureEA.first)
+            if (!mSpeedIsManual) showSpeed(captureEA.second)
         }
     }
 
@@ -701,80 +690,63 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtExpComponsation.text = exp
     }
 
-    private fun speedToNanoseconds(numerator: Int, denominator: Int): Long = 100000000L * numerator / denominator
-
     private fun trackSpeed(delta: Int, isFinal: Boolean) {
         if (!mSpeedIsManual) return
 
         val increase = delta > 0
         var counter = abs(delta)
-        var numerator = mSpeedValueNumerator
-        var denominator = mSpeedValueDenominator
+        var speed = mSpeedValue
 
         while (counter > 0) {
-            val speed = speedToNanoseconds(numerator, denominator)
-
             if (increase) {
-                if ((2*speed) > mCameraHandler.speedRange.upper || numerator >= 40) break
-                if (denominator > 1) {
-                    denominator /= 2
-                } else {
-                    numerator += 10
-                }
+                if ((2*speed) > mCameraHandler.speedRange.upper || speed >= 4000000000L) break // max 4 seconds
+                speed *= 2
             } else {
-                if ((speed/2) < mCameraHandler.speedRange.lower || denominator >= 32768) break
-                if (numerator > 10) {
-                    numerator -= 10
-                } else {
-                    denominator *= 2
-                }
+                if ((speed/2) < mCameraHandler.speedRange.lower) break
+                speed /= 2
             }
             counter -= 1
         }
 
-        showSpeed(numerator, denominator)
+        showSpeed(speed)
 
         if (isFinal) {
-            mSpeedValueNumerator = numerator
-            mSpeedValueDenominator = denominator
+            mSpeedValue = speed
             setupCapturePreviewRequest()
         }
     }
 
-    private fun getSpeedStr( speed: Long ): String =
-        if (speed >= 1000000000L)
-            getSpeedStr((speed / 100000000L).toInt(), 1)
-        else
-            getSpeedStr(1, (1000000000L / speed).toInt())
+    private fun getSpeedStr( speed: Long ): String {
+        if (speed >= 1000000000L) { // 1 second
+            val speedSecondsWith1Decimal = (speed / 100000000).toInt()
+            val speedSeconds = speedSecondsWith1Decimal / 10
+            val speedDecimals = speedSecondsWith1Decimal % 10
 
-    private fun getSpeedStr( numerator: Int, denominator: Int ): String {
-        if (1 == denominator) {
-            val rest = numerator % 10
-            if (0 == rest)
-                return "${numerator/10}\""
-            else
-                return "${numerator/10}.${rest}\""
-        } else {
-            val roundedDenominator =
-                if (denominator >= 1000)
-                    (denominator / 1000) * 1000
-                else if (denominator >= 500)
-                    (denominator / 100) * 100
-                else if (128 == denominator)
-                    125
-                else if (denominator >= 30)
-                    (denominator / 10) * 10
-                else if (16 == denominator)
-                    15
-                else
-                    denominator
-
-            return "1/${roundedDenominator}"
+            if (0 == speedDecimals)
+                return "${speedSeconds}\""
+            return "${speedSeconds}.${speedDecimals}\""
         }
+
+        val denominator = (1000000000L / speed).toInt()
+        val roundedDenominator =
+            if (denominator >= 1000)
+                (denominator / 1000) * 1000
+            else if (denominator >= 500)
+                (denominator / 100) * 100
+            else if (128 == denominator)
+                125
+            else if (denominator >= 30)
+                (denominator / 10) * 10
+            else if (16 == denominator)
+                15
+            else
+                denominator
+
+        return "1/${roundedDenominator}"
     }
 
-    private fun showSpeed(numerator: Int, denominator: Int) {
-        mBinding.txtSpeed.text = getSpeedStr( numerator, denominator )
+    private fun showSpeed(speed: Long) {
+        mBinding.txtSpeed.text = getSpeedStr( speed )
     }
 
     private fun showFocus() {
@@ -821,7 +793,7 @@ class MainActivity : AppCompatActivity() {
             showIso(mIsoValue)
 
         if (mSpeedIsManual)
-            showSpeed(mSpeedValueNumerator, mSpeedValueDenominator)
+            showSpeed(mSpeedValue)
 
         showFocus()
         showExpComponsation(mExposureCompensationValue)
@@ -1027,7 +999,7 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
         } else {
-            var manualSpeed = speedToNanoseconds(mSpeedValueNumerator, mSpeedValueDenominator)
+            var manualSpeed = mSpeedValue
             var manualISO = mIsoValue
 
             if (manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
