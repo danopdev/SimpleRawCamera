@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.graphics.*
 import android.hardware.camera2.*
 import android.hardware.camera2.params.MeteringRectangle
+import android.location.LocationManager
 import android.media.ImageReader
 import android.os.Bundle
 import android.os.Handler
@@ -25,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.math.abs
@@ -66,6 +68,10 @@ class MainActivity : AppCompatActivity() {
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
 
+        val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
+
+        fun getPhotoBaseFileName( timestamp: Long ): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
+
         fun getBestResolution(targetWidth: Int, targetRatio: Float, sizes: Array<Size>): Size {
             var bestSize = sizes.last()
 
@@ -90,21 +96,26 @@ class MainActivity : AppCompatActivity() {
 
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
 
+    private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
+
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(
         mCameraManager
     ) }
     private var mCameraIndex = 0
     private lateinit var mCameraHandler: CameraHandler
+
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
     private var mCaptureModeIsPhoto = true
+    private var mCaptureLastPhotoResult: TotalCaptureResult? = null
 
     private var mPhotoButtonMask = 0
     private var mPhotoTakeMask = 0
     private var mPhotoTimestamp = 0L
+    private var mPhotoFileNameBase = ""
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -191,11 +202,11 @@ class MainActivity : AppCompatActivity() {
                 val image = imageReader.acquireLatestImage()
                 if (null != image) {
                     try {
-                        val destFile = File(mDestFolder.absolutePath + "/a.jpg")
+                        val jpegFile = getPhotoJpegFile()
                         val buffer = image.planes[0].buffer
                         val bytes = ByteArray(buffer.remaining())
                         buffer.get(bytes)
-                        val fos = destFile.outputStream()
+                        val fos = jpegFile.outputStream()
                         fos.write(bytes)
                         fos.close()
                     } catch (e: Exception) {
@@ -206,6 +217,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoButtonMask and PHOTO_TAKE_JPEG.inv()
+
             runOnUiThread {
                 takePhoto()
             }
@@ -220,11 +232,26 @@ class MainActivity : AppCompatActivity() {
             if (null != imageReader) {
                 val image = imageReader.acquireLatestImage()
                 if (null != image) {
+                    val captureLastPhotoResult = mCaptureLastPhotoResult
+                    if (null != captureLastPhotoResult) {
+                        try {
+                            val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
+
+                            val dngFile = getPhotoDngFile()
+                            val fos = dngFile.outputStream()
+                            dngCreator.writeImage(fos, image)
+                            fos.close()
+
+                        } catch (e: Exception) {
+                        }
+                    }
+
                     image.close()
                 }
             }
 
             mPhotoTakeMask = mPhotoButtonMask and PHOTO_TAKE_DNG.inv()
+
             runOnUiThread {
                 takePhoto()
             }
@@ -284,7 +311,7 @@ class MainActivity : AppCompatActivity() {
 
             mCameraCaptureSession = session
 
-            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
             captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
             captureRequestBuilder.addTarget(mImageReaderHisto.surface)
 
@@ -371,6 +398,7 @@ class MainActivity : AppCompatActivity() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
+            mCaptureLastPhotoResult = result
         }
     }
 
@@ -406,6 +434,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
     }
+
+    private fun getPhotoJpegFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".jpeg")
+    private fun getPhotoDngFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".dng")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -710,13 +741,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showSpeed(numerator: Int, denominator: Int) {
+    private fun getSpeedStr( speed: Long ): String =
+        if (speed >= 1000000000L)
+            getSpeedStr((speed / 100000000L).toInt(), 1)
+        else
+            getSpeedStr(1, (1000000000L / speed).toInt())
+
+    private fun getSpeedStr( numerator: Int, denominator: Int ): String {
         if (1 == denominator) {
             val rest = numerator % 10
             if (0 == rest)
-                mBinding.txtSpeed.text = "${numerator/10}\""
+                return "${numerator/10}\""
             else
-                mBinding.txtSpeed.text = "${numerator/10}.${rest}\""
+                return "${numerator/10}.${rest}\""
         } else {
             val roundedDenominator =
                 if (denominator >= 1000)
@@ -732,8 +769,12 @@ class MainActivity : AppCompatActivity() {
                 else
                     denominator
 
-            mBinding.txtSpeed.text = "1/${roundedDenominator}"
+            return "1/${roundedDenominator}"
         }
+    }
+
+    private fun showSpeed(numerator: Int, denominator: Int) {
+        mBinding.txtSpeed.text = getSpeedStr( numerator, denominator )
     }
 
     private fun showFocus() {
@@ -806,6 +847,7 @@ class MainActivity : AppCompatActivity() {
             Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
 
             if (0 == mask) {
+                mCaptureLastPhotoResult = null
                 setupCapturePreviewRequest()
             } else {
                 if (0 == oldMask) {
@@ -827,8 +869,10 @@ class MainActivity : AppCompatActivity() {
 
         Log.i("TAKE_PHOTO", "New photo")
 
+        mCaptureLastPhotoResult = null
         mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_SINGLE_SHOT
         mPhotoTimestamp = System.currentTimeMillis()
+        mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
         cameraCaptureSession.capture(
             captureRequestPhoto,
@@ -867,10 +911,20 @@ class MainActivity : AppCompatActivity() {
         )
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
+        mImageReaderJpeg = ImageReader.newInstance(
+            mCameraHandler.resolutionWidth,
+            mCameraHandler.resolutionHeight,
+            ImageFormat.JPEG,
+            1
+        )
         mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, Handler { true })
 
-        mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
+        mImageReaderDng = ImageReader.newInstance(
+            mCameraHandler.resolutionWidth,
+            mCameraHandler.resolutionHeight,
+            ImageFormat.RAW_SENSOR,
+            1
+        )
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler { true })
 
         updateSliders()
@@ -893,9 +947,15 @@ class MainActivity : AppCompatActivity() {
         mCaptureModeIsPhoto = true //force preview update
 
         if (mCameraHandler.supportLensStabilisation)
-            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
+            captureRequestBuilder.set(
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
+            )
 
-        captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+        captureRequestBuilder.set(
+            CaptureRequest.NOISE_REDUCTION_MODE,
+            CaptureRequest.NOISE_REDUCTION_MODE_OFF
+        )
 
         /*
         captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
@@ -935,12 +995,20 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
                 }
 
+                //mLocationManager.
+                captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
+                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, 70)
+                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, Size(256, 256 * mCameraHandler.resolutionHeight / mCameraHandler.resolutionWidth))
+
                 captureRequestBuilder.addTarget(mImageReaderDng.surface)
                 captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
 
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
                 mCaptureRequest = null
+
+                captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 70)
+                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
 
                 captureRequestBuilder.removeTarget(mImageReaderDng.surface)
                 captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)

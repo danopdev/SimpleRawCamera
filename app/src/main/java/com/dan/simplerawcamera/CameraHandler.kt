@@ -13,6 +13,7 @@ import kotlin.math.min
 
 class CameraHandler(
     val cameraManager: CameraManager,
+    val cameraCharacteristics: CameraCharacteristics,
     val id: String,
     val resolutionWidth: Int,
     val resolutionHeight: Int,
@@ -95,6 +96,7 @@ class CameraHandler(
                         validCameras.add(
                             CameraHandler(
                                 cameraManager,
+                                characteristics,
                                 cameraId,
                                 resolutionRect.width(),
                                 resolutionRect.height(),
