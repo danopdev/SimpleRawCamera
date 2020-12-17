@@ -403,7 +403,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getPhotoJpegFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".jpeg")
+    private fun getPhotoJpegFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".jpg")
     private fun getPhotoDngFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".dng")
 
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
