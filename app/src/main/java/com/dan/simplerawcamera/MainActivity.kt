@@ -13,10 +13,7 @@ import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
-import android.provider.DocumentsContract
-import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -32,8 +29,6 @@ import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.w3c.dom.Document
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
