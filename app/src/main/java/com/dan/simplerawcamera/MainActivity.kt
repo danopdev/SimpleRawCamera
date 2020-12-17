@@ -50,7 +50,9 @@ class MainActivity : AppCompatActivity() {
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
 
-        const val MANUAL_MIN_SPEED_PREVIEW = 62500000L // 1/16 sec
+        const val SPEED_MANUAL_MIN_PREVIEW = 62500000L // 1/16 sec
+
+        const val SPEED_MAX_MANUAL = 4000000000L // 4 sec
 
         const val FOCUS_REGION_SIZE_PERCENT = 5
 
@@ -262,7 +264,7 @@ class MainActivity : AppCompatActivity() {
     private var mIsoIsManual = false
     private var mIsoMeasuredValue = 100
 
-    private var mSpeedValue = 7812500L
+    private var mSpeedDivValue = 4*128L // 1/128 sec
     private var mSpeedIsManual = false
     private var mSpeedMeasuredValue = 1L
 
@@ -327,10 +329,11 @@ class MainActivity : AppCompatActivity() {
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
 
         if (mIsoIsManual && mSpeedIsManual) {
+            val speedValue = getSpeedValue()
             return Triple(
                 mIsoValue,
-                mSpeedValue,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, mSpeedValue)
+                SPEED_MAX_MANUAL / speedValue,
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mIsoValue, speedValue)
             )
         }
 
@@ -350,7 +353,8 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        val speedRatio = mSpeedValue / mSpeedMeasuredValue
+        val speedValue = getSpeedValue()
+        val speedRatio = speedValue / mSpeedMeasuredValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
         if (suggestedIso < mCameraHandler.isoRange.lower)
@@ -361,7 +365,7 @@ class MainActivity : AppCompatActivity() {
         return Triple(
             suggestedIso,
             mSpeedMeasuredValue,
-            calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, mSpeedValue)
+            calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, speedValue)
         )
     }
 
@@ -426,6 +430,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun getPhotoJpegFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".jpeg")
     private fun getPhotoDngFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".dng")
+
+    private fun getSpeedValue( div: Long ): Long = SPEED_MAX_MANUAL / div
+    private fun getSpeedValue(): Long = getSpeedValue(mSpeedDivValue)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -695,23 +702,23 @@ class MainActivity : AppCompatActivity() {
 
         val increase = delta > 0
         var counter = abs(delta)
-        var speed = mSpeedValue
+        var speedDiv = mSpeedDivValue
 
         while (counter > 0) {
             if (increase) {
-                if ((2*speed) > mCameraHandler.speedRange.upper || speed >= 4000000000L) break // max 4 seconds
-                speed *= 2
+                if (speedDiv == 1L || getSpeedValue(speedDiv / 2) > mCameraHandler.speedRange.upper) break
+                speedDiv /= 2
             } else {
-                if ((speed/2) < mCameraHandler.speedRange.lower) break
-                speed /= 2
+                if (getSpeedValue(speedDiv * 2) < mCameraHandler.speedRange.lower) break
+                speedDiv *= 2
             }
             counter -= 1
         }
 
-        showSpeed(speed)
+        showSpeed(getSpeedValue(speedDiv))
 
         if (isFinal) {
-            mSpeedValue = speed
+            mSpeedDivValue = speedDiv
             setupCapturePreviewRequest()
         }
     }
@@ -793,7 +800,7 @@ class MainActivity : AppCompatActivity() {
             showIso(mIsoValue)
 
         if (mSpeedIsManual)
-            showSpeed(mSpeedValue)
+            showSpeed(getSpeedValue())
 
         showFocus()
         showExpComponsation(mExposureCompensationValue)
@@ -883,20 +890,10 @@ class MainActivity : AppCompatActivity() {
         )
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(
-            mCameraHandler.resolutionWidth,
-            mCameraHandler.resolutionHeight,
-            ImageFormat.JPEG,
-            1
-        )
+        mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
         mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, Handler { true })
 
-        mImageReaderDng = ImageReader.newInstance(
-            mCameraHandler.resolutionWidth,
-            mCameraHandler.resolutionHeight,
-            ImageFormat.RAW_SENSOR,
-            1
-        )
+        mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler { true })
 
         updateSliders()
@@ -919,23 +916,10 @@ class MainActivity : AppCompatActivity() {
         mCaptureModeIsPhoto = true //force preview update
 
         if (mCameraHandler.supportLensStabilisation)
-            captureRequestBuilder.set(
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
-                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
-            )
+            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
-        captureRequestBuilder.set(
-            CaptureRequest.NOISE_REDUCTION_MODE,
-            CaptureRequest.NOISE_REDUCTION_MODE_OFF
-        )
-
-        /*
-        captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
-        captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-        captureRequestBuilder.set(CaptureRequest.CONTROL_AE_ANTIBANDING_MODE, CaptureRequest.CONTROL_AE_ANTIBANDING_MODE_AUTO)
-        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
-         */
-    }
+        captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
+   }
 
     private fun setupCapturePhotoRequest() {
         setupCaptureRequest(true)
@@ -999,11 +983,11 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mExposureCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
         } else {
-            var manualSpeed = mSpeedValue
+            var manualSpeed = getSpeedValue()
             var manualISO = mIsoValue
 
-            if (manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
-                while (manualSpeed > MANUAL_MIN_SPEED_PREVIEW) {
+            if (manualSpeed > SPEED_MANUAL_MIN_PREVIEW) {
+                while (manualSpeed > SPEED_MANUAL_MIN_PREVIEW) {
                     if ((2*manualISO) > mCameraHandler.isoRange.upper)
                         break
 
@@ -1011,7 +995,7 @@ class MainActivity : AppCompatActivity() {
                     manualSpeed /= 2
                 }
 
-                manualSpeed = min(MANUAL_MIN_SPEED_PREVIEW, manualSpeed)
+                manualSpeed = min(SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
             }
 
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
