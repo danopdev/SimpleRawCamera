@@ -23,6 +23,7 @@ class Settings( private val activity: Activity) {
         const val FOCUS_TYPE_MAX = 4
     }
 
+    var saveUri: String = ""
     var cameraIndex: Int = 0
     var expIsoIsManual: Boolean = false
     var expIsoValue: Int = 100

@@ -3,14 +3,20 @@ package com.dan.simplerawcamera
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
 import android.hardware.camera2.*
 import android.hardware.camera2.params.MeteringRectangle
 import android.location.LocationManager
+import android.media.Image
 import android.media.ImageReader
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -21,10 +27,12 @@ import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.documentfile.provider.DocumentFile
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.w3c.dom.Document
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -46,6 +54,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         const val REQUEST_PERMISSIONS = 1
+        const val INTENT_SELECT_FOLDER = 2
 
         const val HISTOGRAM_BITMAP_WIDTH = 64
         const val HISTOGRAM_BITMAP_HEIGHT = 50
@@ -121,7 +130,7 @@ class MainActivity : AppCompatActivity() {
     private var mFirstCall = true
     private var mSurfaceIsCreated = false
 
-    private var mDestFolder = File("/storage/emulated/0/SimpleRawCamera")
+    private var mSaveFolder: DocumentFile? = null
 
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var isBusy = false
@@ -192,23 +201,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
+        private fun saveImage(image: Image) {
+            try {
+                val saveFolder = mSaveFolder ?: return
+                val fileName = mPhotoFileNameBase + ".jpg"
+                val documentFile = saveFolder.createFile("image/jpeg", fileName) ?: return
+                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+                val buffer = image.planes[0].buffer
+                val bytes = ByteArray(buffer.remaining())
+                buffer.get(bytes)
+                outputStream.write(bytes)
+                outputStream.close()
+            } catch(e: Exception) {
+            }
+        }
+
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "JPEG: ${mPhotoTimestamp}")
 
             if (null != imageReader) {
                 val image = imageReader.acquireLatestImage()
                 if (null != image) {
-                    try {
-                        val jpegFile = getPhotoJpegFile()
-                        val buffer = image.planes[0].buffer
-                        val bytes = ByteArray(buffer.remaining())
-                        buffer.get(bytes)
-                        val fos = jpegFile.outputStream()
-                        fos.write(bytes)
-                        fos.close()
-                    } catch (e: Exception) {
-                    }
-
+                    saveImage(image)
                     image.close()
                 }
             }
@@ -222,26 +236,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
+        private fun saveImage(image: Image) {
+            try {
+                val captureLastPhotoResult = mCaptureLastPhotoResult ?: return
+                val saveFolder = mSaveFolder ?: return
+                val fileName = mPhotoFileNameBase + ".dng"
+                val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
+                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+                val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
+                dngCreator.writeImage(outputStream, image)
+                outputStream.close()
+            } catch(e: Exception) {
+            }
+        }
+
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "DNG ${mPhotoTimestamp}")
 
             if (null != imageReader) {
                 val image = imageReader.acquireLatestImage()
                 if (null != image) {
-                    val captureLastPhotoResult = mCaptureLastPhotoResult
-                    if (null != captureLastPhotoResult) {
-                        try {
-                            val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
-
-                            val dngFile = getPhotoDngFile()
-                            val fos = dngFile.outputStream()
-                            dngCreator.writeImage(fos, image)
-                            fos.close()
-
-                        } catch (e: Exception) {
-                        }
-                    }
-
+                    saveImage(image)
                     image.close()
                 }
             }
@@ -403,9 +418,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getPhotoJpegFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".jpg")
-    private fun getPhotoDngFile(): File = File(mDestFolder.absolutePath + "/" + mPhotoFileNameBase + ".dng")
-
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
 
@@ -455,6 +467,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, intent: Intent?) {
+        super.onActivityResult(requestCode, resultCode, intent)
+
+        if (INTENT_SELECT_FOLDER == requestCode && RESULT_OK == resultCode && null != intent) {
+            val data = intent.data
+            if (data is Uri) {
+                mSaveFolder = DocumentFile.fromTreeUri(applicationContext, data)
+                mSettings.saveUri = data.toString()
+                mSettings.saveProperties()
+                onValidSaveFolder()
+            }
+        }
+    }
+
     private fun exitApp() {
         setResult(0)
         finish()
@@ -497,11 +523,32 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        try {
+            mSaveFolder = DocumentFile.fromTreeUri(applicationContext, Uri.parse(mSettings.saveUri))
+        } catch (e: Exception) {
+        }
+
+        if (null == mSaveFolder) {
+            startSelectFolder()
+        } else {
+            onValidSaveFolder()
+        }
+    }
+
+    private fun startSelectFolder() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+        intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
+        intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
+        intent.addFlags( Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION or
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION )
+        startActivityForResult(intent, INTENT_SELECT_FOLDER)
+    }
+
+    private fun onValidSaveFolder() {
         if (mSettings.cameraIndex < 0 || mSettings.cameraIndex >= mCameraList.size)
             mSettings.cameraIndex = 0
-
-        if (!mDestFolder.exists())
-            mDestFolder.mkdirs()
 
         if (1 == mCameraList.size) {
             mBinding.txtCamera.isVisible = false
