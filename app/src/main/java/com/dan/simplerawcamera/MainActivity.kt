@@ -92,9 +92,7 @@ class MainActivity : AppCompatActivity() {
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
 
-    private var mCameraIndex = 0
     private lateinit var mCameraHandler: CameraHandler
-
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
@@ -258,14 +256,14 @@ class MainActivity : AppCompatActivity() {
 
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            selectCamera(mCameraIndex)
+            selectCamera(mSettings.cameraIndex)
             mSurfaceIsCreated = true
 
-            if (mFirstCall) {
+            if (mFirstCall) { //workaround ratio issue
                 mFirstCall = false
                 Timer().schedule(500) {
                     runOnUiThread {
-                        selectCamera(mCameraIndex)
+                        selectCamera(mSettings.cameraIndex)
                     }
                 }
             }
@@ -421,7 +419,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (mSurfaceIsCreated)
-            selectCamera(mCameraIndex)
+            selectCamera(mSettings.cameraIndex)
     }
 
     override fun onPause() {
@@ -499,6 +497,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        if (mSettings.cameraIndex < 0 || mSettings.cameraIndex >= mCameraList.size)
+            mSettings.cameraIndex = 0
+
         if (!mDestFolder.exists())
             mDestFolder.mkdirs()
 
@@ -513,7 +514,7 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
-        mBinding.btnCamera.setOnClickListener { selectCamera((mCameraIndex + 1) % mCameraList.size) }
+        mBinding.btnCamera.setOnClickListener { selectCamera((mSettings.cameraIndex + 1) % mCameraList.size) }
 
         mCameraHandler = mCameraList[0]
 
@@ -521,9 +522,14 @@ class MainActivity : AppCompatActivity() {
         SeekBarDirectionTracker.track(mBinding.seekBarSpeed) { delta, isFinal -> trackSpeed(delta, isFinal) }
         SeekBarDirectionTracker.track(mBinding.seekBarExpComponsation) { delta, isFinal -> trackExpComponsation(delta, isFinal) }
 
+        mBinding.seekBarFocus.progress = mSettings.focusManualProgress
+
         mBinding.seekBarFocus.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, user: Boolean) {
-                setupCapturePreviewRequest()
+                if (Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
+                    mSettings.focusManualProgress = progress
+                    setupCapturePreviewRequest()
+                }
             }
 
             override fun onStartTrackingTouch(p0: SeekBar?) {
@@ -839,7 +845,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
-        mCameraIndex = index
+        mSettings.cameraIndex = index
         mCameraHandler = mCameraList[index]
 
         closeCamera()

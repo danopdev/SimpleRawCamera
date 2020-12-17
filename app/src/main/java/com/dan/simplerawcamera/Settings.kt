@@ -23,14 +23,14 @@ class Settings( private val activity: Activity) {
         const val FOCUS_TYPE_MAX = 4
     }
 
-    var cameraId: String = "0"
+    var cameraIndex: Int = 0
     var expIsoIsManual: Boolean = false
     var expIsoValue: Int = 100
     var expSpeedIsManual: Boolean = false
     var expSpeedDivValue: Long = SPEED_MAX_MANUAL / SPEED_DEFAULT_MANUAL
     var expCompensationValue: Int = 0
     var focusType: Int = FOCUS_TYPE_CONTINOUS
-    var focusManualDistance: Float = 0F
+    var focusManualProgress: Int = 0
 
     init {
         loadProperties()
@@ -49,6 +49,7 @@ class Settings( private val activity: Activity) {
 
         forEachSettingProperty { property ->
             when( property.returnType ) {
+                Boolean::class.createType() -> property.setter.call( this, preferences.getBoolean( property.name, property.getter.call(this) as Boolean ) )
                 Int::class.createType() -> property.setter.call( this, preferences.getInt( property.name, property.getter.call(this) as Int ) )
                 Long::class.createType() -> property.setter.call( this, preferences.getLong( property.name, property.getter.call(this) as Long ) )
                 Float::class.createType() -> property.setter.call( this, preferences.getFloat( property.name, property.getter.call(this) as Float ) )
@@ -63,6 +64,7 @@ class Settings( private val activity: Activity) {
 
         forEachSettingProperty { property ->
             when( property.returnType ) {
+                Boolean::class.createType() -> editor.putBoolean( property.name, property.getter.call(this) as Boolean )
                 Int::class.createType() -> editor.putInt( property.name, property.getter.call(this) as Int )
                 Long::class.createType() -> editor.putLong( property.name, property.getter.call(this) as Long )
                 Float::class.createType() -> editor.putFloat( property.name, property.getter.call(this) as Float )
