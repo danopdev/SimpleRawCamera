@@ -4,10 +4,16 @@ import android.app.Activity
 import android.content.Context
 import kotlin.reflect.full.declaredMemberProperties
 
-class Settings( val activity: Activity) {
+class Settings( private val activity: Activity) {
 
     companion object {
     }
+
+    var cameraId: String = "0"
+    var expIsoIsManual: Boolean = false
+    var expIsoValue: Int = 100
+    var expSpeedIsManual: Boolean = false
+    var expSpeedValue: Long = 7812500L // 1/128
 
     private fun forEachProperty() {
         for( member in this::class.declaredMemberProperties ) {
