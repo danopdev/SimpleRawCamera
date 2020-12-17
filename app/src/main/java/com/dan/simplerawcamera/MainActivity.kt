@@ -886,9 +886,16 @@ class MainActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "New photo")
 
         mCaptureLastPhotoResult = null
-        mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
+
+        when( mSettings.takePhotoModes ) {
+            Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG
+            Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG
+            else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
+        }
+
         if (!mSettings.continuousMode)
             mPhotoTakeMask = mPhotoTakeMask or PHOTO_TAKE_SINGLE_SHOT
+
         mPhotoTimestamp = System.currentTimeMillis()
         mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
@@ -1012,8 +1019,20 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, 70)
                 captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, Size(256, 256 * mCameraHandler.resolutionHeight / mCameraHandler.resolutionWidth))
 
-                captureRequestBuilder.addTarget(mImageReaderDng.surface)
-                captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                when( mSettings.takePhotoModes ) {
+                    Settings.PHOTO_TYPE_DNG -> {
+                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                    }
+
+                    Settings.PHOTO_TYPE_JPEG -> {
+                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                    }
+
+                    else -> {
+                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                    }
+                }
 
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
