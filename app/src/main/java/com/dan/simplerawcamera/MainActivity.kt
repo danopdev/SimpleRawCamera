@@ -222,7 +222,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            mPhotoTakeMask = mPhotoButtonMask and PHOTO_TAKE_JPEG.inv()
+            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
 
             runOnUiThread {
                 takePhoto()
@@ -256,7 +256,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            mPhotoTakeMask = mPhotoButtonMask and PHOTO_TAKE_DNG.inv()
+            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
 
             runOnUiThread {
                 takePhoto()
