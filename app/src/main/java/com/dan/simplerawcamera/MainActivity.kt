@@ -121,6 +121,7 @@ class MainActivity : AppCompatActivity() {
     private var mRotatedPreviewHeight = 3
 
     private var mFirstCall = true
+    private var mSurfaceIsCreated = false
 
     private var mDestFolder = File("/storage/emulated/0/SimpleRawCamera")
 
@@ -258,6 +259,7 @@ class MainActivity : AppCompatActivity() {
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             selectCamera(mCameraIndex)
+            mSurfaceIsCreated = true
 
             if (mFirstCall) {
                 mFirstCall = false
@@ -386,16 +388,20 @@ class MainActivity : AppCompatActivity() {
             mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
-            cameraDevice.createCaptureSession(
-                mutableListOf(
-                    mBinding.surfaceView.holder.surface,
-                    mImageReaderHisto.surface,
-                    mImageReaderJpeg.surface,
-                    mImageReaderDng.surface,
-                ),
-                mCameraCaptureSessionStateCallback,
-                Handler { true }
-            )
+
+            try {
+                cameraDevice.createCaptureSession(
+                    mutableListOf(
+                        mBinding.surfaceView.holder.surface,
+                        mImageReaderHisto.surface,
+                        mImageReaderJpeg.surface,
+                        mImageReaderDng.surface,
+                    ),
+                    mCameraCaptureSessionStateCallback,
+                    Handler { true }
+                )
+            } catch(e: Exception) {
+            }
         }
     }
 
@@ -410,6 +416,18 @@ class MainActivity : AppCompatActivity() {
 
         if (!askPermissions())
             onPermissionsAllowed()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (mSurfaceIsCreated)
+            selectCamera(mCameraIndex)
+    }
+
+    override fun onPause() {
+        closeCamera()
+        mSettings.saveProperties()
+        super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -824,20 +842,7 @@ class MainActivity : AppCompatActivity() {
         mCameraIndex = index
         mCameraHandler = mCameraList[index]
 
-        val cameraCaptureSession = mCameraCaptureSession
-        if (null != cameraCaptureSession) {
-            cameraCaptureSession.close()
-            mCameraCaptureSession = null
-        }
-
-        val cameraDevice = mCameraDevice
-        if (null != cameraDevice) {
-            cameraDevice.close()
-            mCameraDevice = null
-        }
-
-        mCaptureRequestBuilder = null
-        mCaptureRequestBuilder = null
+        closeCamera()
 
         mBinding.txtCamera.text = index.toString()
 
@@ -858,6 +863,24 @@ class MainActivity : AppCompatActivity() {
         updateSliders()
 
         mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true })
+    }
+
+    private fun closeCamera() {
+        val cameraCaptureSession = mCameraCaptureSession
+        if (null != cameraCaptureSession) {
+            cameraCaptureSession.stopRepeating()
+            cameraCaptureSession.close()
+            mCameraCaptureSession = null
+        }
+
+        val cameraDevice = mCameraDevice
+        if (null != cameraDevice) {
+            cameraDevice.close()
+            mCameraDevice = null
+        }
+
+        mCaptureRequestBuilder = null
+        mCaptureRequestBuilder = null
     }
 
     private fun askPermissions(): Boolean {
