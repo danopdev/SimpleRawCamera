@@ -326,7 +326,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val speedValue = getSpeedValue()
-        val speedRatio = speedValue / mSpeedMeasuredValue
+        val speedRatio = mSpeedMeasuredValue / speedValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
         if (suggestedIso < mCameraHandler.isoRange.lower)
