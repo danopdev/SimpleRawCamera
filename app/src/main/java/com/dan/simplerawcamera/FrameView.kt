@@ -64,15 +64,19 @@ class FrameView : View {
     }
 
     fun showRatio(show: Boolean, ratioWidth: Int = 4, ratioHeight: Int = 3) {
-        mShowRatio = show
-        mRatioWidth = ratioWidth
-        mRatioHeight = ratioHeight
-        invalidate()
+        if (mShowRatio != show || mRatioWidth != ratioWidth || mRatioHeight != ratioHeight) {
+            mShowRatio = show
+            mRatioWidth = ratioWidth
+            mRatioHeight = ratioHeight
+            invalidate()
+        }
     }
 
     fun showGrid(show: Boolean) {
-        mShowGrid = show
-        invalidate()
+        if (mShowGrid != show) {
+            mShowGrid = show
+            invalidate()
+        }
     }
 
     fun showFocusZone(rect: Rect) {
@@ -122,12 +126,12 @@ class FrameView : View {
 
         //dark ratio frame
         if (mShowRatio) {
-            gridHeight = windowHeight * mRatioHeight / mRatioWidth
-            if (gridHeight > windowHeight) {
+            gridWidth = windowWidth
+            gridHeight = gridWidth * mRatioHeight / mRatioWidth
+
+            if (gridWidth > windowWidth || gridHeight > windowHeight) {
                 gridHeight = windowHeight
-                gridWidth = windowWidth * mRatioWidth / mRatioHeight
-            } else {
-                gridWidth = windowWidth
+                gridWidth = gridHeight * mRatioWidth / mRatioHeight
             }
 
             gridX = (windowWidth - gridWidth) / 2
