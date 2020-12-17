@@ -498,6 +498,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleRequestPermissions(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        if (grantResults.size < PERMISSIONS.size)
+            return
+
         var allowedAll = grantResults.size >= PERMISSIONS.size
 
         if (grantResults.size >= PERMISSIONS.size) {
