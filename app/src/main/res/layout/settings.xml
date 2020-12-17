@@ -111,6 +111,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
                     android:text="Continuous mode" />
 
                 <Switch
@@ -118,6 +119,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
                     android:text="Show grid" />
 
                 <LinearLayout
