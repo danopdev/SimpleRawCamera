@@ -2,15 +2,18 @@ package com.dan.simplerawcamera
 
 import android.app.Activity
 import android.content.Context
+import kotlin.reflect.full.declaredMemberProperties
 
 class Settings( val activity: Activity) {
 
     companion object {
     }
 
-    private class SettingValue( val name: String, val value: Any, val defaultValue: Any )
+    private fun forEachProperty() {
+        for( member in this::class.declaredMemberProperties ) {
 
-    private val values = arrayOf<SettingValue>()
+        }
+    }
 
     fun create() {
         val preferences = activity.getPreferences(Context.MODE_PRIVATE)
