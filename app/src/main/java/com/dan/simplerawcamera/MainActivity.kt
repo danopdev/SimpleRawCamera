@@ -86,16 +86,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val mSettings: Settings by lazy { Settings(this) }
-
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-
+    private val mSettings: Settings by lazy { Settings(this) }
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
-
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
-    private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(
-        mCameraManager
-    ) }
+    private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
 
     private var mCameraIndex = 0
     private lateinit var mCameraHandler: CameraHandler
@@ -113,6 +108,22 @@ class MainActivity : AppCompatActivity() {
     private var mPhotoFileNameBase = ""
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
+    private lateinit var mImageReaderJpeg: ImageReader
+    private lateinit var mImageReaderDng: ImageReader
+
+    private var mIsoMeasuredValue = 100
+    private var mSpeedMeasuredValue = 1L
+
+    private var mFocusClick = false
+    private var mFocusClickPosition = Point(0, 0)
+
+    private var mRotatedPreviewWidth = 4
+    private var mRotatedPreviewHeight = 3
+
+    private var mFirstCall = true
+
+    private var mDestFolder = File("/storage/emulated/0/SimpleRawCamera")
+
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var isBusy = false
 
@@ -181,7 +192,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private lateinit var mImageReaderJpeg: ImageReader
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "JPEG: ${mPhotoTimestamp}")
@@ -212,7 +222,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private lateinit var mImageReaderDng: ImageReader
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "DNG ${mPhotoTimestamp}")
@@ -245,19 +254,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-    private var mIsoMeasuredValue = 100
-    private var mSpeedMeasuredValue = 1L
-
-    private var mFocusClick = false
-    private var mFocusClickPosition = Point(0, 0)
-
-    private var mRotatedPreviewWidth = 4
-    private var mRotatedPreviewHeight = 3
-
-    private var mFirstCall = true
-
-    private var mDestFolder = File("/storage/emulated/0/SimpleRawCamera")
 
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
@@ -422,6 +418,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hideSystemUI() {
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -494,23 +491,11 @@ class MainActivity : AppCompatActivity() {
 
         mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, Handler { true })
 
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        window.decorView.systemUiVisibility =
-            (View.SYSTEM_UI_FLAG_IMMERSIVE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN)
-
         setContentView(mBinding.root)
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
-        mBinding.btnCamera.setOnClickListener {
-            selectCamera((mCameraIndex + 1) % mCameraList.size)
-        }
+        mBinding.btnCamera.setOnClickListener { selectCamera((mCameraIndex + 1) % mCameraList.size) }
 
         mCameraHandler = mCameraList[0]
 
