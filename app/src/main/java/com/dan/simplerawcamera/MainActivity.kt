@@ -549,6 +549,7 @@ class MainActivity : AppCompatActivity() {
         startActivityForResult(intent, INTENT_SELECT_FOLDER)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun onValidSaveFolder() {
         if (mSettings.cameraIndex < 0 || mSettings.cameraIndex >= mCameraList.size)
             mSettings.cameraIndex = 0
@@ -629,6 +630,14 @@ class MainActivity : AppCompatActivity() {
 
             false
         }
+
+        mBinding.btnSettings.setOnClickListener {
+            SettingsDialog.show( supportFragmentManager, mSettings ) {
+                updateFrame()
+            }
+        }
+
+        updateFrame()
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
@@ -882,7 +891,9 @@ class MainActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "New photo")
 
         mCaptureLastPhotoResult = null
-        mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_SINGLE_SHOT
+        mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
+        if (!mSettings.continuousMode)
+            mPhotoTakeMask = mPhotoTakeMask or PHOTO_TAKE_SINGLE_SHOT
         mPhotoTimestamp = System.currentTimeMillis()
         mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
@@ -939,6 +950,18 @@ class MainActivity : AppCompatActivity() {
         mCaptureRequestBuilder = null
     }
 
+    private fun updateFrame() {
+        mBinding.frameView.showGrid(mSettings.showGrid)
+
+        when(mSettings.frameType) {
+            Settings.FRAME_TYPE_1_1 -> mBinding.frameView.showRatio(true, 1, 1)
+            Settings.FRAME_TYPE_4_3 -> mBinding.frameView.showRatio(true, 4, 3)
+            Settings.FRAME_TYPE_3_2 -> mBinding.frameView.showRatio(true, 3, 2)
+            Settings.FRAME_TYPE_16_9 -> mBinding.frameView.showRatio(true, 16, 9)
+            else -> mBinding.frameView.showRatio(false)
+        }
+    }
+
     private fun askPermissions(): Boolean {
         for (permission in PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -980,7 +1003,6 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
-                //captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
 
                 if (mSettings.expIsoIsManual || mSettings.expSpeedIsManual) {
@@ -1011,7 +1033,6 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
-                //captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
             }
         }

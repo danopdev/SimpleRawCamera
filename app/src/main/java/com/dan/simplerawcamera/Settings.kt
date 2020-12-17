@@ -21,6 +21,16 @@ class Settings( private val activity: Activity) {
         const val FOCUS_TYPE_HYPERFOCAL = 2
         const val FOCUS_TYPE_MANUAL = 3
         const val FOCUS_TYPE_MAX = 4
+
+        const val PHOTO_TYPE_JPEG = 0
+        const val PHOTO_TYPE_DNG = 1
+        const val PHOTO_TYPE_JPEG_DNG = 2
+
+        const val FRAME_TYPE_NONE = 0
+        const val FRAME_TYPE_1_1 = 1
+        const val FRAME_TYPE_4_3 = 2
+        const val FRAME_TYPE_3_2 = 3
+        const val FRAME_TYPE_16_9 = 4
     }
 
     var saveUri: String = ""
@@ -32,6 +42,10 @@ class Settings( private val activity: Activity) {
     var expCompensationValue: Int = 0
     var focusType: Int = FOCUS_TYPE_CONTINOUS
     var focusManualProgress: Int = 0
+    var showGrid: Boolean = true
+    var frameType: Int = FRAME_TYPE_NONE
+    var continuousMode: Boolean = true
+    var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
 
     init {
         loadProperties()

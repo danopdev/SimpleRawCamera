@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">Simple Raw Camera</string>
+
+    <string-array name="framing_types">
+        <item>None</item>
+        <item>1x1</item>
+        <item>4x3</item>
+        <item>3x2</item>
+        <item>16x9</item>
+    </string-array>
+
+    <string-array name="photos_modes">
+        <item>JPEG</item>
+        <item>DNG</item>
+        <item>JPEG + DNG</item>
+    </string-array>
+
 </resources>
