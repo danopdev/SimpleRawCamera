@@ -935,6 +935,7 @@ class MainActivity : AppCompatActivity() {
 
                 if (mSettings.expIsoIsManual || mSettings.expSpeedIsManual) {
                     val ae = getCaptureEA()
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
                 }
