@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.graphics.*
 import android.hardware.camera2.*
 import android.hardware.camera2.params.MeteringRectangle
+import android.location.Location
 import android.location.LocationManager
 import android.media.Image
 import android.media.ImageReader
@@ -129,6 +130,8 @@ class MainActivity : AppCompatActivity() {
 
     private var mSaveFolder: DocumentFile? = null
 
+    private var mLocation: Location? = null
+
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var isBusy = false
 
@@ -241,6 +244,7 @@ class MainActivity : AppCompatActivity() {
                 val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
                 val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
                 val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
+                mLocation?.let { dngCreator.setLocation(it) }
                 dngCreator.writeImage(outputStream, image)
                 outputStream.close()
             } catch(e: Exception) {
@@ -998,6 +1002,7 @@ class MainActivity : AppCompatActivity() {
         setupCaptureRequest(false, force)
     }
 
+    @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
@@ -1020,7 +1025,6 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
                 }
 
-                //mLocationManager.
                 captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
                 captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, 70)
                 captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, Size(256, 256 * mCameraHandler.resolutionHeight / mCameraHandler.resolutionWidth))
@@ -1040,8 +1044,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                captureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION, mLocation)
+
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
+                mLocation = null
                 mPhotoCounter = 0
                 mBinding.txtPhotoCounter.isVisible = false
 
