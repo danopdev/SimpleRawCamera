@@ -101,7 +101,7 @@ class MainActivity : AppCompatActivity() {
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
-    private var mCaptureModeIsPhoto = true
+    private var mCaptureModeIsPhoto = false
     private var mCaptureLastPhotoResult: TotalCaptureResult? = null
 
     private var mPhotoButtonMask = 0
@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity() {
 
             mCaptureRequestBuilder = captureRequestBuilder
 
-            setupCapturePreviewRequest()
+            setupCapturePreviewRequest(true)
         }
     }
 
@@ -976,27 +976,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
-        mCaptureModeIsPhoto = true //force preview update
-
         if (mCameraHandler.supportLensStabilisation)
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
         captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
    }
 
-    private fun setupCapturePhotoRequest() {
-        setupCaptureRequest(true)
+    private fun setupCapturePhotoRequest(force: Boolean = false) {
+        setupCaptureRequest(true, force)
     }
 
-    private fun setupCapturePreviewRequest() {
-        setupCaptureRequest(false)
+    private fun setupCapturePreviewRequest(force: Boolean = false) {
+        setupCaptureRequest(false, force)
     }
 
-    private fun setupCaptureRequest(photoMode: Boolean = false) {
+    private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
-        if (photoMode != mCaptureModeIsPhoto) {
+        if (photoMode != mCaptureModeIsPhoto || force) {
             mCaptureModeIsPhoto = photoMode
 
             if (photoMode) {
