@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         const val PHOTO_TAKE_SINGLE_SHOT = 1
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
+        const val PHOTO_TAKE_MASK = 0xFE
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -108,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private var mPhotoTakeMask = 0
     private var mPhotoTimestamp = 0L
     private var mPhotoFileNameBase = ""
+    private var mPhotoCounter = 0
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -225,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
 
             runOnUiThread {
-                takePhoto()
+                takePhoto(true)
             }
         }
     }
@@ -259,7 +261,7 @@ class MainActivity : AppCompatActivity() {
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
 
             runOnUiThread {
-                takePhoto()
+                takePhoto(true)
             }
         }
     }
@@ -876,7 +878,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun takePhoto() {
+    private fun takePhoto(newFile: Boolean = false) {
+        if (newFile && (0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))) {
+            mPhotoCounter++
+            mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
+            mBinding.txtPhotoCounter.isVisible = true
+        }
+
         if (0 != mPhotoTakeMask) return
         if (0 == mPhotoButtonMask) return
 
@@ -1034,6 +1042,9 @@ class MainActivity : AppCompatActivity() {
 
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
+                mPhotoCounter = 0
+                mBinding.txtPhotoCounter.isVisible = false
+
                 mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 70)
