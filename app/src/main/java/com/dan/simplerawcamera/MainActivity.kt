@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -111,6 +112,7 @@ class MainActivity : AppCompatActivity() {
     private var mPhotoTimestamp = 0L
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
+    private var mPhotoCounterTimer: Timer? = null
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -562,6 +564,8 @@ class MainActivity : AppCompatActivity() {
 
         mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, Handler { true })
 
+        mBinding.txtPhotoCounter.isVisible = false
+
         setContentView(mBinding.root)
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
@@ -887,6 +891,15 @@ class MainActivity : AppCompatActivity() {
             mPhotoCounter++
             mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
             mBinding.txtPhotoCounter.isVisible = true
+
+            mPhotoCounterTimer?.cancel()
+            mPhotoCounterTimer = timer(null, false, Settings.PHOTO_COUNTER_TIMEOUT, Settings.PHOTO_COUNTER_TIMEOUT) {
+                runOnUiThread {
+                    mBinding.txtPhotoCounter.isVisible = false
+                    mPhotoCounterTimer?.cancel()
+                    mPhotoCounterTimer = null
+                }
+            }
         }
 
         if (0 != mPhotoTakeMask) return
@@ -1051,8 +1064,6 @@ class MainActivity : AppCompatActivity() {
             } else {
                 mLocation = null
                 mPhotoCounter = 0
-                mBinding.txtPhotoCounter.isVisible = false
-
                 mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 70)
