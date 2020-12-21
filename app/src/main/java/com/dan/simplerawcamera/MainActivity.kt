@@ -418,6 +418,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onError(p0: CameraDevice, p1: Int) {}
 
+        @Suppress("DEPRECATION")
         override fun onOpened(cameraDevice: CameraDevice) {
             mCameraDevice = cameraDevice
 
@@ -480,6 +481,7 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) hideSystemUI()
     }
 
+    @Suppress("DEPRECATION")
     private fun hideSystemUI() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -490,6 +492,7 @@ class MainActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
     }
 
+    @Suppress("DEPRECATION")
     private fun showSystemUI() {
         window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -498,7 +501,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
-            REQUEST_PERMISSIONS -> handleRequestPermissions(requestCode, permissions, grantResults)
+            REQUEST_PERMISSIONS -> handleRequestPermissions(grantResults)
         }
     }
 
@@ -532,7 +535,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun handleRequestPermissions(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    private fun handleRequestPermissions(grantResults: IntArray) {
         if (grantResults.size < PERMISSIONS.size)
             return
 
@@ -660,7 +663,7 @@ class MainActivity : AppCompatActivity() {
             false
         }
 
-        mBinding.btnPhoto.setOnTouchListener { view, motionEvent ->
+        mBinding.btnPhoto.setOnTouchListener { _, motionEvent ->
             when(motionEvent.actionMasked) {
                 MotionEvent.ACTION_DOWN -> takePhoto(true, PHOTO_BUTTON_SCREEN)
                 MotionEvent.ACTION_UP -> takePhoto(false, PHOTO_BUTTON_SCREEN)
