@@ -63,10 +63,8 @@ class MainActivity : AppCompatActivity() {
         const val PHOTO_BUTTON_VOLUMNE_UP = 2
         const val PHOTO_BUTTON_VOLUMNE_DOWN = 4
 
-        const val PHOTO_TAKE_SINGLE_SHOT = 1
-        const val PHOTO_TAKE_JPEG = 2
-        const val PHOTO_TAKE_DNG = 4
-        const val PHOTO_TAKE_MASK = 0xFE
+        const val PHOTO_TAKE_JPEG = 1
+        const val PHOTO_TAKE_DNG = 2
 
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
@@ -240,7 +238,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
-            takePhoto(0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))
+            if (0 == mPhotoTakeMask)
+                takePhoto(true)
         }
     }
 
@@ -272,7 +271,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
-            takePhoto(0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))
+            if (0 == mPhotoTakeMask)
+                takePhoto(true)
         }
     }
 
@@ -896,20 +896,19 @@ class MainActivity : AppCompatActivity() {
             mPhotoButtonMask = mask
             Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
 
-            if (0 != mask) {
-                if (0 == oldMask) {
-                    mPhotoCounter = 0
-                    mPhotoTakeMask = 0
-                    setupCapturePhotoRequest()
-                }
-
-                takePhoto()
+            if (0 != mask && 0 == oldMask) {
+                mPhotoCounter = 0
+                mPhotoTakeMask = 0
+                setupCapturePhotoRequest()
+                takePhoto(false, true)
             }
         }
     }
 
-    private fun takePhoto(newFile: Boolean = false) {
+    private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
+            var takeNewPhoto = start
+
             if (newFile) {
                 mPhotoCounter++
                 mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
@@ -924,15 +923,13 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                if (!mSettings.continuousMode) {
-                    mPhotoButtonMask = 0
-                }
+                takeNewPhoto = mSettings.continuousMode && (0 != mPhotoButtonMask)
             }
 
             val captureRequestPhoto = mCaptureRequest
             val cameraCaptureSession = mCameraCaptureSession
 
-            if (0 == mPhotoTakeMask && 0 != mPhotoButtonMask && null != captureRequestPhoto && null != cameraCaptureSession) {
+            if (takeNewPhoto && null != captureRequestPhoto && null != cameraCaptureSession) {
                 Log.i("TAKE_PHOTO", "New photo")
 
                 mCaptureLastPhotoResult = null
@@ -943,9 +940,6 @@ class MainActivity : AppCompatActivity() {
                     else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
                 }
 
-                if (!mSettings.continuousMode)
-                    mPhotoTakeMask = mPhotoTakeMask or PHOTO_TAKE_SINGLE_SHOT
-
                 mPhotoTimestamp = System.currentTimeMillis()
                 mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
@@ -954,7 +948,7 @@ class MainActivity : AppCompatActivity() {
                     mCameraCaptureSessionPhotoCaptureCallback,
                     mBackgroundHandler
                 )
-            } else if (0 == (mPhotoTakeMask and PHOTO_TAKE_MASK) && 0 == mPhotoButtonMask) {
+            } else {
                 setupCapturePreviewRequest()
             }
         }
