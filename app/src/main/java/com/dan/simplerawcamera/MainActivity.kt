@@ -240,7 +240,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
-            takePhoto(true)
+            takePhoto(0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))
         }
     }
 
@@ -272,7 +272,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
-            takePhoto(true)
+            takePhoto(0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))
         }
     }
 
@@ -896,11 +896,9 @@ class MainActivity : AppCompatActivity() {
             mPhotoButtonMask = mask
             Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
 
-            if (0 == mask) {
-                mCaptureLastPhotoResult = null
-                setupCapturePreviewRequest()
-            } else {
+            if (0 != mask) {
                 if (0 == oldMask) {
+                    mPhotoCounter = 0
                     mPhotoTakeMask = 0
                     setupCapturePhotoRequest()
                 }
@@ -912,7 +910,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun takePhoto(newFile: Boolean = false) {
         runOnUiThread {
-            if (newFile && 0 == (mPhotoTakeMask and PHOTO_TAKE_MASK)) {
+            Log.i("TAKE_PHOTO", "${newFile}, ${mPhotoTakeMask}, ${mPhotoButtonMask}, ${null != mCaptureRequest}, ${null != mCameraCaptureSession}")
+
+            if (newFile) {
                 mPhotoCounter++
                 mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
                 mBinding.txtPhotoCounter.isVisible = true
@@ -924,6 +924,10 @@ class MainActivity : AppCompatActivity() {
                         mPhotoCounterTimer?.cancel()
                         mPhotoCounterTimer = null
                     }
+                }
+
+                if (!mSettings.continuousMode) {
+                    mPhotoButtonMask = 0
                 }
             }
 
@@ -952,6 +956,8 @@ class MainActivity : AppCompatActivity() {
                     mCameraCaptureSessionPhotoCaptureCallback,
                     mBackgroundHandler
                 )
+            } else if (0 == (mPhotoTakeMask and PHOTO_TAKE_MASK) && 0 == mPhotoButtonMask) {
+                setupCapturePreviewRequest()
             }
         }
     }
@@ -1091,7 +1097,6 @@ class MainActivity : AppCompatActivity() {
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
                 mLocation = null
-                mPhotoCounter = 0
                 mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, false)
