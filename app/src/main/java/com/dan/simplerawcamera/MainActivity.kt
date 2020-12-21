@@ -326,7 +326,7 @@ class MainActivity : AppCompatActivity() {
             val speedValue = getSpeedValue()
             return Triple(
                 mSettings.expIsoValue,
-                Settings.SPEED_MAX_MANUAL / speedValue,
+                speedValue,
                 calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mSettings.expIsoValue, speedValue)
             )
         }
@@ -1052,8 +1052,6 @@ class MainActivity : AppCompatActivity() {
             if (photoMode) {
                 cameraCaptureSession.stopRepeating()
 
-                captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
-
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
@@ -1064,6 +1062,8 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
+                } else {
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
                 captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
