@@ -910,8 +910,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun takePhoto(newFile: Boolean = false) {
         runOnUiThread {
-            Log.i("TAKE_PHOTO", "${newFile}, ${mPhotoTakeMask}, ${mPhotoButtonMask}, ${null != mCaptureRequest}, ${null != mCameraCaptureSession}")
-
             if (newFile) {
                 mPhotoCounter++
                 mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
