@@ -67,6 +67,11 @@ class MainActivity : AppCompatActivity() {
         const val PHOTO_TAKE_DNG = 4
         const val PHOTO_TAKE_MASK = 0xFE
 
+        const val FOCUS_STATE_MANUAL = 0
+        const val FOCUS_STATE_CLICK = 1
+        const val FOCUS_STATE_SEARCHING = 2
+        const val FOCUS_STATE_LOCKED = 2
+
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
         fun getPhotoBaseFileName( timestamp: Long ): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
@@ -121,6 +126,7 @@ class MainActivity : AppCompatActivity() {
     private var mIsoMeasuredValue = 100
     private var mSpeedMeasuredValue = 1L
 
+    private var mFocusState = FOCUS_STATE_MANUAL
     private var mFocusClick = false
     private var mFocusClickPosition = Point(0, 0)
 
@@ -366,6 +372,25 @@ class MainActivity : AppCompatActivity() {
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
+            when(mFocusState) {
+                FOCUS_STATE_CLICK -> {
+                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    if (CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN == focusState) {
+                        mFocusState = FOCUS_STATE_SEARCHING
+                    }
+                }
+
+                FOCUS_STATE_SEARCHING -> {
+                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == focusState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == focusState) {
+                        mFocusState = FOCUS_STATE_LOCKED
+                        runOnUiThread {
+                            setupCapturePreviewRequest()
+                        }
+                    }
+                }
+            }
+
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
@@ -583,6 +608,7 @@ class MainActivity : AppCompatActivity() {
         mBinding.seekBarFocus.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, user: Boolean) {
                 if (Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
+                    mFocusState = FOCUS_STATE_MANUAL
                     mSettings.focusManualProgress = progress
                     setupCapturePreviewRequest()
                 }
@@ -615,7 +641,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
-            if (mCameraHandler.focusAllowManual && Settings.FOCUS_TYPE_CLICK == mSettings.focusType) {
+            if (mCameraHandler.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
                 if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
@@ -807,12 +833,6 @@ class MainActivity : AppCompatActivity() {
     private fun showFocus() {
         if (mCameraHandler.focusAllowManual) {
             when(mSettings.focusType) {
-                Settings.FOCUS_TYPE_CLICK -> {
-                    mBinding.txtFocus.text = "Focus: Click"
-                    mBinding.txtFocus.visibility = View.VISIBLE
-                    mBinding.seekBarFocus.visibility = View.INVISIBLE
-                }
-
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
                     mBinding.txtFocus.visibility = View.VISIBLE
@@ -935,6 +955,7 @@ class MainActivity : AppCompatActivity() {
     private fun selectCamera(index: Int) {
         mSettings.cameraIndex = index
         mCameraHandler = mCameraList[index]
+        mFocusState = FOCUS_STATE_MANUAL
 
         closeCamera()
 
@@ -1084,6 +1105,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (photoMode) return
+        cameraCaptureSession.stopRepeating()
 
         if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
@@ -1116,8 +1138,7 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
                     mBinding.frameView.hideFocusZone()
                 }
-
-                Settings.FOCUS_TYPE_CLICK -> {
+                Settings.FOCUS_TYPE_MANUAL -> {
                     if (mFocusClick) {
                         mFocusClick = false
                         val delta = mCameraHandler.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
@@ -1130,6 +1151,8 @@ class MainActivity : AppCompatActivity() {
 
                         if (y2 > y1 && x2 > x1) {
                             val rectangle = MeteringRectangle(x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
+
+                            mFocusState = FOCUS_STATE_CLICK
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
@@ -1143,15 +1166,15 @@ class MainActivity : AppCompatActivity() {
                                 mFocusClickPosition.y + FOCUS_REGION_SIZE_PERCENT
                             )
                         )
+                    } else if (FOCUS_STATE_LOCKED == mFocusState) {
+                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+                    } else if (FOCUS_STATE_MANUAL == mFocusState) {
+                        val distance = mCameraHandler.focusRange.lower +
+                                (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
+                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                        mBinding.frameView.hideFocusZone()
                     }
-                }
-
-                Settings.FOCUS_TYPE_MANUAL -> {
-                    val distance = mCameraHandler.focusRange.lower +
-                            (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
-                    mBinding.frameView.hideFocusZone()
                 }
 
                 else -> {

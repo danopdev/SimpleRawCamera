@@ -19,10 +19,9 @@ class Settings( private val activity: Activity) {
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
 
         const val FOCUS_TYPE_CONTINOUS = 0
-        const val FOCUS_TYPE_CLICK = 1
-        const val FOCUS_TYPE_HYPERFOCAL = 2
-        const val FOCUS_TYPE_MANUAL = 3
-        const val FOCUS_TYPE_MAX = 4
+        const val FOCUS_TYPE_HYPERFOCAL = 1
+        const val FOCUS_TYPE_MANUAL = 2
+        const val FOCUS_TYPE_MAX = 3
 
         const val PHOTO_TYPE_JPEG = 0
         const val PHOTO_TYPE_DNG = 1
