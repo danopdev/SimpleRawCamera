@@ -120,6 +120,7 @@ class MainActivity : AppCompatActivity() {
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
     private var mPhotoCounterTimer: Timer? = null
+    private var mPhotoInProgress = false
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -932,6 +933,7 @@ class MainActivity : AppCompatActivity() {
             if (takeNewPhoto && null != captureRequestPhoto && null != cameraCaptureSession) {
                 Log.i("TAKE_PHOTO", "New photo")
 
+                mPhotoInProgress = true
                 mCaptureLastPhotoResult = null
 
                 when (mSettings.takePhotoModes) {
@@ -949,6 +951,7 @@ class MainActivity : AppCompatActivity() {
                     mBackgroundHandler
                 )
             } else {
+                mPhotoInProgress = false
                 setupCapturePreviewRequest()
             }
         }
@@ -956,6 +959,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
+        mPhotoInProgress = false
         mSettings.cameraIndex = index
         mCameraHandler = mCameraList[index]
         mFocusState = FOCUS_STATE_MANUAL
@@ -1041,6 +1045,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
+        if (mPhotoInProgress) return
+
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
