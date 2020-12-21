@@ -15,7 +15,6 @@ import android.media.ImageReader
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -98,9 +97,6 @@ class MainActivity : AppCompatActivity() {
             return deltaExpIso + deltaExpSpeed
         }
     }
-
-    private val mBackgroundHandlerThread = HandlerThread("BackgroundHandlerThread")
-    private lateinit var mBackgroundHandler: Handler
 
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val mSettings: Settings by lazy { Settings(this) }
@@ -443,7 +439,7 @@ class MainActivity : AppCompatActivity() {
                         mImageReaderDng.surface,
                     ),
                     mCameraCaptureSessionStateCallback,
-                    mBackgroundHandler
+                    Handler { true }
                 )
             } catch(e: Exception) {
             }
@@ -455,9 +451,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        mBackgroundHandlerThread.start()
-        mBackgroundHandler = Handler(mBackgroundHandlerThread.looper)
 
         if (!askPermissions())
             onPermissionsAllowed()
@@ -594,7 +587,7 @@ class MainActivity : AppCompatActivity() {
             mBinding.btnCamera.isVisible = false
         }
 
-        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, mBackgroundHandler)
+        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, Handler { true })
 
         mBinding.txtPhotoCounter.isVisible = false
 
@@ -954,7 +947,7 @@ class MainActivity : AppCompatActivity() {
         cameraCaptureSession.capture(
             captureRequestPhoto,
             mCameraCaptureSessionPhotoCaptureCallback,
-            mBackgroundHandler
+            Handler { true }
         )
     }
 
@@ -977,14 +970,14 @@ class MainActivity : AppCompatActivity() {
         set.applyTo(mBinding.layoutView)
 
         mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
-        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, mBackgroundHandler)
+        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, Handler { true })
 
         mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
-        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, mBackgroundHandler)
+        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, Handler { true })
 
         updateSliders()
 
-        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, mBackgroundHandler)
+        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, Handler { true })
     }
 
     private fun closeCamera() {
@@ -1195,7 +1188,7 @@ class MainActivity : AppCompatActivity() {
         cameraCaptureSession.setRepeatingRequest(
             captureRequestBuilder.build(),
             mCameraCaptureSessionPreviewCaptureCallback,
-            mBackgroundHandler
+            Handler { true }
         )
     }
 }
