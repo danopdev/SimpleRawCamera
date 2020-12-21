@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
         const val FOCUS_STATE_SEARCHING = 2
-        const val FOCUS_STATE_LOCKED = 2
+        const val FOCUS_STATE_LOCKED = 3
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -240,10 +240,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
-
-            runOnUiThread {
-                takePhoto(true)
-            }
+            takePhoto(true)
         }
     }
 
@@ -275,10 +272,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
-
-            runOnUiThread {
-                takePhoto(true)
-            }
+            takePhoto(true)
         }
     }
 
@@ -917,48 +911,49 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun takePhoto(newFile: Boolean = false) {
-        if (newFile && (0 == (mPhotoTakeMask and PHOTO_TAKE_MASK))) {
-            mPhotoCounter++
-            mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
-            mBinding.txtPhotoCounter.isVisible = true
+        runOnUiThread {
+            if (newFile && 0 == (mPhotoTakeMask and PHOTO_TAKE_MASK)) {
+                mPhotoCounter++
+                mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
+                mBinding.txtPhotoCounter.isVisible = true
 
-            mPhotoCounterTimer?.cancel()
-            mPhotoCounterTimer = timer(null, false, Settings.PHOTO_COUNTER_TIMEOUT, Settings.PHOTO_COUNTER_TIMEOUT) {
-                runOnUiThread {
-                    mBinding.txtPhotoCounter.isVisible = false
-                    mPhotoCounterTimer?.cancel()
-                    mPhotoCounterTimer = null
+                mPhotoCounterTimer?.cancel()
+                mPhotoCounterTimer = timer(null, false, Settings.PHOTO_COUNTER_TIMEOUT, Settings.PHOTO_COUNTER_TIMEOUT) {
+                    runOnUiThread {
+                        mBinding.txtPhotoCounter.isVisible = false
+                        mPhotoCounterTimer?.cancel()
+                        mPhotoCounterTimer = null
+                    }
                 }
             }
+
+            val captureRequestPhoto = mCaptureRequest
+            val cameraCaptureSession = mCameraCaptureSession
+
+            if (0 == mPhotoTakeMask && 0 != mPhotoButtonMask && null != captureRequestPhoto && null != cameraCaptureSession) {
+                Log.i("TAKE_PHOTO", "New photo")
+
+                mCaptureLastPhotoResult = null
+
+                when (mSettings.takePhotoModes) {
+                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG
+                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG
+                    else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
+                }
+
+                if (!mSettings.continuousMode)
+                    mPhotoTakeMask = mPhotoTakeMask or PHOTO_TAKE_SINGLE_SHOT
+
+                mPhotoTimestamp = System.currentTimeMillis()
+                mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
+
+                cameraCaptureSession.capture(
+                    captureRequestPhoto,
+                    mCameraCaptureSessionPhotoCaptureCallback,
+                    mBackgroundHandler
+                )
+            }
         }
-
-        if (0 != mPhotoTakeMask) return
-        if (0 == mPhotoButtonMask) return
-
-        val captureRequestPhoto = mCaptureRequest ?: return
-        val cameraCaptureSession = mCameraCaptureSession ?: return
-
-        Log.i("TAKE_PHOTO", "New photo")
-
-        mCaptureLastPhotoResult = null
-
-        when( mSettings.takePhotoModes ) {
-            Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG
-            Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG
-            else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
-        }
-
-        if (!mSettings.continuousMode)
-            mPhotoTakeMask = mPhotoTakeMask or PHOTO_TAKE_SINGLE_SHOT
-
-        mPhotoTimestamp = System.currentTimeMillis()
-        mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
-
-        cameraCaptureSession.capture(
-            captureRequestPhoto,
-            mCameraCaptureSessionPhotoCaptureCallback,
-            mBackgroundHandler
-        )
     }
 
     @SuppressLint("MissingPermission")
@@ -1115,7 +1110,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (photoMode) return
-        cameraCaptureSession.stopRepeating()
 
         if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
