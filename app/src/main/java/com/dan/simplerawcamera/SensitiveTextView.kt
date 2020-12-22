@@ -2,6 +2,7 @@ package com.dan.simplerawcamera
 
 import android.content.Context
 import android.content.res.Resources
+import android.graphics.Canvas
 import android.graphics.Color
 import android.util.AttributeSet
 import android.util.Log
@@ -9,6 +10,7 @@ import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatTextView
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 
 
 class SensitiveTextView : AppCompatTextView {
@@ -38,6 +40,19 @@ class SensitiveTextView : AppCompatTextView {
     constructor(context: Context) : super(context, null) {}
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) {}
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {}
+
+    override fun onDraw(canvas: Canvas?) {
+        super.onDraw(canvas)
+
+        if (null != canvas) {
+            val size = min(width, height)
+            val drawableUp = resources.getDrawable(android.R.drawable.arrow_up_float, null)
+            drawableUp.setBounds(0,0,size,size)
+            drawableUp.draw(canvas)
+            drawableUp.setBounds(width-size,0,width,size)
+            drawableUp.draw(canvas)
+        }
+   }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when(ev.action) {
