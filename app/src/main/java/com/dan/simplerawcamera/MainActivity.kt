@@ -97,9 +97,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val mBackgroundHandlerThread = HandlerThread("BackgroundHandlerThread")
-    private lateinit var mBackgroundHandler: Handler
-
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val mSettings: Settings by lazy { Settings(this) }
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
@@ -439,21 +436,20 @@ class MainActivity : AppCompatActivity() {
                         mImageReaderDng.surface,
                     ),
                     mCameraCaptureSessionStateCallback,
-                    mBackgroundHandler
+                    getWorkerHandler()
                 )
             } catch(e: Exception) {
             }
         }
     }
 
+    private fun getWorkerHandler(): Handler? { return null }
+
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        mBackgroundHandlerThread.start()
-        mBackgroundHandler = Handler(mBackgroundHandlerThread.looper)
 
         if (!askPermissions())
             onPermissionsAllowed()
@@ -592,7 +588,7 @@ class MainActivity : AppCompatActivity() {
             mBinding.btnCamera.isVisible = false
         }
 
-        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, mBackgroundHandler)
+        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, getWorkerHandler())
 
         mBinding.txtPhotoCounter.isVisible = false
 
@@ -647,7 +643,7 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
             if (mCameraHandler.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
-                if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked && !mFocusClick && (FOCUS_STATE_MANUAL == mFocusState || FOCUS_STATE_LOCKED == mFocusState)) {
+                if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
                     mFocusClick = true
@@ -948,7 +944,7 @@ class MainActivity : AppCompatActivity() {
                 cameraCaptureSession.capture(
                     captureRequestPhoto,
                     mCameraCaptureSessionPhotoCaptureCallback,
-                    mBackgroundHandler
+                    getWorkerHandler()
                 )
             } else {
                 mPhotoInProgress = false
@@ -977,14 +973,14 @@ class MainActivity : AppCompatActivity() {
         set.applyTo(mBinding.layoutView)
 
         mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
-        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, mBackgroundHandler)
+        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, getWorkerHandler())
 
         mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
-        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, mBackgroundHandler)
+        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, getWorkerHandler())
 
         updateSliders()
 
-        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, mBackgroundHandler)
+        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, getWorkerHandler())
     }
 
     private fun closeCamera() {
@@ -1114,29 +1110,7 @@ class MainActivity : AppCompatActivity() {
 
         if (photoMode) return
 
-        if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mSettings.expCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
-        } else {
-            var manualSpeed = getSpeedValue()
-            var manualISO = mSettings.expIsoValue
-
-            if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
-                while (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
-                    if ((2*manualISO) > mCameraHandler.isoRange.upper)
-                        break
-
-                    manualISO *= 2
-                    manualSpeed /= 2
-                }
-
-                manualSpeed = min(Settings.SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
-            }
-
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
-            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
-        }
+        captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
 
         if (mCameraHandler.focusAllowManual) {
             when(mSettings.focusType) {
@@ -1178,7 +1152,6 @@ class MainActivity : AppCompatActivity() {
                     } else if (FOCUS_STATE_MANUAL == mFocusState) {
                         val distance = mCameraHandler.focusRange.lower +
                                 (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
-                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL)
                         captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                         captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                         mBinding.frameView.hideFocusZone()
@@ -1193,10 +1166,38 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        //WORKAROUND: My camera block with click to focus in full manual mode
+        if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && mSettings.expIsoIsManual && mSettings.expSpeedIsManual) {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
+        } else if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mSettings.expCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
+        } else {
+            var manualSpeed = getSpeedValue()
+            var manualISO = mSettings.expIsoValue
+
+            if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
+                while (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
+                    if ((2*manualISO) > mCameraHandler.isoRange.upper)
+                        break
+
+                    manualISO *= 2
+                    manualSpeed /= 2
+                }
+
+                manualSpeed = min(Settings.SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
+            }
+
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
+        }
+
         cameraCaptureSession.setRepeatingRequest(
             captureRequestBuilder.build(),
             mCameraCaptureSessionPreviewCaptureCallback,
-            mBackgroundHandler
+            getWorkerHandler()
         )
     }
 }
