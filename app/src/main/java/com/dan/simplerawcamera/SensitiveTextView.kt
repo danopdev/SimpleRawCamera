@@ -1,6 +1,8 @@
 package com.dan.simplerawcamera
 
 import android.content.Context
+import android.content.res.Resources
+import android.graphics.Color
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -12,67 +14,94 @@ import kotlin.math.max
 class SensitiveTextView : AppCompatTextView {
 
     companion object {
-        const val DEFAULT_STEPS_X = 2
-        const val DEFAULT_STEPS_Y = 2
+        private fun dpToPx(dp: Int): Int {
+            return (dp * Resources.getSystem().displayMetrics.density).toInt()
+        }
+
+        val BG_COLOR_NORMAL = Color.argb(255, 0, 0, 0 )
+        val BG_COLOR_PRESSED = Color.rgb(48, 48, 48 )
+
+        val STEP_X = dpToPx(30)
+        val STEP_Y = dpToPx(20)
+
+        const val DIRECTION_NOT_DEFINED = 0
+        const val DIRECTION_X_AXIS = 1
+        const val DIRECTION_Y_AXIS = 2
     }
 
-    private var mStepsX: Int = DEFAULT_STEPS_X
-    private var mStepsY: Int = DEFAULT_STEPS_Y
     private var mStartX: Float = 0f
     private var mStartY: Float = 0f
+    private var mDirection: Int = DIRECTION_NOT_DEFINED
+    private var mOnMoveXAxis: ((Int)->Unit)? = null
+    private var mOnMoveYAxis: ((Int)->Unit)? = null
 
     constructor(context: Context) : super(context, null) {}
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) {}
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {}
 
-    var stepsX: Int
-        get() = mStepsX
-        set(value) { mStepsX = value }
-
-    var stepsY: Int
-        get() = mStepsY
-        set(value) { mStepsY = value }
-
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         when(ev.action) {
             MotionEvent.ACTION_DOWN -> {
-                //Log.i("SensitiveTextView", "DOWN: ${ev.x.toInt()}, ${ev.y.toInt()}")
-                mStartX = ev.x
-                mStartY = ev.y
+                handleActionDown(ev)
                 return true
             }
 
-            MotionEvent.ACTION_MOVE -> {
-                val deltaX = (ev.x - mStartX).toInt()
-                val deltaY = (ev.y - mStartY).toInt()
-                //Log.i("SensitiveTextView", "UP: ${ev.x.toInt()}, ${ev.y.toInt()}, Delta: ${deltaX}, ${deltaY}")
-                val absDeltaX = abs(deltaX)
-                val absDeltaY = abs(deltaY)
-
-                if (absDeltaX >= (2*absDeltaY)) { //take it as x-axis movement
-                    if (mStepsX > 0) {
-                        val stepSize = (max(width, height) / mStepsX)
-                        val steps = deltaX / stepSize
-                        if (0 != steps) {
-                            Log.i("SensitiveTextView", "X-Axis: ${steps}")
-                            mStartX = ev.x
-                            mStartY = ev.y
-                        }
-                    }
-                } else if (absDeltaY >= (2*absDeltaX)) { //take it as y-axis movement
-                    if (mStepsY > 0) {
-                        val stepSize = (max(width, height) / mStepsY)
-                        var steps = deltaY / stepSize
-                        if (0 != steps) {
-                            Log.i("SensitiveTextView", "Y-Axis: ${steps}")
-                            mStartX = ev.x
-                            mStartY = ev.y
-                        }
-                    }
-                }
-            }
+            MotionEvent.ACTION_MOVE -> handleActionMove(ev)
+            MotionEvent.ACTION_UP -> handleActionUp(ev)
         }
 
         return super.onTouchEvent(ev)
+    }
+
+    private fun handleActionUp(ev: MotionEvent) {
+        val deltaX = (ev.x - mStartX).toInt()
+        val deltaY = (ev.y - mStartY).toInt()
+        val absDeltaX = abs(deltaX)
+        val absDeltaY = abs(deltaY)
+
+        if (DIRECTION_NOT_DEFINED == mDirection) {
+            if (absDeltaX < STEP_X && absDeltaY < STEP_Y) return
+            mDirection = if (absDeltaX >= STEP_X) DIRECTION_X_AXIS else DIRECTION_Y_AXIS
+        }
+
+        when(mDirection) {
+            DIRECTION_X_AXIS -> {
+                if (absDeltaX >= STEP_X) {
+                    val steps = deltaX / STEP_X
+                    mStartX = ev.x + steps * STEP_X
+                    mStartY = ev.y
+                    mOnMoveXAxis?.invoke(steps)
+                }
+            }
+
+            DIRECTION_Y_AXIS -> {
+                if (absDeltaY >= STEP_Y) {
+                    val steps = deltaY / STEP_Y
+                    mStartX = ev.x
+                    mStartY = ev.y + steps * STEP_Y
+                    mOnMoveYAxis?.invoke(steps)
+                }
+            }
+        }
+    }
+
+    private fun handleActionDown(ev: MotionEvent) {
+        mStartX = ev.x
+        mStartY = ev.y
+        mDirection = DIRECTION_NOT_DEFINED
+
+        setBackgroundColor(BG_COLOR_PRESSED)
+    }
+
+    private fun handleActionMove(ev: MotionEvent) {
+        setBackgroundColor(BG_COLOR_NORMAL)
+    }
+
+    fun setOnMoveXAxisListener( l: (Int)->Unit ) {
+        mOnMoveXAxis = l
+    }
+
+    fun setOnMoveYAxisListener( l: (Int)->Unit ) {
+        mOnMoveYAxis = l
     }
 }
