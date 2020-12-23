@@ -140,7 +140,15 @@ class SensitiveTextView : AppCompatTextView {
     private fun handleActionDown(ev: MotionEvent) {
         mStartX = ev.x
         mStartY = ev.y
-        mDirection = DIRECTION_NOT_DEFINED
+
+        if (null != mOnMoveXAxis && null == mOnMoveYAxis) {
+            mDirection = DIRECTION_X_AXIS
+        } else if (null == mOnMoveXAxis && null != mOnMoveYAxis) {
+            mDirection = DIRECTION_Y_AXIS
+        } else {
+            mDirection = DIRECTION_NOT_DEFINED
+        }
+
         setBackgroundColor(BG_COLOR_PRESSED)
         invalidate()
     }
