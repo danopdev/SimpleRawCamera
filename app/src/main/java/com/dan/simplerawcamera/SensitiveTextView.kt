@@ -105,9 +105,15 @@ class SensitiveTextView : AppCompatTextView {
         val absDeltaY = abs(deltaY)
 
         if (DIRECTION_NOT_DEFINED == mDirection || DIRECTION_NONE == mDirection) {
-            if (absDeltaX < STEP_X && absDeltaY < STEP_Y) return
-            mDirection = if (absDeltaX >= STEP_X) DIRECTION_X_AXIS else DIRECTION_Y_AXIS
-            invalidate()
+            if (absDeltaX >= STEP_X && null != mOnMoveXAxis) {
+                mDirection = DIRECTION_X_AXIS
+                invalidate()
+            } else if (absDeltaY >= STEP_Y && null != mOnMoveYAxis) {
+                mDirection = DIRECTION_Y_AXIS
+                invalidate()
+            } else {
+                return
+            }
         }
 
         when(mDirection) {
