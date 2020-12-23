@@ -600,9 +600,47 @@ class MainActivity : AppCompatActivity() {
 
         mCameraHandler = mCameraList[0]
 
-        SeekBarDirectionTracker.track(mBinding.seekBarIso) { delta, isFinal -> trackIso(delta, isFinal) }
-        SeekBarDirectionTracker.track(mBinding.seekBarSpeed) { delta, isFinal -> trackSpeed(delta, isFinal) }
-        SeekBarDirectionTracker.track(mBinding.seekBarExpComponsation) { delta, isFinal -> trackExpComponsation(delta, isFinal) }
+        mBinding.txtIso.setOnMoveYAxisListener {
+            if (it > 0 && !mSettings.expIsoIsManual) {
+                mSettings.expIsoIsManual = true
+                updateSliders()
+            } else if (it < 0 && mSettings.expIsoIsManual) {
+                mSettings.expIsoIsManual = false
+                updateSliders()
+            }
+        }
+
+        mBinding.txtIso.setOnMoveXAxisListener { trackIso(it) }
+
+        mBinding.txtSpeed.setOnMoveYAxisListener {
+            if (it > 0 && !mSettings.expSpeedIsManual) {
+                mSettings.expSpeedIsManual = true
+                updateSliders()
+            } else if (it < 0 && mSettings.expSpeedIsManual) {
+                mSettings.expSpeedIsManual = false
+                updateSliders()
+            }
+        }
+
+        mBinding.txtSpeed.setOnMoveXAxisListener { trackSpeed(it) }
+
+        mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpComponsation(it) }
+
+        mBinding.txtFocus.setOnMoveYAxisListener {
+            if (mCameraHandler.focusAllowManual) {
+                if (it > 0 && (mSettings.focusType + 1) < Settings.FOCUS_TYPE_MAX) {
+                    mSettings.focusType++
+                    mFocusClick = false
+                    showFocus()
+                    setupCapturePreviewRequest()
+                } else if (it < 0 && mSettings.focusType > 0) {
+                    mSettings.focusType--
+                    mFocusClick = false
+                    showFocus()
+                    setupCapturePreviewRequest()
+                }
+            }
+        }
 
         mBinding.seekBarFocus.progress = mSettings.focusManualProgress
 
@@ -621,25 +659,6 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(p0: SeekBar?) {
             }
         })
-
-        mBinding.txtIso.setOnClickListener {
-            mSettings.expIsoIsManual = !mSettings.expIsoIsManual
-            updateSliders()
-        }
-
-        mBinding.txtSpeed.setOnClickListener {
-            mSettings.expSpeedIsManual = !mSettings.expSpeedIsManual
-            updateSliders()
-        }
-
-        mBinding.txtFocus.setOnClickListener {
-            if (mCameraHandler.focusAllowManual) {
-                mSettings.focusType = (mSettings.focusType + 1) % Settings.FOCUS_TYPE_MAX
-                mFocusClick = false
-                showFocus()
-                setupCapturePreviewRequest()
-            }
-        }
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
             if (mCameraHandler.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
@@ -704,7 +723,7 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    private fun trackIso(delta: Int, isFinal: Boolean) {
+    private fun trackIso(delta: Int) {
         if (!mSettings.expIsoIsManual) return
 
         val increase = delta > 0
@@ -723,18 +742,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         showIso(value)
-
-        if (isFinal) {
-            mSettings.expIsoValue = value
-            setupCapturePreviewRequest()
-        }
+        mSettings.expIsoValue = value
+        setupCapturePreviewRequest()
     }
 
     private fun showIso(value: Int) {
-        mBinding.txtIso.text = "${value} ISO"
+        val extra = if (mSettings.expIsoIsManual) "M" else "A"
+        mBinding.txtIso.text = "${value} ISO (${extra})"
     }
 
-    private fun trackExpComponsation(delta: Int, isFinal: Boolean) {
+    private fun trackExpComponsation(delta: Int) {
         if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
 
         val increase = delta > 0
@@ -753,11 +770,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         showExpComponsation(value)
-
-        if (isFinal) {
-            mSettings.expCompensationValue = value
-            setupCapturePreviewRequest()
-        }
+        mSettings.expCompensationValue = value
+        setupCapturePreviewRequest()
     }
 
     private fun showExpComponsation(value: Int) {
@@ -772,7 +786,7 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtExpComponsation.text = exp
     }
 
-    private fun trackSpeed(delta: Int, isFinal: Boolean) {
+    private fun trackSpeed(delta: Int) {
         if (!mSettings.expSpeedIsManual) return
 
         val increase = delta > 0
@@ -791,11 +805,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         showSpeed(getSpeedValue(speedDiv))
-
-        if (isFinal) {
-            mSettings.expSpeedDivValue = speedDiv
-            setupCapturePreviewRequest()
-        }
+        mSettings.expSpeedDivValue = speedDiv
+        setupCapturePreviewRequest()
     }
 
     private fun getSpeedStr( speed: Long ): String {
@@ -828,7 +839,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSpeed(speed: Long) {
-        mBinding.txtSpeed.text = getSpeedStr( speed )
+        val extra = if (mSettings.expSpeedIsManual) " (M)" else " (A)"
+        mBinding.txtSpeed.text = getSpeedStr( speed ) + extra
     }
 
     private fun showFocus() {
@@ -860,10 +872,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSliders() {
-        mBinding.seekBarIso.visibility = if (mSettings.expIsoIsManual) View.VISIBLE else View.INVISIBLE
-        mBinding.seekBarSpeed.visibility = if (mSettings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
         mBinding.txtExpComponsation.visibility = if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
-        mBinding.seekBarExpComponsation.visibility = mBinding.txtExpComponsation.visibility
 
         if (mSettings.expIsoIsManual)
             showIso(mSettings.expIsoValue)

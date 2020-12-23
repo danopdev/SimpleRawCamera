@@ -4,13 +4,11 @@ import android.content.Context
 import android.content.res.Resources
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import androidx.appcompat.widget.AppCompatTextView
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
 
 class SensitiveTextView : AppCompatTextView {
@@ -20,20 +18,23 @@ class SensitiveTextView : AppCompatTextView {
             return (dp * Resources.getSystem().displayMetrics.density).toInt()
         }
 
+        val PADDING = dpToPx(1).toFloat()
+
         val BG_COLOR_NORMAL = Color.argb(255, 0, 0, 0 )
         val BG_COLOR_PRESSED = Color.rgb(48, 48, 48 )
 
         val STEP_X = dpToPx(30)
-        val STEP_Y = dpToPx(20)
+        val STEP_Y = dpToPx(30)
 
-        const val DIRECTION_NOT_DEFINED = 0
-        const val DIRECTION_X_AXIS = 1
-        const val DIRECTION_Y_AXIS = 2
+        const val DIRECTION_NONE = 0
+        const val DIRECTION_NOT_DEFINED = 1
+        const val DIRECTION_X_AXIS = 2
+        const val DIRECTION_Y_AXIS = 3
     }
 
     private var mStartX: Float = 0f
     private var mStartY: Float = 0f
-    private var mDirection: Int = DIRECTION_NOT_DEFINED
+    private var mDirection: Int = DIRECTION_NONE
     private var mOnMoveXAxis: ((Int)->Unit)? = null
     private var mOnMoveYAxis: ((Int)->Unit)? = null
 
@@ -44,14 +45,43 @@ class SensitiveTextView : AppCompatTextView {
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
-        if (null != canvas) {
-            val size = min(width, height)
-            val drawableUp = resources.getDrawable(android.R.drawable.arrow_up_float, null)
-            drawableUp.setBounds(0,0,size,size)
-            drawableUp.draw(canvas)
-            drawableUp.setBounds(width-size,0,width,size)
-            drawableUp.draw(canvas)
+        if (null == canvas) return
+
+        var charLeft = "o"
+        var charRight = "o"
+        var charRightIsRotated = false
+        var charOffset = 0
+
+        when(mDirection) {
+            DIRECTION_NOT_DEFINED -> {
+                charLeft = "+"
+                charRight = "+"
+            }
+
+            DIRECTION_X_AXIS -> {
+                charLeft = "<"
+                charRight = ">"
+            }
+
+            DIRECTION_Y_AXIS -> {
+                charLeft = "^"
+                charRight = "^"
+                charRightIsRotated = true
+                charOffset = dpToPx(3)
+            }
         }
+
+        val paint = this.paint
+
+        val textRect = Rect()
+        paint.getTextBounds( charLeft, 0, 1, textRect )
+
+        canvas.drawText( charLeft, PADDING, (height + textRect.height()) / 2f + charOffset, paint )
+
+        if (charRightIsRotated) {
+            canvas.rotate(180f, width - (PADDING + textRect.width()) / 2, height / 2f)
+        }
+        canvas.drawText( charRight, width - PADDING - textRect.width(), (height + textRect.height()) / 2f + charOffset, paint )
    }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
@@ -62,28 +92,29 @@ class SensitiveTextView : AppCompatTextView {
             }
 
             MotionEvent.ACTION_MOVE -> handleActionMove(ev)
-            MotionEvent.ACTION_UP -> handleActionUp(ev)
+            MotionEvent.ACTION_UP -> handleActionUp()
         }
 
         return super.onTouchEvent(ev)
     }
 
-    private fun handleActionUp(ev: MotionEvent) {
+    private fun handleActionMove(ev: MotionEvent) {
         val deltaX = (ev.x - mStartX).toInt()
         val deltaY = (ev.y - mStartY).toInt()
         val absDeltaX = abs(deltaX)
         val absDeltaY = abs(deltaY)
 
-        if (DIRECTION_NOT_DEFINED == mDirection) {
+        if (DIRECTION_NOT_DEFINED == mDirection || DIRECTION_NONE == mDirection) {
             if (absDeltaX < STEP_X && absDeltaY < STEP_Y) return
             mDirection = if (absDeltaX >= STEP_X) DIRECTION_X_AXIS else DIRECTION_Y_AXIS
+            invalidate()
         }
 
         when(mDirection) {
             DIRECTION_X_AXIS -> {
                 if (absDeltaX >= STEP_X) {
                     val steps = deltaX / STEP_X
-                    mStartX = ev.x + steps * STEP_X
+                    mStartX = ev.x
                     mStartY = ev.y
                     mOnMoveXAxis?.invoke(steps)
                 }
@@ -93,7 +124,7 @@ class SensitiveTextView : AppCompatTextView {
                 if (absDeltaY >= STEP_Y) {
                     val steps = deltaY / STEP_Y
                     mStartX = ev.x
-                    mStartY = ev.y + steps * STEP_Y
+                    mStartY = ev.y
                     mOnMoveYAxis?.invoke(steps)
                 }
             }
@@ -104,12 +135,14 @@ class SensitiveTextView : AppCompatTextView {
         mStartX = ev.x
         mStartY = ev.y
         mDirection = DIRECTION_NOT_DEFINED
-
         setBackgroundColor(BG_COLOR_PRESSED)
+        invalidate()
     }
 
-    private fun handleActionMove(ev: MotionEvent) {
+    private fun handleActionUp() {
+        mDirection = DIRECTION_NONE
         setBackgroundColor(BG_COLOR_NORMAL)
+        invalidate()
     }
 
     fun setOnMoveXAxisListener( l: (Int)->Unit ) {
