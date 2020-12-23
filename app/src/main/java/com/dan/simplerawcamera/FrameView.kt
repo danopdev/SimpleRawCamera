@@ -21,12 +21,18 @@ class FrameView : View {
             return (dp * Resources.getSystem().getDisplayMetrics().density).toInt()
         }
 
+        const val SHOW_COUNTER_TIMEOUT = 1000L
         const val SHOW_FOCUS_TIMEOUT = 1000L
         val LINE_WIDTH = dpToPx(1)
+        val TEXT_PADDING = dpToPx(32)
+        val TEXT_SHADOW_PADDING = dpToPx(1)
+        val TEXT_COLOR = Color.rgb(192, 192, 192)
+        val TEXT_COLOR_SHADOW = Color.BLACK
     }
 
     private val mPaintDark = Paint()
     private val mPaintLight = Paint()
+    private val mPaintText = Paint()
 
     private var mShowRatio = false
     private var mRatioWidth = 3
@@ -38,6 +44,9 @@ class FrameView : View {
     private var mShowFocusZoneRect = Rect(0, 0, 0, 0)
     private val mShowFocusLight = Paint()
     private var mShowFocusTimer: Timer? = null
+
+    private var mCounterTimer: Timer? = null
+    private var mCounter = 0
 
     constructor(context: Context) : super(context, null) { init() }
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
@@ -60,6 +69,30 @@ class FrameView : View {
             strokeWidth = LINE_WIDTH.toFloat()
             color = Color.rgb(255, 255, 0)
             style = Paint.Style.STROKE
+        }
+
+        with(mPaintText) {
+            style = Paint.Style.FILL_AND_STROKE
+            textSize = dpToPx(64).toFloat()
+        }
+    }
+
+    fun showCounter(counter: Int) {
+        if (counter != mCounter) {
+            mCounterTimer?.cancel()
+            mCounterTimer = null
+
+            mCounter = counter
+            invalidate()
+
+            if (counter > 0) {
+                mCounterTimer = timer(null, false, SHOW_COUNTER_TIMEOUT, SHOW_COUNTER_TIMEOUT) {
+                    mCounterTimer?.cancel()
+                    mCounterTimer = null
+                    mCounter = 0
+                    invalidate()
+                }
+            }
         }
     }
 
@@ -211,6 +244,14 @@ class FrameView : View {
             val y2 = mShowFocusZoneRect.bottom * windowHeight / 100
             canvas.drawRect(Rect(x1 - LINE_WIDTH / 2, y1 - LINE_WIDTH / 2, x2 + LINE_WIDTH / 2, y2 + LINE_WIDTH / 2), mPaintDark)
             canvas.drawRect(Rect(x1 + LINE_WIDTH / 2, y1 + LINE_WIDTH / 2, x2 - LINE_WIDTH / 2, y2 - LINE_WIDTH / 2), mShowFocusLight)
+        }
+
+        if (mCounter > 0) {
+            var counterStr = mCounter.toString()
+            mPaintText.color = TEXT_COLOR_SHADOW
+            canvas.drawText( counterStr, (TEXT_PADDING + TEXT_SHADOW_PADDING).toFloat(), (height - TEXT_PADDING - TEXT_SHADOW_PADDING).toFloat(), mPaintText )
+            mPaintText.color = TEXT_COLOR
+            canvas.drawText( counterStr, TEXT_PADDING.toFloat(), (height - TEXT_PADDING).toFloat(), mPaintText )
         }
     }
 }

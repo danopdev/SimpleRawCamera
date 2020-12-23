@@ -116,7 +116,6 @@ class MainActivity : AppCompatActivity() {
     private var mPhotoTimestamp = 0L
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
-    private var mPhotoCounterTimer: Timer? = null
     private var mPhotoInProgress = false
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
@@ -402,6 +401,7 @@ class MainActivity : AppCompatActivity() {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
             mCaptureLastPhotoResult = result
+            newPhoto()
         }
     }
 
@@ -589,8 +589,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, getWorkerHandler())
-
-        mBinding.txtPhotoCounter.isVisible = false
 
         setContentView(mBinding.root)
 
@@ -911,24 +909,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun newPhoto() {
+        runOnUiThread {
+            mPhotoCounter++
+            mBinding.frameView.showCounter(mPhotoCounter)
+        }
+    }
+
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
             var takeNewPhoto = start
 
             if (newFile) {
-                mPhotoCounter++
-                mBinding.txtPhotoCounter.text = mPhotoCounter.toString()
-                mBinding.txtPhotoCounter.isVisible = true
-
-                mPhotoCounterTimer?.cancel()
-                mPhotoCounterTimer = timer(null, false, Settings.PHOTO_COUNTER_TIMEOUT, Settings.PHOTO_COUNTER_TIMEOUT) {
-                    runOnUiThread {
-                        mBinding.txtPhotoCounter.isVisible = false
-                        mPhotoCounterTimer?.cancel()
-                        mPhotoCounterTimer = null
-                    }
-                }
-
                 takeNewPhoto = mSettings.continuousMode && (0 != mPhotoButtonMask)
             }
 
