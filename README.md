@@ -3,7 +3,7 @@
 Simple photo camera inspired from real camera look.
 It use Camera2 API and supports only cameras with full AE / focus control.
 
-![Main View](screenshots/main.png)
+![Main View](img/help.jpg)
 
 Tested only on my LG G6 smartphone.
 
