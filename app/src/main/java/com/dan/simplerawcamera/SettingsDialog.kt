@@ -9,13 +9,13 @@ import androidx.fragment.app.FragmentManager
 import com.dan.simplerawcamera.databinding.SettingsBinding
 
 
-class SettingsDialog( private val settings: Settings, val listenerOK: ()->Unit ) : DialogFragment() {
+class SettingsDialog( private val settings: Settings, private val mainActivity: MainActivity, private val listenerOK: ()->Unit ) : DialogFragment() {
 
     companion object {
         const val DIALOG_TAG = "SETTINGS_DIALOG"
 
-        fun show( fragmentManager: FragmentManager, settings: Settings, listenerOK: () -> Unit ) {
-            with( SettingsDialog( settings, listenerOK ) ) {
+        fun show( fragmentManager: FragmentManager, mainActivity: MainActivity, settings: Settings, listenerOK: () -> Unit ) {
+            with( SettingsDialog( settings, mainActivity, listenerOK ) ) {
                 isCancelable = false
                 show(fragmentManager, DIALOG_TAG)
             }
@@ -31,6 +31,10 @@ class SettingsDialog( private val settings: Settings, val listenerOK: ()->Unit )
         mBinding.switchContinuousMode.isChecked = settings.continuousMode
         mBinding.switchShowGrid.isChecked = settings.showGrid
         mBinding.spinnerShowFraming.setSelection( settings.frameType )
+
+        mBinding.btnSelectFolder.setOnClickListener {
+            mainActivity.startSelectFolder()
+        }
 
         mBinding.bntCancel.setOnClickListener { dismiss() }
 

@@ -527,7 +527,9 @@ class MainActivity : AppCompatActivity() {
                 mSaveFolder = DocumentFile.fromTreeUri(applicationContext, data)
                 mSettings.saveUri = data.toString()
                 mSettings.saveProperties()
-                onValidSaveFolder()
+
+                if (mFirstCall)
+                    onValidSaveFolder()
             }
         }
     }
@@ -589,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startSelectFolder() {
+    fun startSelectFolder() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
         intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
         intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
@@ -695,7 +697,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         mBinding.btnSettings.setOnClickListener {
-            SettingsDialog.show( supportFragmentManager, mSettings ) {
+            SettingsDialog.show( supportFragmentManager, this, mSettings ) {
                 updateFrame()
             }
         }
