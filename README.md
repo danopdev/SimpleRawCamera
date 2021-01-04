@@ -64,7 +64,6 @@ Currently always AUTO.
   * Continuous photo mode: try reduce save time to take the next photo faster
 
 * Settings:
-  * Allow to change output folder
   * Add noise reductions option
   * Add "location" option
 
