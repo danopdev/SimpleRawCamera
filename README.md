@@ -22,24 +22,24 @@ Supported modes:
 
 Supported modes:
 * Automatic (continuous)
-* Hyperfocal (fixed)
+* Hyper-focal (fixed)
 * Manual:
   * Select using the slider
   * Click to focus
- 
+
 ## Flash
- 
+
 Not supported yet.
- 
+
 Desired features:
 * Automatic
 * Manual
 * Continuous flash (flashlight)
- 
+
 ## White balance
- 
+
 Not supported yet.
- 
+
 ## Output modes:
 
 * JPEG
@@ -50,16 +50,19 @@ Not supported yet.
 
 * Single shot
 * Continuous
- 
+
 ## Helpers:
-* Show roules of third grid
+* Show rule of third grid
 * Show frame for another radio than the sensor
- 
+
 ## TODO:
- 
+
 * Exposure:
   * Try to adjust exposure (except for full manual mode) to avoid burning highlights
- 
+
+* Focus:
+  * Add face detection
+
 * Optimizations:
   * Continuous photo mode: try reduce save time to take the next photo faster
 
@@ -67,7 +70,7 @@ Not supported yet.
   * Allow to change output folder
   * Add noise reductions option
   * Add "location" option
- 
+
 * Features:
   * Add timer (2 / 10 seconds)
-  * Add continuous photo with a timer (every: 1 second, 5 seconds, 10 seconds ... 1 min) 
+  * Add continuous photo with a timer (every: 1 second, 5 seconds, 10 seconds ... 1 min)
