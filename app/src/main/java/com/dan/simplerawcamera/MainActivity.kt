@@ -1030,7 +1030,10 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
         captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
-   }
+        captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
+        captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
+
+    }
 
     private fun setupCapturePhotoRequest(force: Boolean = false) {
         setupCaptureRequest(true, force)
@@ -1067,10 +1070,6 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
-                captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
-                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_QUALITY, 70)
-                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, Size(256, 256 * mCameraHandler.resolutionHeight / mCameraHandler.resolutionWidth))
-
                 when( mSettings.takePhotoModes ) {
                     Settings.PHOTO_TYPE_DNG -> {
                         captureRequestBuilder.addTarget(mImageReaderDng.surface)
@@ -1095,9 +1094,6 @@ class MainActivity : AppCompatActivity() {
                 mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-
-                captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 70)
-                captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
 
                 captureRequestBuilder.removeTarget(mImageReaderDng.surface)
                 captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
