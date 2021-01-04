@@ -30,32 +30,29 @@ Supported modes:
 ## Flash
 
 Not supported yet.
-
-Desired features:
-* Automatic
-* Manual
-* Continuous flash (flashlight)
+Currently always OFF.
 
 ## White balance
 
 Not supported yet.
+Currently always AUTO.
 
-## Output modes:
+## Output modes
 
 * JPEG
 * RAW/DNG
 * JPEG + RAW/DNG
 
-## Photo mode:
+## Photo mode
 
 * Single shot
 * Continuous
 
-## Helpers:
+## Helpers
 * Show rule of third grid
 * Show frame for another radio than the sensor
 
-## TODO:
+## TODO
 
 * Exposure:
   * Try to adjust exposure (except for full manual mode) to avoid burning highlights
@@ -74,3 +71,10 @@ Not supported yet.
 * Features:
   * Add timer (2 / 10 seconds)
   * Add continuous photo with a timer (every: 1 second, 5 seconds, 10 seconds ... 1 min)
+
+* Flash (not supported yet)
+  * Automatic
+  * Manual
+  * Continuous flash (flashlight)
+
+* White balance (not supported yet)
