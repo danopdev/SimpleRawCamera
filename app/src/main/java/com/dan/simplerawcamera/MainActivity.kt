@@ -615,40 +615,32 @@ class MainActivity : AppCompatActivity() {
         mCameraHandler = mCameraList[0]
 
         mBinding.txtIso.setOnMoveYAxisListener {
-            if (it > 0 && !mSettings.expIsoIsManual) {
-                mSettings.expIsoIsManual = true
-                updateSliders()
-            } else if (it < 0 && mSettings.expIsoIsManual) {
-                mSettings.expIsoIsManual = false
-                updateSliders()
-            }
+            mSettings.expIsoIsManual = !mSettings.expIsoIsManual
+            updateSliders()
         }
 
         mBinding.txtIso.setOnMoveXAxisListener { trackIso(it) }
 
         mBinding.txtSpeed.setOnMoveYAxisListener {
-            if (it > 0 && !mSettings.expSpeedIsManual) {
-                mSettings.expSpeedIsManual = true
-                updateSliders()
-            } else if (it < 0 && mSettings.expSpeedIsManual) {
-                mSettings.expSpeedIsManual = false
-                updateSliders()
-            }
+            mSettings.expSpeedIsManual = !mSettings.expSpeedIsManual
+            updateSliders()
         }
 
         mBinding.txtSpeed.setOnMoveXAxisListener { trackSpeed(it) }
 
         mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpCompensation(it) }
 
-        mBinding.txtFocus.setOnMoveYAxisListener {
+        mBinding.txtFocus.setOnMoveYAxisListener { steps ->
             if (mCameraHandler.focusAllowManual) {
-                if (it > 0 && (mSettings.focusType + 1) < Settings.FOCUS_TYPE_MAX) {
-                    mSettings.focusType++
-                    mFocusClick = false
-                    showFocus()
-                    setupCapturePreviewRequest()
-                } else if (it < 0 && mSettings.focusType > 0) {
-                    mSettings.focusType--
+                var newFocusType = mSettings.focusType + (if (steps < 0) -1 else 1)
+                if (newFocusType < 0) {
+                    newFocusType = Settings.FOCUS_TYPE_MAX-1
+                } else if (newFocusType >= Settings.FOCUS_TYPE_MAX) {
+                    newFocusType = 0
+                }
+
+                if (newFocusType != mSettings.focusType) {
+                    mSettings.focusType = newFocusType
                     mFocusClick = false
                     showFocus()
                     setupCapturePreviewRequest()
