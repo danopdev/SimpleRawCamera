@@ -9,7 +9,7 @@ Tested only on my LG G6 smartphone.
 
 ## Exposure
 
-It support only ISO & Speed (as most smart phone cameras has fixed aperture).
+It support only ISO & Speed (as most smart phone cameras have fixed aperture).
 
 Supported modes:
 * Full auto
@@ -61,7 +61,7 @@ Currently always AUTO.
   * Add face detection
 
 * Optimizations:
-  * Continuous photo mode: try reduce save time to take the next photo faster
+  * Continuous photo mode: limit the number of continuous photos to avoid using all the RAM
 
 * Settings:
   * Add noise reductions option
