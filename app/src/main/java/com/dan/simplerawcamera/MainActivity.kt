@@ -171,8 +171,14 @@ class MainActivity : AppCompatActivity() {
                         var index = line * rowStride
                         for (column in 0 until imageW) {
                             var yValue = yBytes[index].toInt()
+
                             if (yValue < 0) yValue += 256
-                            values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 255]++
+
+                            if (yValue < 5) yValue = 0
+                            else if (yValue >= 250) yValue = 245
+                            else yValue -= 5
+
+                            values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 245]++
                             index++
                         }
                     }
