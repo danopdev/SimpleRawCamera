@@ -9,6 +9,9 @@ import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaField
 
+/**
+ Settings: all public var fields will be save / restaured
+ */
 class Settings( private val activity: Activity) {
 
     companion object {

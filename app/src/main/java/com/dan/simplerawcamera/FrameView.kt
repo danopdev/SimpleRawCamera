@@ -14,6 +14,13 @@ import java.util.*
 import kotlin.concurrent.timer
 
 
+/**
+ Allow to display information over the camera preview:
+  * Rules of 3rd grid
+  * Ratio frame
+  * Click to focus area
+  * Photo counter
+ */
 class FrameView : View {
 
     companion object {
@@ -77,6 +84,7 @@ class FrameView : View {
         }
     }
 
+    /** Show photo counter */
     fun showCounter(counter: Int) {
         if (counter != mCounter) {
             mCounterTimer?.cancel()
@@ -96,6 +104,7 @@ class FrameView : View {
         }
     }
 
+    /** Show ratio frame */
     fun showRatio(show: Boolean, ratioWidth: Int = 4, ratioHeight: Int = 3) {
         if (mShowRatio != show || mRatioWidth != ratioWidth || mRatioHeight != ratioHeight) {
             mShowRatio = show
@@ -105,6 +114,7 @@ class FrameView : View {
         }
     }
 
+    /** Show rule of 3rd grid */
     fun showGrid(show: Boolean) {
         if (mShowGrid != show) {
             mShowGrid = show
@@ -112,6 +122,7 @@ class FrameView : View {
         }
     }
 
+    /** Show click to focus zone */
     fun showFocusZone(rect: Rect) {
         if (!mShowFocusZone || !mShowFocusZoneRect.equals(rect)) {
             hideFocusZone()
@@ -126,6 +137,7 @@ class FrameView : View {
         }
     }
 
+    /** Manually hide click to focus zone */
     fun hideFocusZone() {
         if (mShowFocusZone) {
             mShowFocusTimer?.cancel()

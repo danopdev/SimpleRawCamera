@@ -11,6 +11,9 @@ import android.util.Rational
 import kotlin.math.max
 import kotlin.math.min
 
+/**
+ Contains camera characteristics (don't need to query again)
+ */
 class CameraHandler(
     val cameraManager: CameraManager,
     val cameraCharacteristics: CameraCharacteristics,
@@ -32,6 +35,9 @@ class CameraHandler(
 ) {
 
     companion object {
+        /**
+         List all available and valid (for this application) cameras.
+         */
         fun getValidCameras(cameraManager: CameraManager): ArrayList<CameraHandler> {
             val validCameras = ArrayList<CameraHandler>()
 

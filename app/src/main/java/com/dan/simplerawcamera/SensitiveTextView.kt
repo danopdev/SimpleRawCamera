@@ -11,6 +11,9 @@ import androidx.appcompat.widget.AppCompatTextView
 import kotlin.math.abs
 
 
+/**
+ Simulate a button with up/down and/or left/right movements
+ */
 class SensitiveTextView : AppCompatTextView {
 
     companion object {

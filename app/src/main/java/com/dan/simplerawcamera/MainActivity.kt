@@ -41,6 +41,9 @@ import kotlin.math.min
 import kotlin.system.exitProcess
 
 
+/**
+ Main camera view
+ */
 class MainActivity : AppCompatActivity() {
 
     companion object {
@@ -73,8 +76,10 @@ class MainActivity : AppCompatActivity() {
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
+        /** Get photo name */
         fun getPhotoBaseFileName( timestamp: Long ): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
 
+        /** Get best resolution for preview */
         fun getBestResolution(targetWidth: Int, targetRatio: Float, sizes: Array<Size>): Size {
             var bestSize = sizes.last()
 
@@ -90,6 +95,7 @@ class MainActivity : AppCompatActivity() {
             return bestSize
         }
 
+        /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
         fun calculateExpDeviation(visibleIso: Int, visibleSpeed: Long, expectedIso: Int, expectedSpeed: Long): Float {
             var deltaExpIso: Float = (expectedIso - visibleIso).toFloat() / expectedIso
             var deltaExpSpeed: Float = (expectedSpeed - visibleSpeed).toFloat() / expectedSpeed
@@ -139,6 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     private var mLocation: Location? = null
 
+    /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var isBusy = false
 
@@ -207,6 +214,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Save image as JPEG */
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
         private fun saveImage(image: Image) {
             try {
@@ -240,6 +248,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Save image as DNG */
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
         private fun saveImage(image: Image) {
             try {
@@ -273,6 +282,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Surface for preview */
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
             selectCamera(mSettings.cameraIndex)
@@ -295,6 +305,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Camera state */
     private val mCameraCaptureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigureFailed(session: CameraCaptureSession) {}
 
@@ -315,6 +326,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (!mSettings.expIsoIsManual && !mSettings.expSpeedIsManual)
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
@@ -360,6 +372,7 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /** Preview callback */
     private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
@@ -396,6 +409,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Take photo callback: maybe not needed ??? */
     private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
@@ -405,6 +419,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Camera state */
     private val mCameraDeviceStateCallback = object: CameraDevice.StateCallback() {
         override fun onDisconnected(p0: CameraDevice) {}
 
@@ -443,6 +458,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
 
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
@@ -622,7 +638,7 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.txtSpeed.setOnMoveXAxisListener { trackSpeed(it) }
 
-        mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpComponsation(it) }
+        mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpCompensation(it) }
 
         mBinding.txtFocus.setOnMoveYAxisListener {
             if (mCameraHandler.focusAllowManual) {
@@ -721,6 +737,7 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
+    /** ISO slider/button is changed */
     private fun trackIso(delta: Int) {
         if (!mSettings.expIsoIsManual) return
 
@@ -749,7 +766,8 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtIso.text = "${value} ISO (${extra})"
     }
 
-    private fun trackExpComponsation(delta: Int) {
+    /** Exposure compensation slider/button is changed */
+    private fun trackExpCompensation(delta: Int) {
         if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
 
         val increase = delta > 0
@@ -784,6 +802,7 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtExpComponsation.text = exp
     }
 
+    /** Speed slider/button is changed */
     private fun trackSpeed(delta: Int) {
         if (!mSettings.expSpeedIsManual) return
 
@@ -894,6 +913,7 @@ class MainActivity : AppCompatActivity() {
         updateTakePhoto(mask)
     }
 
+    /** Update take photo button pressed based on difference sources: screen button, volume up or volume down */
     private fun updateTakePhoto(mask: Int) {
         if (mask != mPhotoButtonMask) {
             val oldMask = mPhotoButtonMask
@@ -916,6 +936,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Start takeing a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
             var takeNewPhoto = start
@@ -954,6 +975,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Select the camera */
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
         mPhotoInProgress = false
@@ -1025,6 +1047,7 @@ class MainActivity : AppCompatActivity() {
         return false
     }
 
+    /** Called once when the camera is selected (common to preview & take photo) */
     private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
         if (mCameraHandler.supportLensStabilisation)
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
@@ -1043,6 +1066,7 @@ class MainActivity : AppCompatActivity() {
         setupCaptureRequest(false, force)
     }
 
+    /** Specific preview or take photo options */
     @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
         if (mPhotoInProgress) return
