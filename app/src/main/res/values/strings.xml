@@ -9,7 +9,7 @@
         <item>16x9</item>
     </string-array>
 
-    <string-array name="photos_modes">
+    <string-array name="photo_modes">
         <item>JPEG Only</item>
         <item>DNG Only</item>
         <item>JPEG &amp; DNG</item>
