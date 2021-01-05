@@ -2,12 +2,9 @@ package com.dan.simplerawcamera
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import kotlin.reflect.*
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.declaredMemberProperties
-import kotlin.reflect.jvm.isAccessible
-import kotlin.reflect.jvm.javaField
 
 /**
  Settings: all public var fields will be save / restaured
