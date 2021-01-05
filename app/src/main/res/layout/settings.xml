@@ -34,6 +34,7 @@
                 android:text="Settings"
                 android:textAlignment="center"
                 android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="@color/black"
                 android:textStyle="bold" />
 
             <Button
@@ -68,7 +69,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Save folder:" />
+                        android:text="Save folder:"
+                        android:textColor="@color/black" />
 
                     <Button
                         android:id="@+id/btnSelectFolder"
@@ -95,7 +97,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginRight="16dp"
                         android:layout_weight="0"
-                        android:text="Photo modes" />
+                        android:text="Photo modes"
+                        android:textColor="@color/black" />
 
                     <Spinner
                         android:id="@+id/spinnerPhotoModes"
@@ -135,7 +138,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginRight="16dp"
                         android:layout_weight="0"
-                        android:text="Show framing" />
+                        android:text="Show framing"
+                        android:textColor="@color/black" />
 
                     <Spinner
                         android:id="@+id/spinnerShowFraming"
