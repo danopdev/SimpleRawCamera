@@ -30,6 +30,10 @@ class Settings( private val activity: Activity) {
         const val FRAME_TYPE_4_3 = 2
         const val FRAME_TYPE_3_2 = 3
         const val FRAME_TYPE_16_9 = 4
+
+        const val NOISE_REDUCTION_DISABLED = 0
+        const val NOISE_REDUCTION_JPEG_ONLY = 1
+        const val NOISE_REDUCTION_ENABLED = 2
     }
 
     var saveUri: String = ""
@@ -45,6 +49,7 @@ class Settings( private val activity: Activity) {
     var frameType: Int = FRAME_TYPE_NONE
     var continuousMode: Boolean = true
     var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
+    var noiseReduction: Int = NOISE_REDUCTION_DISABLED
 
     init {
         loadProperties()

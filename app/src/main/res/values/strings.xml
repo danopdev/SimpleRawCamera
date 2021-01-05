@@ -15,4 +15,10 @@
         <item>JPEG &amp; DNG</item>
     </string-array>
 
+    <string-array name="noise_reduction_modes">
+        <item>Disabled</item>
+        <item>JPEG Only Mode</item>
+        <item>Enabled</item>
+    </string-array>
+
 </resources>

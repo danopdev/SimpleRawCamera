@@ -1091,7 +1091,6 @@ class MainActivity : AppCompatActivity() {
         if (mCameraHandler.supportLensStabilisation)
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
-        captureRequestBuilder.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_OFF)
         captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
         captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
 
@@ -1151,6 +1150,15 @@ class MainActivity : AppCompatActivity() {
                 mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 captureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION, mLocation)
 
+                captureRequestBuilder.set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    if (Settings.NOISE_REDUCTION_ENABLED == mSettings.noiseReduction ||
+                        (Settings.NOISE_REDUCTION_JPEG_ONLY == mSettings.noiseReduction && Settings.PHOTO_TYPE_JPEG == mSettings.takePhotoModes) )
+                        CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
+                    else
+                        CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                )
+
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
                 mLocation = null
@@ -1165,6 +1173,13 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
+                captureRequestBuilder.set(
+                    CaptureRequest.NOISE_REDUCTION_MODE,
+                    if (Settings.NOISE_REDUCTION_DISABLED == mSettings.noiseReduction)
+                        CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                    else
+                        CaptureRequest.NOISE_REDUCTION_MODE_FAST
+                )
             }
         }
 

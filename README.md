@@ -64,7 +64,6 @@ Currently always AUTO.
   * Continuous photo mode: limit the number of continuous photos to avoid using all the RAM
 
 * Settings:
-  * Add noise reductions option
   * Add "location" option
 
 * Features:

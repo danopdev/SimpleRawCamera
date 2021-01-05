@@ -109,6 +109,31 @@
                         android:spinnerMode="dropdown" />
                 </LinearLayout>
 
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="10dp">
+
+                    <TextView
+                        android:id="@+id/textView6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="16dp"
+                        android:layout_weight="0"
+                        android:text="Noise reduction"
+                        android:textColor="@color/black" />
+
+                    <Spinner
+                        android:id="@+id/spinnerNoiseReductionModes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:entries="@array/noise_reduction_modes"
+                        android:spinnerMode="dropdown" />
+                </LinearLayout>
+
                 <Switch
                     android:id="@+id/switchContinuousMode"
                     android:layout_width="match_parent"
