@@ -31,8 +31,6 @@ import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.BufferedOutputStream
-import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
@@ -226,13 +224,15 @@ class MainActivity : AppCompatActivity() {
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
         private fun saveImage(image: Image) {
             try {
+                val saveFolder = mSaveFolder ?: return
                 val fileName = mPhotoFileNameBase + ".jpg"
-                val byteArrayOutputStream = ByteArrayOutputStream()
+                val documentFile = saveFolder.createFile("image/jpeg", fileName) ?: return
+                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
                 val buffer = image.planes[0].buffer
                 val bytes = ByteArray(buffer.remaining())
                 buffer.get(bytes)
-                byteArrayOutputStream.write(bytes)
-                savePhotoAsync( byteArrayOutputStream, "image/jpeg", fileName )
+                outputStream.write(bytes)
+                outputStream.close()
             } catch(e: Exception) {
             }
         }
@@ -259,12 +259,14 @@ class MainActivity : AppCompatActivity() {
         private fun saveImage(image: Image) {
             try {
                 val captureLastPhotoResult = mCaptureLastPhotoResult ?: return
+                val saveFolder = mSaveFolder ?: return
                 val fileName = mPhotoFileNameBase + ".dng"
+                val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
+                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
                 val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
-                val byteArrayOutputStream = ByteArrayOutputStream()
                 mLocation?.let { dngCreator.setLocation(it) }
-                dngCreator.writeImage(byteArrayOutputStream, image)
-                savePhotoAsync( byteArrayOutputStream, "image/x-adobe-dng", fileName )
+                dngCreator.writeImage(outputStream, image)
+                outputStream.close()
             } catch(e: Exception) {
             }
         }
@@ -467,22 +469,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
-
-    private fun savePhotoAsync( byteArrayOutputStream: ByteArrayOutputStream, mimeType: String, fileName: String ) {
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                mSaveFolder?.let { saveFolder ->
-                    saveFolder.createFile(mimeType, fileName)?.let { newFile ->
-                        contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
-                            outputStream.write(byteArrayOutputStream.toByteArray())
-                            outputStream.close()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
