@@ -31,6 +31,7 @@ import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
@@ -898,18 +899,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveAsync(byteArrayOutputStream: ByteArrayOutputStream, mimeType: String, fileName: String ) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                mSaveFolder?.let { saveFolder ->
+                    saveFolder.createFile(mimeType, fileName)?.let { newFile ->
+                        contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
+                            outputStream.write(byteArrayOutputStream.toByteArray())
+                            outputStream.close()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
         Log.i("TAKE_PHOTO", "DNG: Save starts")
         try {
-            val saveFolder = mSaveFolder ?: return
-            val fileName = mPhotoFileNameBase + ".dng"
-            val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
-            val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+            val outputStream = ByteArrayOutputStream()
             val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureResult)
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.writeImage(outputStream, image)
-            outputStream.close()
+            saveAsync( outputStream, "image/x-adobe-dng", mPhotoFileNameBase + ".dng" )
         } catch(e: Exception) {
             e.printStackTrace()
         }
@@ -919,15 +933,12 @@ class MainActivity : AppCompatActivity() {
     private fun saveJpeg(image: Image) {
         Log.i("TAKE_PHOTO", "JPEG: Save starts")
         try {
-            val saveFolder = mSaveFolder ?: return
-            val fileName = mPhotoFileNameBase + ".jpg"
-            val documentFile = saveFolder.createFile("image/jpeg", fileName) ?: return
-            val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+            val outputStream = ByteArrayOutputStream()
             val buffer = image.planes[0].buffer
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
             outputStream.write(bytes)
-            outputStream.close()
+            saveAsync( outputStream, "image/jpeg", mPhotoFileNameBase + ".jpg" )
         } catch(e: Exception) {
             e.printStackTrace()
         }
