@@ -15,8 +15,6 @@ import kotlin.reflect.jvm.javaField
 class Settings( private val activity: Activity) {
 
     companion object {
-        const val PHOTO_COUNTER_TIMEOUT = 1000L
-
         const val SPEED_MANUAL_MIN_PREVIEW = 62500000L // 1/16 sec
         const val SPEED_MAX_MANUAL = 4000000000L // 4 sec
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
