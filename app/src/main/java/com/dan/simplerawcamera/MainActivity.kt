@@ -66,8 +66,9 @@ class MainActivity : AppCompatActivity() {
         const val PHOTO_BUTTON_VOLUMNE_UP = 2
         const val PHOTO_BUTTON_VOLUMNE_DOWN = 4
 
-        const val PHOTO_TAKE_JPEG = 1
-        const val PHOTO_TAKE_DNG = 2
+        const val PHOTO_TAKE_COMPLETED = 1
+        const val PHOTO_TAKE_JPEG = 2
+        const val PHOTO_TAKE_DNG = 4
 
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
@@ -115,7 +116,9 @@ class MainActivity : AppCompatActivity() {
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
     private var mCaptureModeIsPhoto = false
-    private var mCaptureLastPhotoResult: TotalCaptureResult? = null
+    private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
+    private var mCurrentPhotoJpegImage: Image? = null
+    private var mCurrentPhotoDngImage: Image? = null
 
     private var mPhotoButtonMask = 0
     private var mPhotoTakeMask = 0
@@ -222,30 +225,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Save image as JPEG */
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
-        private fun saveImage(image: Image) {
-            try {
-                val saveFolder = mSaveFolder ?: return
-                val fileName = mPhotoFileNameBase + ".jpg"
-                val documentFile = saveFolder.createFile("image/jpeg", fileName) ?: return
-                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
-                val buffer = image.planes[0].buffer
-                val bytes = ByteArray(buffer.remaining())
-                buffer.get(bytes)
-                outputStream.write(bytes)
-                outputStream.close()
-            } catch(e: Exception) {
-            }
-        }
-
         override fun onImageAvailable(imageReader: ImageReader?) {
-            Log.i("TAKE_PHOTO", "JPEG: ${mPhotoTimestamp}")
+            Log.i("TAKE_PHOTO", "JPEG: Received")
 
             if (null != imageReader) {
-                val image = imageReader.acquireLatestImage()
-                if (null != image) {
-                    saveImage(image)
-                    image.close()
-                }
+                mCurrentPhotoJpegImage = imageReader.acquireLatestImage()
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
@@ -256,30 +240,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Save image as DNG */
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
-        private fun saveImage(image: Image) {
-            try {
-                val captureLastPhotoResult = mCaptureLastPhotoResult ?: return
-                val saveFolder = mSaveFolder ?: return
-                val fileName = mPhotoFileNameBase + ".dng"
-                val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
-                val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
-                val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureLastPhotoResult)
-                mLocation?.let { dngCreator.setLocation(it) }
-                dngCreator.writeImage(outputStream, image)
-                outputStream.close()
-            } catch(e: Exception) {
-            }
-        }
-
         override fun onImageAvailable(imageReader: ImageReader?) {
-            Log.i("TAKE_PHOTO", "DNG ${mPhotoTimestamp}")
+            Log.i("TAKE_PHOTO", "DNG: Received")
 
             if (null != imageReader) {
-                val image = imageReader.acquireLatestImage()
-                if (null != image) {
-                    saveImage(image)
-                    image.close()
-                }
+                mCurrentPhotoDngImage = imageReader.acquireLatestImage()
             }
 
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
@@ -420,8 +385,10 @@ class MainActivity : AppCompatActivity() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
-            mCaptureLastPhotoResult = result
-            newPhoto()
+            mCurrentPhotoCaptureResult = result
+            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_COMPLETED.inv()
+            if (0 == mPhotoTakeMask)
+                takePhoto(true)
         }
     }
 
@@ -460,6 +427,7 @@ class MainActivity : AppCompatActivity() {
                     getWorkerHandler()
                 )
             } catch(e: Exception) {
+                e.printStackTrace()
             }
         }
     }
@@ -582,6 +550,7 @@ class MainActivity : AppCompatActivity() {
         try {
             mSaveFolder = DocumentFile.fromTreeUri(applicationContext, Uri.parse(mSettings.saveUri))
         } catch (e: Exception) {
+            e.printStackTrace()
         }
 
         if (null == mSaveFolder) {
@@ -929,19 +898,79 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun newPhoto() {
-        runOnUiThread {
-            mPhotoCounter++
-            mBinding.frameView.showCounter(mPhotoCounter)
+
+    private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
+        Log.i("TAKE_PHOTO", "DNG: Save starts")
+        try {
+            val saveFolder = mSaveFolder ?: return
+            val fileName = mPhotoFileNameBase + ".dng"
+            val documentFile = saveFolder.createFile("image/x-adobe-dng", fileName) ?: return
+            val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+            val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureResult)
+            mLocation?.let { dngCreator.setLocation(it) }
+            dngCreator.writeImage(outputStream, image)
+            outputStream.close()
+        } catch(e: Exception) {
+            e.printStackTrace()
         }
+        Log.i("TAKE_PHOTO", "DNG: Save ends")
     }
 
-    /** Start takeing a photo */
+    private fun saveJpeg(image: Image) {
+        Log.i("TAKE_PHOTO", "JPEG: Save starts")
+        try {
+            val saveFolder = mSaveFolder ?: return
+            val fileName = mPhotoFileNameBase + ".jpg"
+            val documentFile = saveFolder.createFile("image/jpeg", fileName) ?: return
+            val outputStream = contentResolver.openOutputStream(documentFile.uri) ?: return
+            val buffer = image.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            outputStream.write(bytes)
+            outputStream.close()
+        } catch(e: Exception) {
+            e.printStackTrace()
+        }
+        Log.i("TAKE_PHOTO", "JPEG: Save ends")
+    }
+
+    /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
             var takeNewPhoto = start
 
             if (newFile) {
+                mPhotoCounter++
+                mBinding.frameView.showCounter(mPhotoCounter)
+
+                //save JPEG
+                mCurrentPhotoJpegImage?.let { image ->
+                    saveJpeg(image)
+
+                    try {
+                        image.close()
+                    } catch(e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                //save DNG
+                mCurrentPhotoDngImage?.let { image ->
+                    mCurrentPhotoCaptureResult?.let { captureResult ->
+                        saveDng(image, captureResult)
+                    }
+
+                    try {
+                        image.close()
+                    } catch(e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+
+                mCurrentPhotoJpegImage = null
+                mCurrentPhotoDngImage = null
+                mCurrentPhotoCaptureResult = null
+
                 takeNewPhoto = mSettings.continuousMode && (0 != mPhotoButtonMask)
             }
 
@@ -952,7 +981,6 @@ class MainActivity : AppCompatActivity() {
                 Log.i("TAKE_PHOTO", "New photo")
 
                 mPhotoInProgress = true
-                mCaptureLastPhotoResult = null
 
                 when (mSettings.takePhotoModes) {
                     Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG

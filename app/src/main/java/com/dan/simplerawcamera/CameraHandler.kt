@@ -121,9 +121,11 @@ class CameraHandler(
                             )
                         )
                     } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
             }
 
             return validCameras

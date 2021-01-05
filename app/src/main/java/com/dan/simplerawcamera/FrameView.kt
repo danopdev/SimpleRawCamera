@@ -28,7 +28,7 @@ class FrameView : View {
             return (dp * Resources.getSystem().getDisplayMetrics().density).toInt()
         }
 
-        const val SHOW_COUNTER_TIMEOUT = 1000L
+        const val SHOW_COUNTER_TIMEOUT = 2000L
         const val SHOW_FOCUS_TIMEOUT = 1000L
         val LINE_WIDTH = dpToPx(1)
         val TEXT_PADDING = dpToPx(32)
