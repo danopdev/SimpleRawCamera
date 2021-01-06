@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity() {
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
+    private val mWindowManager: WindowManager by lazy { getSystemService(Context.WINDOW_SERVICE) as WindowManager }
 
     private lateinit var mCameraHandler: CameraHandler
     private var mCameraDevice: CameraDevice? = null
@@ -432,6 +433,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    @Suppress("DEPRECATION")
+    private fun getScreenOrientation(): Int = mWindowManager.defaultDisplay.rotation
 
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
