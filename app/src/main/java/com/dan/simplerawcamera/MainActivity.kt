@@ -659,8 +659,8 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.btnPhoto.setOnTouchListener { _, motionEvent ->
             when(motionEvent.actionMasked) {
-                MotionEvent.ACTION_DOWN -> takePhoto(true, PHOTO_BUTTON_SCREEN)
-                MotionEvent.ACTION_UP -> takePhoto(false, PHOTO_BUTTON_SCREEN)
+                MotionEvent.ACTION_DOWN -> takePhotoButton(true, PHOTO_BUTTON_SCREEN)
+                MotionEvent.ACTION_UP -> takePhotoButton(false, PHOTO_BUTTON_SCREEN)
             }
 
             false
@@ -678,12 +678,12 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when(keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                takePhoto(false, PHOTO_BUTTON_VOLUMNE_UP)
+                takePhotoButton(false, PHOTO_BUTTON_VOLUMNE_UP)
                 return true
             }
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                takePhoto(false, PHOTO_BUTTON_VOLUMNE_DOWN)
+                takePhotoButton(false, PHOTO_BUTTON_VOLUMNE_DOWN)
                 return true
             }
         }
@@ -694,12 +694,12 @@ class MainActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when(keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                takePhoto(true, PHOTO_BUTTON_VOLUMNE_UP)
+                takePhotoButton(true, PHOTO_BUTTON_VOLUMNE_UP)
                 return true
             }
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                takePhoto(true, PHOTO_BUTTON_VOLUMNE_DOWN)
+                takePhotoButton(true, PHOTO_BUTTON_VOLUMNE_DOWN)
                 return true
             }
         }
@@ -872,19 +872,19 @@ class MainActivity : AppCompatActivity() {
         setupCapturePreviewRequest()
     }
 
-    private fun takePhoto(addSource: Boolean, source: Int) {
+    private fun takePhotoButton(pressed: Boolean, source: Int) {
         val mask =
-            if (addSource) {
+            if (pressed) {
                 mPhotoButtonMask or source
             } else {
                 mPhotoButtonMask and source.inv()
             }
 
-        updateTakePhoto(mask)
+        updateTakePhotoButtonMask(mask)
     }
 
     /** Update take photo button pressed based on difference sources: screen button, volume up or volume down */
-    private fun updateTakePhoto(mask: Int) {
+    private fun updateTakePhotoButtonMask(mask: Int) {
         if (mask != mPhotoButtonMask) {
             val oldMask = mPhotoButtonMask
             mPhotoButtonMask = mask
