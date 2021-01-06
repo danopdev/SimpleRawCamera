@@ -28,6 +28,7 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
         mBinding = SettingsBinding.inflate( inflater )
 
         mBinding.spinnerPhotoModes.setSelection( settings.takePhotoModes )
+        mBinding.spinnerNoiseReductionModes.setSelection( settings.noiseReduction )
         mBinding.switchContinuousMode.isChecked = settings.continuousMode
         mBinding.switchShowGrid.isChecked = settings.showGrid
         mBinding.spinnerShowFraming.setSelection( settings.frameType )
@@ -40,6 +41,7 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
 
         mBinding.bntOK.setOnClickListener {
             settings.takePhotoModes = mBinding.spinnerPhotoModes.selectedItemPosition
+            settings.noiseReduction = mBinding.spinnerNoiseReductionModes.selectedItemPosition
             settings.continuousMode = mBinding.switchContinuousMode.isChecked
             settings.showGrid = mBinding.switchShowGrid.isChecked
             settings.frameType = mBinding.spinnerShowFraming.selectedItemPosition
