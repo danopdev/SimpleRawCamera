@@ -22,29 +22,27 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
         }
     }
 
-    private lateinit var mBinding: SettingsBinding
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        mBinding = SettingsBinding.inflate( inflater )
+        val binding = SettingsBinding.inflate( inflater )
 
-        mBinding.spinnerPhotoModes.setSelection( settings.takePhotoModes )
-        mBinding.spinnerNoiseReductionModes.setSelection( settings.noiseReduction )
-        mBinding.switchContinuousMode.isChecked = settings.continuousMode
-        mBinding.switchShowGrid.isChecked = settings.showGrid
-        mBinding.spinnerShowFraming.setSelection( settings.frameType )
+        binding.spinnerPhotoModes.setSelection( settings.takePhotoModes )
+        binding.spinnerNoiseReductionModes.setSelection( settings.noiseReduction )
+        binding.switchContinuousMode.isChecked = settings.continuousMode
+        binding.switchShowGrid.isChecked = settings.showGrid
+        binding.spinnerShowFraming.setSelection( settings.frameType )
 
-        mBinding.btnSelectFolder.setOnClickListener {
+        binding.btnSelectFolder.setOnClickListener {
             mainActivity.startSelectFolder()
         }
 
-        mBinding.bntCancel.setOnClickListener { dismiss() }
+        binding.bntCancel.setOnClickListener { dismiss() }
 
-        mBinding.bntOK.setOnClickListener {
-            settings.takePhotoModes = mBinding.spinnerPhotoModes.selectedItemPosition
-            settings.noiseReduction = mBinding.spinnerNoiseReductionModes.selectedItemPosition
-            settings.continuousMode = mBinding.switchContinuousMode.isChecked
-            settings.showGrid = mBinding.switchShowGrid.isChecked
-            settings.frameType = mBinding.spinnerShowFraming.selectedItemPosition
+        binding.bntOK.setOnClickListener {
+            settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
+            settings.noiseReduction = binding.spinnerNoiseReductionModes.selectedItemPosition
+            settings.continuousMode = binding.switchContinuousMode.isChecked
+            settings.showGrid = binding.switchShowGrid.isChecked
+            settings.frameType = binding.spinnerShowFraming.selectedItemPosition
 
             settings.saveProperties()
 
@@ -52,6 +50,6 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
             dismiss()
         }
 
-        return mBinding.root
+        return binding.root
     }
 }
