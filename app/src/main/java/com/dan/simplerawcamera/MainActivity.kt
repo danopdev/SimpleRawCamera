@@ -287,6 +287,95 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Take photo callback */
+    private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+            super.onCaptureCompleted(session, request, result)
+            Log.i("TAKE_PHOTO", "onCaptureCompleted")
+            mCurrentPhotoCaptureResult = result
+            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_COMPLETED.inv()
+            if (0 == mPhotoTakeMask)
+                takePhoto(true)
+        }
+    }
+
+    /** Preview callback */
+    private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+            super.onCaptureCompleted(session, request, result)
+
+            mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
+            mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
+
+            when(mFocusState) {
+                FOCUS_STATE_CLICK -> {
+                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    if (CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN == focusState) {
+                        mFocusState = FOCUS_STATE_SEARCHING
+                    }
+                }
+
+                FOCUS_STATE_SEARCHING -> {
+                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == focusState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == focusState) {
+                        mFocusState = FOCUS_STATE_LOCKED
+                        runOnUiThread {
+                            setupCapturePreviewRequest()
+                        }
+                    }
+                }
+            }
+
+            val captureEA = getCaptureEA()
+            mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
+
+            if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
+
+            if (!mSettings.expIsoIsManual) showIso(captureEA.first)
+            if (!mSettings.expSpeedIsManual) showSpeed(captureEA.second)
+        }
+    }
+
+    /** Camera state */
+    private val mCameraDeviceStateCallback = object: CameraDevice.StateCallback() {
+        override fun onDisconnected(p0: CameraDevice) {}
+
+        override fun onError(p0: CameraDevice, p1: Int) {}
+
+        @Suppress("DEPRECATION")
+        override fun onOpened(cameraDevice: CameraDevice) {
+            mCameraDevice = cameraDevice
+
+            val sizes = mCameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
+            if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
+            val previewSize = getBestResolution(
+                mBinding.surfaceView.width,
+                mCameraHandler.resolutionWidth.toFloat() / mCameraHandler.resolutionHeight,
+                sizes
+            )
+
+            mRotatedPreviewWidth = if (mCameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
+            mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
+
+            mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
+
+            try {
+                cameraDevice.createCaptureSession(
+                    mutableListOf(
+                        mBinding.surfaceView.holder.surface,
+                        mImageReaderHisto.surface,
+                        mImageReaderJpeg.surface,
+                        mImageReaderDng.surface,
+                    ),
+                    mCameraCaptureSessionStateCallback,
+                    getWorkerHandler()
+                )
+            } catch(e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (!mSettings.expIsoIsManual && !mSettings.expSpeedIsManual)
@@ -331,95 +420,6 @@ class MainActivity : AppCompatActivity() {
             mSpeedMeasuredValue,
             calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, speedValue)
         )
-    }
-
-    /** Preview callback */
-    private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-            super.onCaptureCompleted(session, request, result)
-
-            mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
-            mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
-
-            when(mFocusState) {
-                FOCUS_STATE_CLICK -> {
-                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
-                    if (CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN == focusState) {
-                        mFocusState = FOCUS_STATE_SEARCHING
-                    }
-                }
-
-                FOCUS_STATE_SEARCHING -> {
-                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
-                    if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == focusState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == focusState) {
-                        mFocusState = FOCUS_STATE_LOCKED
-                        runOnUiThread {
-                            setupCapturePreviewRequest()
-                        }
-                    }
-                }
-            }
-
-            val captureEA = getCaptureEA()
-            mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
-
-            if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
-
-            if (!mSettings.expIsoIsManual) showIso(captureEA.first)
-            if (!mSettings.expSpeedIsManual) showSpeed(captureEA.second)
-        }
-    }
-
-    /** Take photo callback */
-    private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
-            super.onCaptureCompleted(session, request, result)
-            Log.i("TAKE_PHOTO", "onCaptureCompleted")
-            mCurrentPhotoCaptureResult = result
-            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_COMPLETED.inv()
-            if (0 == mPhotoTakeMask)
-                takePhoto(true)
-        }
-    }
-
-    /** Camera state */
-    private val mCameraDeviceStateCallback = object: CameraDevice.StateCallback() {
-        override fun onDisconnected(p0: CameraDevice) {}
-
-        override fun onError(p0: CameraDevice, p1: Int) {}
-
-        @Suppress("DEPRECATION")
-        override fun onOpened(cameraDevice: CameraDevice) {
-            mCameraDevice = cameraDevice
-
-            val sizes = mCameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
-            if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
-            val previewSize = getBestResolution(
-                mBinding.surfaceView.width,
-                mCameraHandler.resolutionWidth.toFloat() / mCameraHandler.resolutionHeight,
-                sizes
-            )
-
-            mRotatedPreviewWidth = if (mCameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
-            mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
-
-            mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
-
-            try {
-                cameraDevice.createCaptureSession(
-                    mutableListOf(
-                        mBinding.surfaceView.holder.surface,
-                        mImageReaderHisto.surface,
-                        mImageReaderJpeg.surface,
-                        mImageReaderDng.surface,
-                    ),
-                    mCameraCaptureSessionStateCallback,
-                    getWorkerHandler()
-                )
-            } catch(e: Exception) {
-                e.printStackTrace()
-            }
-        }
     }
 
     @Suppress("DEPRECATION")
