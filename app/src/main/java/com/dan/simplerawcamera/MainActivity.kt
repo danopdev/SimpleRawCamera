@@ -34,6 +34,7 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
 import kotlin.concurrent.timer
 import kotlin.math.abs
@@ -147,6 +148,9 @@ class MainActivity : AppCompatActivity() {
     private var mSaveFolder: DocumentFile? = null
 
     private var mLocation: Location? = null
+
+    private val mSaveAsyncMQ = mutableListOf<Triple<String, String, ByteArray>>()
+    private var mSaveAsyncBusy = false
 
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -891,21 +895,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveAsync(byteArrayOutputStream: ByteArrayOutputStream, mimeType: String, fileName: String ) {
-        GlobalScope.launch(Dispatchers.IO) {
-            try {
-                mSaveFolder?.let { saveFolder ->
-                    saveFolder.createFile(mimeType, fileName)?.let { newFile ->
-                        contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
-                            outputStream.write(byteArrayOutputStream.toByteArray())
-                            outputStream.close()
+    private fun saveAsyncNextItem() {
+        if(!mSaveAsyncBusy && mSaveAsyncMQ.isNotEmpty()) {
+            mSaveAsyncBusy = true
+            val item = mSaveAsyncMQ.get(0)
+            mSaveAsyncMQ.removeAt(0)
+
+            GlobalScope.launch(Dispatchers.IO) {
+                val fileName = item.first
+                val mimeType = item.second
+                val byteArray = item.third
+
+                try {
+                    mSaveFolder?.let { saveFolder ->
+                        saveFolder.createFile(mimeType, fileName)?.let { newFile ->
+                            contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
+                                outputStream.write(byteArray)
+                                outputStream.close()
+                            }
                         }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+
+                mSaveAsyncBusy = false
+                runOnUiThread {
+                    saveAsyncNextItem()
+                }
             }
         }
+    }
+
+    private fun saveAsync(fileName: String, mimeType: String, byteArray: ByteArray) {
+        mSaveAsyncMQ.add(Triple(fileName, mimeType, byteArray))
+        saveAsyncNextItem()
     }
 
     private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
@@ -915,7 +939,7 @@ class MainActivity : AppCompatActivity() {
             val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureResult)
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.writeImage(outputStream, image)
-            saveAsync( outputStream, "image/x-adobe-dng", mPhotoFileNameBase + ".dng" )
+            saveAsync( mPhotoFileNameBase + ".dng" , "image/x-adobe-dng", outputStream.toByteArray())
         } catch(e: Exception) {
             e.printStackTrace()
         }
@@ -930,7 +954,7 @@ class MainActivity : AppCompatActivity() {
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
             outputStream.write(bytes)
-            saveAsync( outputStream, "image/jpeg", mPhotoFileNameBase + ".jpg" )
+            saveAsync( mPhotoFileNameBase + ".jpg", "image/jpeg", outputStream.toByteArray())
         } catch(e: Exception) {
             e.printStackTrace()
         }
