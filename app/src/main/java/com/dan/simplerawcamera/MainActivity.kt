@@ -6,16 +6,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.*
+import android.hardware.SensorManager
 import android.hardware.camera2.*
 import android.hardware.camera2.params.MeteringRectangle
 import android.location.Location
 import android.location.LocationManager
+import android.media.ExifInterface
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
-import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -36,7 +37,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.concurrent.schedule
-import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -111,7 +111,6 @@ class MainActivity : AppCompatActivity() {
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
-    private val mWindowManager: WindowManager by lazy { getSystemService(Context.WINDOW_SERVICE) as WindowManager }
 
     private lateinit var mCameraHandler: CameraHandler
     private var mCameraDevice: CameraDevice? = null
@@ -151,6 +150,10 @@ class MainActivity : AppCompatActivity() {
 
     private val mSaveAsyncMQ = mutableListOf<Triple<String, String, ByteArray>>()
     private var mSaveAsyncBusy = false
+
+    private var mOrientationEventListener: OrientationEventListener? = null
+    private var mScreenOrientation: Int = 0
+    private var mPhotoExifOrientation: Int = 0
 
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -426,14 +429,21 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    @Suppress("DEPRECATION")
-    private fun getScreenOrientation(): Int = mWindowManager.defaultDisplay.rotation
-
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
 
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
+
+    private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraHandler.sensorOrientation) % 360
+
+    private fun getPhotoExifOrientation( orientation: Int ): Int =
+        when(orientation) {
+            90 -> ExifInterface.ORIENTATION_ROTATE_90
+            180 -> ExifInterface.ORIENTATION_ROTATE_180
+            270 -> ExifInterface.ORIENTATION_ROTATE_270
+            else -> ExifInterface.ORIENTATION_NORMAL
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -444,11 +454,13 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        mOrientationEventListener?.enable()
         if (mSurfaceIsCreated)
             selectCamera(mSettings.cameraIndex)
     }
 
     override fun onPause() {
+        mOrientationEventListener?.disable()
         closeCamera()
         mSettings.saveProperties()
         super.onPause()
@@ -665,6 +677,16 @@ class MainActivity : AppCompatActivity() {
         mBinding.btnSettings.setOnClickListener {
             SettingsDialog.show( supportFragmentManager, this, mSettings ) {
                 updateFrame()
+            }
+        }
+
+        mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
+            override fun onOrientationChanged(orientation: Int) {
+                var screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
+                if (screenOrientation != mScreenOrientation) {
+                    mScreenOrientation = screenOrientation
+                    Log.i("EXIF", "Orientation: ${screenOrientation}")
+                }
             }
         }
 
@@ -938,6 +960,7 @@ class MainActivity : AppCompatActivity() {
             val outputStream = ByteArrayOutputStream()
             val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureResult)
             mLocation?.let { dngCreator.setLocation(it) }
+            dngCreator.setOrientation(mPhotoExifOrientation)
             dngCreator.writeImage(outputStream, image)
             saveAsync( mPhotoFileNameBase + ".dng" , "image/x-adobe-dng", outputStream.toByteArray())
         } catch(e: Exception) {
@@ -1149,6 +1172,10 @@ class MainActivity : AppCompatActivity() {
 
                 mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 captureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION, mLocation)
+
+                val photoOrientation = getPhotoOrientation()
+                mPhotoExifOrientation = getPhotoExifOrientation(photoOrientation)
+                captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, photoOrientation)
 
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,

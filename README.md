@@ -54,9 +54,6 @@ Currently always AUTO.
 
 ## TODO
 
-* Photo
-  * Fix orientation 
-
 * Exposure:
   * Try to adjust exposure (except for full manual mode) to avoid burning highlights
 
