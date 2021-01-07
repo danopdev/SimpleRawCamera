@@ -119,8 +119,6 @@ class MainActivity : AppCompatActivity() {
     private var mCaptureRequest: CaptureRequest? = null
     private var mCaptureModeIsPhoto = false
     private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
-    private var mCurrentPhotoJpegImage: Image? = null
-    private var mCurrentPhotoDngImage: Image? = null
 
     private var mPhotoButtonMask = 0
     private var mPhotoTakeMask = 0
@@ -225,30 +223,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Save image as JPEG */
+    /** JPEG Reader Listener */
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "JPEG: Received")
-
-            if (null != imageReader) {
-                mCurrentPhotoJpegImage = imageReader.acquireLatestImage()
-            }
-
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
             if (0 == mPhotoTakeMask)
                 takePhoto(true)
         }
     }
 
-    /** Save image as DNG */
+    /** DNG Reader Listener */
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "DNG: Received")
-
-            if (null != imageReader) {
-                mCurrentPhotoDngImage = imageReader.acquireLatestImage()
-            }
-
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
             if (0 == mPhotoTakeMask)
                 takePhoto(true)
@@ -382,7 +370,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Take photo callback: maybe not needed ??? */
+    /** Take photo callback */
     private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
@@ -958,33 +946,17 @@ class MainActivity : AppCompatActivity() {
                 mPhotoCounter++
                 mBinding.frameView.showCounter(mPhotoCounter)
 
-                //save JPEG
-                mCurrentPhotoJpegImage?.let { image ->
+                mImageReaderJpeg.acquireLatestImage()?.let{ image ->
                     saveJpeg(image)
-
-                    try {
-                        image.close()
-                    } catch(e: Exception) {
-                        e.printStackTrace()
-                    }
+                    image.close()
                 }
 
-                //save DNG
-                mCurrentPhotoDngImage?.let { image ->
-                    mCurrentPhotoCaptureResult?.let { captureResult ->
+                mImageReaderDng.acquireLatestImage()?.let { image ->
+                    mCurrentPhotoCaptureResult?.let{ captureResult ->
                         saveDng(image, captureResult)
                     }
-
-                    try {
-                        image.close()
-                    } catch(e: Exception) {
-                        e.printStackTrace()
-                    }
+                    image.close()
                 }
-
-                mCurrentPhotoJpegImage = null
-                mCurrentPhotoDngImage = null
-                mCurrentPhotoCaptureResult = null
 
                 takeNewPhoto = mSettings.continuousMode && (0 != mPhotoButtonMask)
             }
@@ -998,9 +970,9 @@ class MainActivity : AppCompatActivity() {
                 mPhotoInProgress = true
 
                 when (mSettings.takePhotoModes) {
-                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG
-                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG
-                    else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG
+                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                    else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                 }
 
                 mPhotoTimestamp = System.currentTimeMillis()
