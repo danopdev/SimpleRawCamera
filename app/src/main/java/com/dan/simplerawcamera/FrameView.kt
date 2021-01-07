@@ -16,7 +16,7 @@ import kotlin.concurrent.timer
 
 /**
  Allow to display information over the camera preview:
-  * Rules of 3rd grid
+  * Rule of 3rd grid
   * Ratio frame
   * Click to focus area
   * Photo counter
