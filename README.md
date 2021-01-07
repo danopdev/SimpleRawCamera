@@ -56,6 +56,7 @@ Currently always AUTO.
 
 * Exposure:
   * Try to adjust exposure (except for full manual mode) to avoid burning highlights
+  * Switch from 1 EV step to 1/2 EV step
 
 * Focus:
   * Add face detection
