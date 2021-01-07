@@ -110,9 +110,9 @@ class MainActivity : AppCompatActivity() {
     private val mSettings: Settings by lazy { Settings(this) }
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
-    private val mCameraList: ArrayList<CameraHandler> by lazy { CameraHandler.getValidCameras(mCameraManager) }
+    private val mCameraList: ArrayList<CameraInfo> by lazy { CameraInfo.getValidCameras(mCameraManager) }
 
-    private lateinit var mCameraHandler: CameraHandler
+    private lateinit var mCameraInfo: CameraInfo
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
@@ -353,16 +353,16 @@ class MainActivity : AppCompatActivity() {
         override fun onOpened(cameraDevice: CameraDevice) {
             mCameraDevice = cameraDevice
 
-            val sizes = mCameraHandler.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
+            val sizes = mCameraInfo.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
             if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
             val previewSize = getBestResolution(
                 mBinding.surfaceView.width,
-                mCameraHandler.resolutionWidth.toFloat() / mCameraHandler.resolutionHeight,
+                mCameraInfo.resolutionWidth.toFloat() / mCameraInfo.resolutionHeight,
                 sizes
             )
 
-            mRotatedPreviewWidth = if (mCameraHandler.areDimensionsSwapped) previewSize.height else previewSize.width
-            mRotatedPreviewHeight = if (mCameraHandler.areDimensionsSwapped) previewSize.width else previewSize.height
+            mRotatedPreviewWidth = if (mCameraInfo.areDimensionsSwapped) previewSize.height else previewSize.width
+            mRotatedPreviewHeight = if (mCameraInfo.areDimensionsSwapped) previewSize.width else previewSize.height
 
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
 
@@ -401,10 +401,10 @@ class MainActivity : AppCompatActivity() {
             val isoRatio = mIsoMeasuredValue.toFloat() / mSettings.expIsoValue
 
             var suggestedSpeed = (mSpeedMeasuredValue * isoRatio).toLong()
-            if (suggestedSpeed < mCameraHandler.speedRange.lower)
-                suggestedSpeed = mCameraHandler.speedRange.lower
-            else if (suggestedSpeed > mCameraHandler.speedRange.upper)
-                suggestedSpeed = mCameraHandler.speedRange.upper
+            if (suggestedSpeed < mCameraInfo.speedRange.lower)
+                suggestedSpeed = mCameraInfo.speedRange.lower
+            else if (suggestedSpeed > mCameraInfo.speedRange.upper)
+                suggestedSpeed = mCameraInfo.speedRange.upper
 
             return Triple(
                 mSettings.expIsoValue,
@@ -417,10 +417,10 @@ class MainActivity : AppCompatActivity() {
         val speedRatio = mSpeedMeasuredValue / speedValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
-        if (suggestedIso < mCameraHandler.isoRange.lower)
-            suggestedIso = mCameraHandler.isoRange.lower
-        else if (suggestedIso > mCameraHandler.isoRange.upper)
-            suggestedIso = mCameraHandler.isoRange.upper
+        if (suggestedIso < mCameraInfo.isoRange.lower)
+            suggestedIso = mCameraInfo.isoRange.lower
+        else if (suggestedIso > mCameraInfo.isoRange.upper)
+            suggestedIso = mCameraInfo.isoRange.upper
 
         return Triple(
             suggestedIso,
@@ -435,7 +435,7 @@ class MainActivity : AppCompatActivity() {
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
 
-    private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraHandler.sensorOrientation) % 360
+    private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraInfo.sensorOrientation) % 360
 
     private fun getPhotoExifOrientation( orientation: Int ): Int =
         when(orientation) {
@@ -598,7 +598,7 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.btnCamera.setOnClickListener { selectCamera((mSettings.cameraIndex + 1) % mCameraList.size) }
 
-        mCameraHandler = mCameraList[0]
+        mCameraInfo = mCameraList[0]
 
         mBinding.txtIso.setOnMoveYAxisListener {
             mSettings.expIsoIsManual = !mSettings.expIsoIsManual
@@ -617,7 +617,7 @@ class MainActivity : AppCompatActivity() {
         mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpCompensation(it) }
 
         mBinding.txtFocus.setOnMoveYAxisListener { steps ->
-            if (mCameraHandler.focusAllowManual) {
+            if (mCameraInfo.focusAllowManual) {
                 var newFocusType = mSettings.focusType + (if (steps < 0) -1 else 1)
                 if (newFocusType < 0) {
                     newFocusType = Settings.FOCUS_TYPE_MAX-1
@@ -653,7 +653,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
-            if (mCameraHandler.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
+            if (mCameraInfo.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
                 if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
@@ -735,10 +735,10 @@ class MainActivity : AppCompatActivity() {
 
         while (counter > 0) {
             if (increase) {
-                if (value >= mCameraHandler.isoRange.upper) break
+                if (value >= mCameraInfo.isoRange.upper) break
                 value *= 2
             } else {
-                if (value <= mCameraHandler.isoRange.lower) break
+                if (value <= mCameraInfo.isoRange.lower) break
                 value /= 2
             }
             counter -= 1
@@ -764,10 +764,10 @@ class MainActivity : AppCompatActivity() {
 
         while (counter > 0) {
             if (increase) {
-                if (value >= mCameraHandler.exposureCompensantionRange.upper) break
+                if (value >= mCameraInfo.exposureCompensantionRange.upper) break
                 value++
             } else {
-                if (value <= mCameraHandler.exposureCompensantionRange.lower) break
+                if (value <= mCameraInfo.exposureCompensantionRange.lower) break
                 value--
             }
             counter -= 1
@@ -800,10 +800,10 @@ class MainActivity : AppCompatActivity() {
 
         while (counter > 0) {
             if (increase) {
-                if (speedDiv == 1L || getSpeedValue(speedDiv / 2) > mCameraHandler.speedRange.upper) break
+                if (speedDiv == 1L || getSpeedValue(speedDiv / 2) > mCameraInfo.speedRange.upper) break
                 speedDiv /= 2
             } else {
-                if (getSpeedValue(speedDiv * 2) < mCameraHandler.speedRange.lower) break
+                if (getSpeedValue(speedDiv * 2) < mCameraInfo.speedRange.lower) break
                 speedDiv *= 2
             }
             counter -= 1
@@ -849,7 +849,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showFocus() {
-        if (mCameraHandler.focusAllowManual) {
+        if (mCameraInfo.focusAllowManual) {
             when(mSettings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
@@ -958,7 +958,7 @@ class MainActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "DNG: Save starts")
         try {
             val outputStream = ByteArrayOutputStream()
-            val dngCreator = DngCreator(mCameraHandler.cameraCharacteristics, captureResult)
+            val dngCreator = DngCreator(mCameraInfo.cameraCharacteristics, captureResult)
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.setOrientation(mPhotoExifOrientation)
             dngCreator.writeImage(outputStream, image)
@@ -1042,7 +1042,7 @@ class MainActivity : AppCompatActivity() {
     private fun selectCamera(index: Int) {
         mPhotoInProgress = false
         mSettings.cameraIndex = index
-        mCameraHandler = mCameraList[index]
+        mCameraInfo = mCameraList[index]
         mFocusState = FOCUS_STATE_MANUAL
 
         closeCamera()
@@ -1053,19 +1053,19 @@ class MainActivity : AppCompatActivity() {
         set.clone(mBinding.layoutView)
         set.setDimensionRatio(
             mBinding.layoutWithRatio.getId(),
-            "${mCameraHandler.resolutionWidth}:${mCameraHandler.resolutionHeight}"
+            "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}"
         )
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.JPEG, 1)
+        mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
         mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, getWorkerHandler())
 
-        mImageReaderDng = ImageReader.newInstance(mCameraHandler.resolutionWidth, mCameraHandler.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
+        mImageReaderDng = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, getWorkerHandler())
 
         updateSliders()
 
-        mCameraManager.openCamera(mCameraHandler.id, mCameraDeviceStateCallback, getWorkerHandler())
+        mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, getWorkerHandler())
     }
 
     private fun closeCamera() {
@@ -1111,7 +1111,7 @@ class MainActivity : AppCompatActivity() {
 
     /** Called once when the camera is selected (common to preview & take photo) */
     private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
-        if (mCameraHandler.supportLensStabilisation)
+        if (mCameraInfo.supportLensStabilisation)
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
         captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
@@ -1214,23 +1214,23 @@ class MainActivity : AppCompatActivity() {
 
         captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
 
-        if (mCameraHandler.focusAllowManual) {
+        if (mCameraInfo.focusAllowManual) {
             when(mSettings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraHandler.focusHyperfocalDistance)
+                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraInfo.focusHyperfocalDistance)
                     mBinding.frameView.hideFocusZone()
                 }
                 Settings.FOCUS_TYPE_MANUAL -> {
                     if (mFocusClick) {
                         mFocusClick = false
-                        val delta = mCameraHandler.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
-                        val x = mCameraHandler.resolutionWidth * mFocusClickPosition.x / 100
-                        val y = mCameraHandler.resolutionWidth * mFocusClickPosition.y / 100
+                        val delta = mCameraInfo.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
+                        val x = mCameraInfo.resolutionWidth * mFocusClickPosition.x / 100
+                        val y = mCameraInfo.resolutionWidth * mFocusClickPosition.y / 100
                         val x1 = max(0, x - delta)
                         val y1 = max(0, y - delta)
-                        val x2 = min(mCameraHandler.resolutionWidth, x + delta)
-                        val y2 = min(mCameraHandler.resolutionHeight, y + delta)
+                        val x2 = min(mCameraInfo.resolutionWidth, x + delta)
+                        val y2 = min(mCameraInfo.resolutionHeight, y + delta)
 
                         if (y2 > y1 && x2 > x1) {
                             val rectangle = MeteringRectangle(x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
@@ -1252,8 +1252,8 @@ class MainActivity : AppCompatActivity() {
                     } else if (FOCUS_STATE_LOCKED == mFocusState) {
                         captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
                     } else if (FOCUS_STATE_MANUAL == mFocusState) {
-                        val distance = mCameraHandler.focusRange.lower +
-                                (100 - mBinding.seekBarFocus.progress) * (mCameraHandler.focusRange.upper - mCameraHandler.focusRange.lower) / 100
+                        val distance = mCameraInfo.focusRange.lower +
+                                (100 - mBinding.seekBarFocus.progress) * (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) / 100
                         captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                         captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                         mBinding.frameView.hideFocusZone()
@@ -1274,14 +1274,14 @@ class MainActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
         } else if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mSettings.expCompensationValue * mCameraHandler.exposureCompensantionMulitplyFactor)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mSettings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
         } else {
             var manualSpeed = getSpeedValue()
             var manualISO = mSettings.expIsoValue
 
             if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
                 while (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
-                    if ((2*manualISO) > mCameraHandler.isoRange.upper)
+                    if ((2*manualISO) > mCameraInfo.isoRange.upper)
                         break
 
                     manualISO *= 2

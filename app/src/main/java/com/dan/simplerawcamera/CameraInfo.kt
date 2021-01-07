@@ -14,7 +14,7 @@ import kotlin.math.min
 /**
  Contains camera characteristics (don't need to query again)
  */
-class CameraHandler(
+class CameraInfo(
     val cameraManager: CameraManager,
     val cameraCharacteristics: CameraCharacteristics,
     val id: String,
@@ -38,8 +38,8 @@ class CameraHandler(
         /**
          List all available and valid (for this application) cameras.
          */
-        fun getValidCameras(cameraManager: CameraManager): ArrayList<CameraHandler> {
-            val validCameras = ArrayList<CameraHandler>()
+        fun getValidCameras(cameraManager: CameraManager): ArrayList<CameraInfo> {
+            val validCameras = ArrayList<CameraInfo>()
 
             try {
                 val cameraIds = cameraManager.cameraIdList
@@ -100,7 +100,7 @@ class CameraHandler(
                                 .contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
                         validCameras.add(
-                            CameraHandler(
+                            CameraInfo(
                                 cameraManager,
                                 characteristics,
                                 cameraId,
