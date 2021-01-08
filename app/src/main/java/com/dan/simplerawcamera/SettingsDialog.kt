@@ -9,13 +9,13 @@ import androidx.fragment.app.FragmentManager
 import com.dan.simplerawcamera.databinding.SettingsBinding
 
 
-class SettingsDialog( private val settings: Settings, private val mainActivity: MainActivity, private val listenerOK: ()->Unit ) : DialogFragment() {
+class SettingsDialog( private val mainActivity: MainActivity, private val listenerOK: ()->Unit ) : DialogFragment() {
 
     companion object {
         const val DIALOG_TAG = "SETTINGS_DIALOG"
 
-        fun show( fragmentManager: FragmentManager, mainActivity: MainActivity, settings: Settings, listenerOK: () -> Unit ) {
-            with( SettingsDialog( settings, mainActivity, listenerOK ) ) {
+        fun show( fragmentManager: FragmentManager, mainActivity: MainActivity, listenerOK: () -> Unit ) {
+            with( SettingsDialog( mainActivity, listenerOK ) ) {
                 isCancelable = false
                 show(fragmentManager, DIALOG_TAG)
             }
@@ -25,11 +25,11 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val binding = SettingsBinding.inflate( inflater )
 
-        binding.spinnerPhotoModes.setSelection( settings.takePhotoModes )
-        binding.spinnerNoiseReductionModes.setSelection( settings.noiseReduction )
-        binding.switchContinuousMode.isChecked = settings.continuousMode
-        binding.switchShowGrid.isChecked = settings.showGrid
-        binding.spinnerShowFraming.setSelection( settings.frameType )
+        binding.spinnerPhotoModes.setSelection( mainActivity.settings.takePhotoModes )
+        binding.spinnerNoiseReductionModes.setSelection( mainActivity.settings.noiseReduction )
+        binding.switchContinuousMode.isChecked = mainActivity.settings.continuousMode
+        binding.switchShowGrid.isChecked = mainActivity.settings.showGrid
+        binding.spinnerShowFraming.setSelection( mainActivity.settings.frameType )
 
         binding.btnSelectFolder.setOnClickListener {
             mainActivity.startSelectFolder()
@@ -38,13 +38,13 @@ class SettingsDialog( private val settings: Settings, private val mainActivity: 
         binding.bntCancel.setOnClickListener { dismiss() }
 
         binding.bntOK.setOnClickListener {
-            settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
-            settings.noiseReduction = binding.spinnerNoiseReductionModes.selectedItemPosition
-            settings.continuousMode = binding.switchContinuousMode.isChecked
-            settings.showGrid = binding.switchShowGrid.isChecked
-            settings.frameType = binding.spinnerShowFraming.selectedItemPosition
+            mainActivity.settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
+            mainActivity.settings.noiseReduction = binding.spinnerNoiseReductionModes.selectedItemPosition
+            mainActivity.settings.continuousMode = binding.switchContinuousMode.isChecked
+            mainActivity.settings.showGrid = binding.switchShowGrid.isChecked
+            mainActivity.settings.frameType = binding.spinnerShowFraming.selectedItemPosition
 
-            settings.saveProperties()
+            mainActivity.settings.saveProperties()
 
             listenerOK.invoke()
             dismiss()

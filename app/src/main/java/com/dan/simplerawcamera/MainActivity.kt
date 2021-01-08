@@ -106,8 +106,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    val settings: Settings by lazy { Settings(this) }
+
     private val mBinding: ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
-    private val mSettings: Settings by lazy { Settings(this) }
     private val mLocationManager: LocationManager by lazy { getSystemService(Context.LOCATION_SERVICE) as LocationManager }
     private val mCameraManager: CameraManager by lazy { getSystemService(Context.CAMERA_SERVICE) as CameraManager }
     private val mCameraList: ArrayList<CameraInfo> by lazy { CameraInfo.getValidCameras(mCameraManager) }
@@ -253,14 +254,14 @@ class MainActivity : AppCompatActivity() {
     /** Surface for preview */
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            selectCamera(mSettings.cameraIndex)
+            selectCamera(settings.cameraIndex)
             mSurfaceIsCreated = true
 
             if (mFirstCall) { //workaround ratio issue
                 mFirstCall = false
                 Timer().schedule(500) {
                     runOnUiThread {
-                        selectCamera(mSettings.cameraIndex)
+                        selectCamera(settings.cameraIndex)
                     }
                 }
             }
@@ -336,10 +337,10 @@ class MainActivity : AppCompatActivity() {
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
-            if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
+            if (settings.expIsoIsManual && settings.expSpeedIsManual) return
 
-            if (!mSettings.expIsoIsManual) showIso(captureEA.first)
-            if (!mSettings.expSpeedIsManual) showSpeed(captureEA.second)
+            if (!settings.expIsoIsManual) showIso(captureEA.first)
+            if (!settings.expSpeedIsManual) showSpeed(captureEA.second)
         }
     }
 
@@ -385,20 +386,20 @@ class MainActivity : AppCompatActivity() {
 
     /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
-        if (!mSettings.expIsoIsManual && !mSettings.expSpeedIsManual)
+        if (!settings.expIsoIsManual && !settings.expSpeedIsManual)
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
 
-        if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) {
+        if (settings.expIsoIsManual && settings.expSpeedIsManual) {
             val speedValue = getSpeedValue()
             return Triple(
-                mSettings.expIsoValue,
+                settings.expIsoValue,
                 speedValue,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mSettings.expIsoValue, speedValue)
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, speedValue)
             )
         }
 
-        if (mSettings.expIsoIsManual) {
-            val isoRatio = mIsoMeasuredValue.toFloat() / mSettings.expIsoValue
+        if (settings.expIsoIsManual) {
+            val isoRatio = mIsoMeasuredValue.toFloat() / settings.expIsoValue
 
             var suggestedSpeed = (mSpeedMeasuredValue * isoRatio).toLong()
             if (suggestedSpeed < mCameraInfo.speedRange.lower)
@@ -407,9 +408,9 @@ class MainActivity : AppCompatActivity() {
                 suggestedSpeed = mCameraInfo.speedRange.upper
 
             return Triple(
-                mSettings.expIsoValue,
+                settings.expIsoValue,
                 suggestedSpeed,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, mSettings.expIsoValue, suggestedSpeed)
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, suggestedSpeed)
             )
         }
 
@@ -433,7 +434,7 @@ class MainActivity : AppCompatActivity() {
     private fun getWorkerHandler(): Handler? { return null }
 
     private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
-    private fun getSpeedValue(): Long = getSpeedValue(mSettings.expSpeedDivValue)
+    private fun getSpeedValue(): Long = getSpeedValue(settings.expSpeedDivValue)
 
     private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraInfo.sensorOrientation) % 360
 
@@ -456,13 +457,13 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         mOrientationEventListener?.enable()
         if (mSurfaceIsCreated)
-            selectCamera(mSettings.cameraIndex)
+            selectCamera(settings.cameraIndex)
     }
 
     override fun onPause() {
         mOrientationEventListener?.disable()
         closeCamera()
-        mSettings.saveProperties()
+        settings.saveProperties()
         super.onPause()
     }
 
@@ -502,8 +503,8 @@ class MainActivity : AppCompatActivity() {
             val data = intent.data
             if (data is Uri) {
                 mSaveFolder = DocumentFile.fromTreeUri(applicationContext, data)
-                mSettings.saveUri = data.toString()
-                mSettings.saveProperties()
+                settings.saveUri = data.toString()
+                settings.saveProperties()
 
                 if (mFirstCall)
                     onValidSaveFolder()
@@ -557,7 +558,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-            mSaveFolder = DocumentFile.fromTreeUri(applicationContext, Uri.parse(mSettings.saveUri))
+            mSaveFolder = DocumentFile.fromTreeUri(applicationContext, Uri.parse(settings.saveUri))
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -582,8 +583,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun onValidSaveFolder() {
-        if (mSettings.cameraIndex < 0 || mSettings.cameraIndex >= mCameraList.size)
-            mSettings.cameraIndex = 0
+        if (settings.cameraIndex < 0 || settings.cameraIndex >= mCameraList.size)
+            settings.cameraIndex = 0
 
         if (1 == mCameraList.size) {
             mBinding.txtCamera.isVisible = false
@@ -596,19 +597,19 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
-        mBinding.btnCamera.setOnClickListener { selectCamera((mSettings.cameraIndex + 1) % mCameraList.size) }
+        mBinding.btnCamera.setOnClickListener { selectCamera((settings.cameraIndex + 1) % mCameraList.size) }
 
         mCameraInfo = mCameraList[0]
 
         mBinding.txtIso.setOnMoveYAxisListener {
-            mSettings.expIsoIsManual = !mSettings.expIsoIsManual
+            settings.expIsoIsManual = !settings.expIsoIsManual
             updateSliders()
         }
 
         mBinding.txtIso.setOnMoveXAxisListener { trackIso(it) }
 
         mBinding.txtSpeed.setOnMoveYAxisListener {
-            mSettings.expSpeedIsManual = !mSettings.expSpeedIsManual
+            settings.expSpeedIsManual = !settings.expSpeedIsManual
             updateSliders()
         }
 
@@ -618,15 +619,15 @@ class MainActivity : AppCompatActivity() {
 
         mBinding.txtFocus.setOnMoveYAxisListener { steps ->
             if (mCameraInfo.focusAllowManual) {
-                var newFocusType = mSettings.focusType + (if (steps < 0) -1 else 1)
+                var newFocusType = settings.focusType + (if (steps < 0) -1 else 1)
                 if (newFocusType < 0) {
                     newFocusType = Settings.FOCUS_TYPE_MAX-1
                 } else if (newFocusType >= Settings.FOCUS_TYPE_MAX) {
                     newFocusType = 0
                 }
 
-                if (newFocusType != mSettings.focusType) {
-                    mSettings.focusType = newFocusType
+                if (newFocusType != settings.focusType) {
+                    settings.focusType = newFocusType
                     mFocusClick = false
                     showFocus()
                     setupCapturePreviewRequest()
@@ -634,13 +635,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        mBinding.seekBarFocus.progress = mSettings.focusManualProgress
+        mBinding.seekBarFocus.progress = settings.focusManualProgress
 
         mBinding.seekBarFocus.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, user: Boolean) {
-                if (Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
+                if (Settings.FOCUS_TYPE_MANUAL == settings.focusType) {
                     mFocusState = FOCUS_STATE_MANUAL
-                    mSettings.focusManualProgress = progress
+                    settings.focusManualProgress = progress
                     setupCapturePreviewRequest()
                 }
             }
@@ -653,7 +654,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
-            if (mCameraInfo.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == mSettings.focusType) {
+            if (mCameraInfo.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == settings.focusType) {
                 if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
@@ -675,7 +676,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         mBinding.btnSettings.setOnClickListener {
-            SettingsDialog.show( supportFragmentManager, this, mSettings ) {
+            SettingsDialog.show( supportFragmentManager, this ) {
                 updateFrame()
             }
         }
@@ -727,11 +728,11 @@ class MainActivity : AppCompatActivity() {
 
     /** ISO slider/button is changed */
     private fun trackIso(delta: Int) {
-        if (!mSettings.expIsoIsManual) return
+        if (!settings.expIsoIsManual) return
 
         val increase = delta > 0
         var counter = abs(delta)
-        var value = mSettings.expIsoValue
+        var value = settings.expIsoValue
 
         while (counter > 0) {
             if (increase) {
@@ -745,22 +746,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         showIso(value)
-        mSettings.expIsoValue = value
+        settings.expIsoValue = value
         setupCapturePreviewRequest()
     }
 
     private fun showIso(value: Int) {
-        val extra = if (mSettings.expIsoIsManual) "M" else "A"
+        val extra = if (settings.expIsoIsManual) "M" else "A"
         mBinding.txtIso.text = "${value} ISO (${extra})"
     }
 
     /** Exposure compensation slider/button is changed */
     private fun trackExpCompensation(delta: Int) {
-        if (mSettings.expIsoIsManual && mSettings.expSpeedIsManual) return
+        if (settings.expIsoIsManual && settings.expSpeedIsManual) return
 
         val increase = delta > 0
         var counter = abs(delta)
-        var value = mSettings.expCompensationValue
+        var value = settings.expCompensationValue
 
         while (counter > 0) {
             if (increase) {
@@ -774,7 +775,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         showExpComponsation(value)
-        mSettings.expCompensationValue = value
+        settings.expCompensationValue = value
         setupCapturePreviewRequest()
     }
 
@@ -792,11 +793,11 @@ class MainActivity : AppCompatActivity() {
 
     /** Speed slider/button is changed */
     private fun trackSpeed(delta: Int) {
-        if (!mSettings.expSpeedIsManual) return
+        if (!settings.expSpeedIsManual) return
 
         val increase = delta > 0
         var counter = abs(delta)
-        var speedDiv = mSettings.expSpeedDivValue
+        var speedDiv = settings.expSpeedDivValue
 
         while (counter > 0) {
             if (increase) {
@@ -810,7 +811,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         showSpeed(getSpeedValue(speedDiv))
-        mSettings.expSpeedDivValue = speedDiv
+        settings.expSpeedDivValue = speedDiv
         setupCapturePreviewRequest()
     }
 
@@ -844,13 +845,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSpeed(speed: Long) {
-        val extra = if (mSettings.expSpeedIsManual) " (M)" else " (A)"
+        val extra = if (settings.expSpeedIsManual) " (M)" else " (A)"
         mBinding.txtSpeed.text = getSpeedStr( speed ) + extra
     }
 
     private fun showFocus() {
         if (mCameraInfo.focusAllowManual) {
-            when(mSettings.focusType) {
+            when(settings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
                     mBinding.txtFocus.visibility = View.VISIBLE
@@ -877,16 +878,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSliders() {
-        mBinding.txtExpComponsation.visibility = if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
+        mBinding.txtExpComponsation.visibility = if (!settings.expIsoIsManual || !settings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
 
-        if (mSettings.expIsoIsManual)
-            showIso(mSettings.expIsoValue)
+        if (settings.expIsoIsManual)
+            showIso(settings.expIsoValue)
 
-        if (mSettings.expSpeedIsManual)
+        if (settings.expSpeedIsManual)
             showSpeed(getSpeedValue())
 
         showFocus()
-        showExpComponsation(mSettings.expCompensationValue)
+        showExpComponsation(settings.expCompensationValue)
         setupCapturePreviewRequest()
     }
 
@@ -1005,7 +1006,7 @@ class MainActivity : AppCompatActivity() {
                     image.close()
                 }
 
-                takeNewPhoto = mSettings.continuousMode && (0 != mPhotoButtonMask)
+                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask)
             }
 
             val captureRequestPhoto = mCaptureRequest
@@ -1016,7 +1017,7 @@ class MainActivity : AppCompatActivity() {
 
                 mPhotoInProgress = true
 
-                when (mSettings.takePhotoModes) {
+                when (settings.takePhotoModes) {
                     Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                     Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
                     else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
@@ -1041,7 +1042,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun selectCamera(index: Int) {
         mPhotoInProgress = false
-        mSettings.cameraIndex = index
+        settings.cameraIndex = index
         mCameraInfo = mCameraList[index]
         mFocusState = FOCUS_STATE_MANUAL
 
@@ -1087,9 +1088,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateFrame() {
-        mBinding.frameView.showGrid(mSettings.showGrid)
+        mBinding.frameView.showGrid(settings.showGrid)
 
-        when(mSettings.frameType) {
+        when(settings.frameType) {
             Settings.FRAME_TYPE_1_1 -> mBinding.frameView.showRatio(true, 1, 1)
             Settings.FRAME_TYPE_4_3 -> mBinding.frameView.showRatio(true, 4, 3)
             Settings.FRAME_TYPE_3_2 -> mBinding.frameView.showRatio(true, 3, 2)
@@ -1146,7 +1147,7 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
 
-                if (mSettings.expIsoIsManual || mSettings.expSpeedIsManual) {
+                if (settings.expIsoIsManual || settings.expSpeedIsManual) {
                     val ae = getCaptureEA()
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
@@ -1155,7 +1156,7 @@ class MainActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
-                when( mSettings.takePhotoModes ) {
+                when( settings.takePhotoModes ) {
                     Settings.PHOTO_TYPE_DNG -> {
                         captureRequestBuilder.addTarget(mImageReaderDng.surface)
                     }
@@ -1179,8 +1180,8 @@ class MainActivity : AppCompatActivity() {
 
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
-                    if (Settings.NOISE_REDUCTION_ENABLED == mSettings.noiseReduction ||
-                        (Settings.NOISE_REDUCTION_JPEG_ONLY == mSettings.noiseReduction && Settings.PHOTO_TYPE_JPEG == mSettings.takePhotoModes) )
+                    if (Settings.NOISE_REDUCTION_ENABLED == settings.noiseReduction ||
+                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes) )
                         CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
                     else
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -1202,7 +1203,7 @@ class MainActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
-                    if (Settings.NOISE_REDUCTION_DISABLED == mSettings.noiseReduction)
+                    if (Settings.NOISE_REDUCTION_DISABLED == settings.noiseReduction)
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
                     else
                         CaptureRequest.NOISE_REDUCTION_MODE_FAST
@@ -1215,7 +1216,7 @@ class MainActivity : AppCompatActivity() {
         captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
 
         if (mCameraInfo.focusAllowManual) {
-            when(mSettings.focusType) {
+            when(settings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraInfo.focusHyperfocalDistance)
@@ -1269,15 +1270,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         //WORKAROUND: My camera block with click to focus in full manual mode
-        if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && mSettings.expIsoIsManual && mSettings.expSpeedIsManual) {
+        if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && settings.expIsoIsManual && settings.expSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
-        } else if (!mSettings.expIsoIsManual || !mSettings.expSpeedIsManual) {
+        } else if (!settings.expIsoIsManual || !settings.expSpeedIsManual) {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, mSettings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
         } else {
             var manualSpeed = getSpeedValue()
-            var manualISO = mSettings.expIsoValue
+            var manualISO = settings.expIsoValue
 
             if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
                 while (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
