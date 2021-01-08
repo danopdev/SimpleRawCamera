@@ -21,4 +21,29 @@
         <item>Enabled</item>
     </string-array>
 
+    <string-array name="sequences_delay_start">
+        <item>2</item>
+        <item>5</item>
+        <item>10</item>
+    </string-array>
+
+    <string-array name="sequences_delay_between">
+        <item>1</item>
+        <item>5</item>
+        <item>10</item>
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+        <item>300</item>
+        <item>600</item>
+    </string-array>
+
+    <string-array name="sequences_number_of_photos">
+        <item>1</item>
+        <item>3</item>
+        <item>5</item>
+        <item>10</item>
+        <item>infinite</item>
+    </string-array>
+
 </resources>

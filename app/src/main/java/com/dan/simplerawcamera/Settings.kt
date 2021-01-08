@@ -51,6 +51,11 @@ class Settings( private val activity: Activity) {
     var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
     var noiseReduction: Int = NOISE_REDUCTION_DISABLED
 
+    var sequenceDelayStart: Int = 0
+    var sequenceDelayBetween: Int = 0
+    var sequenceNumberOfPhotos: Int = 0
+
+
     init {
         loadProperties()
     }
