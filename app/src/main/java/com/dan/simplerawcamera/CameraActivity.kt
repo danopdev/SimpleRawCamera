@@ -46,7 +46,7 @@ import kotlin.system.exitProcess
 /**
  Main camera view
  */
-class MainActivity : AppCompatActivity() {
+class CameraActivity : AppCompatActivity() {
 
     companion object {
         val PERMISSIONS = arrayOf(

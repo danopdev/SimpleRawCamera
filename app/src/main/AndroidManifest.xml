@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SimpleRawCamera">
         <activity
-            android:name=".MainActivity"
+            android:name=".CameraActivity"
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
