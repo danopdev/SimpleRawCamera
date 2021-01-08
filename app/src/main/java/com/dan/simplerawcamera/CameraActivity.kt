@@ -67,6 +67,7 @@ class CameraActivity : AppCompatActivity() {
         const val PHOTO_BUTTON_SCREEN = 1
         const val PHOTO_BUTTON_VOLUMNE_UP = 2
         const val PHOTO_BUTTON_VOLUMNE_DOWN = 4
+        const val PHOTO_BUTTON_SEQUENCE = 8
 
         const val PHOTO_TAKE_COMPLETED = 1
         const val PHOTO_TAKE_JPEG = 2
@@ -127,6 +128,7 @@ class CameraActivity : AppCompatActivity() {
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
     private var mPhotoInProgress = false
+    private var mPhotoTakenCallback: (()->Unit)? = null
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -681,6 +683,10 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
+        mBinding.btnSequences.setOnClickListener {
+            SequencesDialog.show( supportFragmentManager, this )
+        }
+
         mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
             override fun onOrientationChanged(orientation: Int) {
                 var screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
@@ -985,6 +991,11 @@ class CameraActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "JPEG: Save ends")
     }
 
+    fun takePhotoWithCallback( callback: ()->Unit ) {
+        mPhotoTakenCallback = callback
+        takePhotoButton( true, PHOTO_BUTTON_SEQUENCE )
+    }
+
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
@@ -1006,7 +1017,15 @@ class CameraActivity : AppCompatActivity() {
                     image.close()
                 }
 
-                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask)
+                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask) && (null == mPhotoTakenCallback)
+
+                val photoTakenCallback = mPhotoTakenCallback
+                mPhotoTakenCallback = null
+                mPhotoButtonMask = mPhotoButtonMask and PHOTO_BUTTON_SEQUENCE.inv()
+
+                if (null != photoTakenCallback) {
+                    photoTakenCallback.invoke()
+                }
             }
 
             val captureRequestPhoto = mCaptureRequest

@@ -70,6 +70,12 @@
                 android:orientation="vertical"></LinearLayout>
 
             <ImageButton
+                android:id="@+id/btnSequences"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:srcCompat="@android:drawable/ic_menu_camera" />
+
+            <ImageButton
                 android:id="@+id/btnSettings"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
