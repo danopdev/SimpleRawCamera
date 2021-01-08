@@ -35,9 +35,9 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
             cameraActivity.startSelectFolder()
         }
 
-        binding.bntCancel.setOnClickListener { dismiss() }
+        binding.btnCancel.setOnClickListener { dismiss() }
 
-        binding.bntOK.setOnClickListener {
+        binding.btnOK.setOnClickListener {
             cameraActivity.settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
             cameraActivity.settings.noiseReduction = binding.spinnerNoiseReductionModes.selectedItemPosition
             cameraActivity.settings.continuousMode = binding.switchContinuousMode.isChecked

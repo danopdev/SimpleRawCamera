@@ -19,7 +19,7 @@
             android:paddingRight="10dp">
 
             <Button
-                android:id="@+id/bntCancel"
+                android:id="@+id/btnCancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:backgroundTint="#F44336"
@@ -38,7 +38,7 @@
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/bntOK"
+                android:id="@+id/btnOK"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="OK"
