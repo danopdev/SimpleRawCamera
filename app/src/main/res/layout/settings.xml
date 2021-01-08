@@ -97,7 +97,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginRight="16dp"
                         android:layout_weight="0"
-                        android:text="Photo modes"
+                        android:text="Photo modes:"
                         android:textColor="@color/black" />
 
                     <Spinner
@@ -122,7 +122,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginRight="16dp"
                         android:layout_weight="0"
-                        android:text="Noise reduction"
+                        android:text="Noise reduction:"
                         android:textColor="@color/black" />
 
                     <Spinner
@@ -140,7 +140,7 @@
                     android:layout_height="wrap_content"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp"
-                    android:text="Continuous mode" />
+                    android:text="Continuous mode:" />
 
                 <Switch
                     android:id="@+id/switchShowGrid"
@@ -148,7 +148,7 @@
                     android:layout_height="wrap_content"
                     android:paddingTop="10dp"
                     android:paddingBottom="10dp"
-                    android:text="Show grid" />
+                    android:text="Show grid:" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -163,7 +163,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginRight="16dp"
                         android:layout_weight="0"
-                        android:text="Show framing"
+                        android:text="Show framing:"
                         android:textColor="@color/black" />
 
                     <Spinner
