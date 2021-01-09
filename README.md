@@ -67,10 +67,6 @@ Currently always AUTO.
 * Settings:
   * Add "location" option
 
-* Features:
-  * Add timer (2 / 10 seconds)
-  * Add continuous photo with a timer (every: 1 second, 5 seconds, 10 seconds ... 1 min)
-
 * Flash (not supported yet)
   * Automatic
   * Manual
