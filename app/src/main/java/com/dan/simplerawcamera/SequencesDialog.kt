@@ -43,18 +43,12 @@ class SequencesDialog( private val cameraActivity: CameraActivity ) : DialogFrag
     }
 
     private fun takeNextPhotoAfterDelay(delay: Int) {
-        if (delay <= 0) {
+        val msDelay = if (delay <= 0) 100L else delay * 1000L
+        mTimer = timer(null, false, msDelay, msDelay) {
+            mTimer?.cancel()
+            mTimer = null
             cameraActivity.runOnUiThread {
                 if (mIsBusy) takeNextPhoto()
-            }
-        } else {
-            val msDelay = delay * 1000L
-            mTimer = timer(null, false, msDelay, msDelay) {
-                mTimer?.cancel()
-                mTimer = null
-                cameraActivity.runOnUiThread {
-                    if (mIsBusy) takeNextPhoto()
-                }
             }
         }
     }
