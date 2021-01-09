@@ -106,7 +106,6 @@ class SequencesDialog( private val cameraActivity: CameraActivity ) : DialogFrag
             } catch (e: Exception) {
             }
 
-            val a = mBinding.spinnerDelayStart.selectedItem
             val delayStart = (mBinding.spinnerDelayStart.selectedItem as String).toInt()
             takeNextPhotoAfterDelay( delayStart )
         }
