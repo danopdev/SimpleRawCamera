@@ -82,7 +82,7 @@ class CameraInfo(
                         val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
                         val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
                         val focusRange = Range(0f, focusMinDistance)
-                        val focusModes = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) as IntArray
+                        //val focusModes = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) as IntArray
                         val focusMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) as Int
 
                         val hasFlash =
