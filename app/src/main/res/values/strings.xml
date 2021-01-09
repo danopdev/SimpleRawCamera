@@ -28,6 +28,7 @@
     </string-array>
 
     <string-array name="sequences_delay_between">
+        <item>0</item>
         <item>1</item>
         <item>5</item>
         <item>10</item>
