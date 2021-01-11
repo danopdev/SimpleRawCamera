@@ -68,8 +68,9 @@ Currently always AUTO.
   * Add "location" option
 
 * Flash (not supported yet)
-  * Automatic
-  * Manual
+  * OFF
+  * ON
+  * Red Eye
   * Continuous flash (flashlight)
 
 * White balance (not supported yet)
