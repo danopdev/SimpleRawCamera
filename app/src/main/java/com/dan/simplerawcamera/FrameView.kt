@@ -8,8 +8,10 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.res.ResourcesCompat
 import java.util.*
 import kotlin.concurrent.timer
 
@@ -30,11 +32,17 @@ class FrameView : View {
 
         const val SHOW_COUNTER_TIMEOUT = 2000L
         const val SHOW_FOCUS_TIMEOUT = 1000L
+
         val LINE_WIDTH = dpToPx(1)
-        val TEXT_PADDING = dpToPx(32)
+
         val TEXT_SHADOW_PADDING = dpToPx(1)
         val TEXT_COLOR = Color.rgb(192, 192, 192)
         val TEXT_COLOR_SHADOW = Color.BLACK
+
+        val PHOTO_ICON_X = dpToPx(5)
+        val PHOTO_ICON_Y = PHOTO_ICON_X
+        val PHOTO_ICON_WIDTH = dpToPx(60)
+        val PHOTO_ICON_HEIGHT = PHOTO_ICON_WIDTH
     }
 
     private val mPaintDark = Paint()
@@ -54,6 +62,8 @@ class FrameView : View {
 
     private var mCounterTimer: Timer? = null
     private var mCounter = 0
+
+    private var mShowTakePhotoIcon = false
 
     constructor(context: Context) : super(context, null) { init() }
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
@@ -80,7 +90,7 @@ class FrameView : View {
 
         with(mPaintText) {
             style = Paint.Style.FILL_AND_STROKE
-            textSize = dpToPx(64).toFloat()
+            textSize = dpToPx(32).toFloat()
         }
     }
 
@@ -101,6 +111,14 @@ class FrameView : View {
                     invalidate()
                 }
             }
+        }
+    }
+
+    /** Show take photo icon (use before the counter is displayed) */
+    fun showTakePhotoIcon(show: Boolean) {
+        if (mShowTakePhotoIcon != show) {
+            mShowTakePhotoIcon = show
+            invalidate()
         }
     }
 
@@ -148,7 +166,7 @@ class FrameView : View {
         }
     }
 
-    @SuppressLint("DrawAllocation")
+    @SuppressLint("DrawAllocation", "UseCompatLoadingForDrawables")
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         if(null == canvas) return
@@ -258,12 +276,24 @@ class FrameView : View {
             canvas.drawRect(Rect(x1 + LINE_WIDTH / 2, y1 + LINE_WIDTH / 2, x2 - LINE_WIDTH / 2, y2 - LINE_WIDTH / 2), mShowFocusLight)
         }
 
+        if (mShowTakePhotoIcon) {
+            @Suppress("DEPRECATION")
+            val takePhotoIcon = resources.getDrawable( android.R.drawable.ic_menu_camera )
+            takePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
+            takePhotoIcon.draw(canvas)
+        }
+
         if (mCounter > 0) {
-            var counterStr = mCounter.toString()
+            val counterStr = mCounter.toString()
+            var textRect = Rect()
+            mPaintText.getTextBounds( counterStr, 0, counterStr.length, textRect )
+            val textX = (PHOTO_ICON_X + (PHOTO_ICON_WIDTH - textRect.width()) / 2).toFloat()
+            val textY = (PHOTO_ICON_Y + (PHOTO_ICON_HEIGHT + textRect.height()) / 2).toFloat()
+
             mPaintText.color = TEXT_COLOR_SHADOW
-            canvas.drawText( counterStr, (TEXT_PADDING + TEXT_SHADOW_PADDING).toFloat(), (height - TEXT_PADDING - TEXT_SHADOW_PADDING).toFloat(), mPaintText )
+            canvas.drawText( counterStr, textX + TEXT_SHADOW_PADDING, textY + TEXT_SHADOW_PADDING, mPaintText )
             mPaintText.color = TEXT_COLOR
-            canvas.drawText( counterStr, TEXT_PADDING.toFloat(), (height - TEXT_PADDING).toFloat(), mPaintText )
+            canvas.drawText( counterStr, textX, textY, mPaintText )
         }
     }
 }

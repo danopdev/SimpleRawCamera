@@ -1026,7 +1026,10 @@ class CameraActivity : AppCompatActivity() {
                 if (null != photoTakenCallback) {
                     photoTakenCallback.invoke()
                 }
+
             }
+
+            mBinding.frameView.showTakePhotoIcon(takeNewPhoto)
 
             val captureRequestPhoto = mCaptureRequest
             val cameraCaptureSession = mCameraCaptureSession
