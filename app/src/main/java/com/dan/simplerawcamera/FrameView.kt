@@ -64,6 +64,12 @@ class FrameView : View {
     private var mCounter = 0
 
     private var mShowTakePhotoIcon = false
+    private var mShowSavePhotosIcon = false
+
+    @Suppress("DEPRECATION")
+    private val mSavePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_save )
+    @Suppress("DEPRECATION")
+    private val mTakePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_camera )
 
     constructor(context: Context) : super(context, null) { init() }
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
@@ -92,6 +98,9 @@ class FrameView : View {
             style = Paint.Style.FILL_AND_STROKE
             textSize = dpToPx(32).toFloat()
         }
+
+        mTakePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
+        mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
     }
 
     /** Show photo counter */
@@ -118,6 +127,14 @@ class FrameView : View {
     fun showTakePhotoIcon(show: Boolean) {
         if (mShowTakePhotoIcon != show) {
             mShowTakePhotoIcon = show
+            invalidate()
+        }
+    }
+
+    /** Show save photos icon */
+    fun showSavePhotosIcon(show: Boolean) {
+        if (mShowSavePhotosIcon != show) {
+            mShowSavePhotosIcon = show
             invalidate()
         }
     }
@@ -276,11 +293,12 @@ class FrameView : View {
             canvas.drawRect(Rect(x1 + LINE_WIDTH / 2, y1 + LINE_WIDTH / 2, x2 - LINE_WIDTH / 2, y2 - LINE_WIDTH / 2), mShowFocusLight)
         }
 
+        if (mShowSavePhotosIcon) {
+            mSavePhotoIcon.draw(canvas)
+        }
+
         if (mShowTakePhotoIcon) {
-            @Suppress("DEPRECATION")
-            val takePhotoIcon = resources.getDrawable( android.R.drawable.ic_menu_camera )
-            takePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
-            takePhotoIcon.draw(canvas)
+            mSavePhotoIcon.draw(canvas)
         }
 
         if (mCounter > 0) {

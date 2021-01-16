@@ -927,6 +927,7 @@ class CameraActivity : AppCompatActivity() {
     private fun saveAsyncNextItem() {
         if(!mSaveAsyncBusy && mSaveAsyncMQ.isNotEmpty()) {
             mSaveAsyncBusy = true
+            mBinding.frameView.showSavePhotosIcon(true)
             val item = mSaveAsyncMQ.get(0)
             mSaveAsyncMQ.removeAt(0)
 
@@ -953,6 +954,8 @@ class CameraActivity : AppCompatActivity() {
                     saveAsyncNextItem()
                 }
             }
+        } else if(!mSaveAsyncBusy) {
+            mBinding.frameView.showSavePhotosIcon(false)
         }
     }
 
