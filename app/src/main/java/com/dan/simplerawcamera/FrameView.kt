@@ -298,7 +298,7 @@ class FrameView : View {
         }
 
         if (mShowTakePhotoIcon) {
-            mSavePhotoIcon.draw(canvas)
+            mTakePhotoIcon.draw(canvas)
         }
 
         if (mCounter > 0) {
