@@ -648,8 +648,13 @@ class CameraActivity : AppCompatActivity() {
         })
 
         mBinding.surfaceView.setOnTouchListener { view, motionEvent ->
-            if (mCameraInfo.focusAllowManual && Settings.FOCUS_TYPE_MANUAL == settings.focusType) {
+            if (mCameraInfo.focusAllowManual) {
                 if (MotionEvent.ACTION_DOWN == motionEvent.actionMasked) {
+                    if (Settings.FOCUS_TYPE_MANUAL != settings.focusType) {
+                        settings.focusType = Settings.FOCUS_TYPE_MANUAL
+                        showFocus()
+                    }
+
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
                     mFocusClick = true
