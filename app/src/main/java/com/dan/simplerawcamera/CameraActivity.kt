@@ -256,20 +256,12 @@ class CameraActivity : AppCompatActivity() {
     /** Surface for preview */
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
-            selectCamera(settings.cameraIndex)
             mSurfaceIsCreated = true
-
-            if (mFirstCall) { //workaround ratio issue
-                mFirstCall = false
-                Timer().schedule(500) {
-                    runOnUiThread {
-                        selectCamera(settings.cameraIndex)
-                    }
-                }
-            }
+            selectCamera(settings.cameraIndex)
         }
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            selectCamera(settings.cameraIndex)
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
