@@ -43,11 +43,15 @@ class FrameView : View {
         val PHOTO_ICON_Y = PHOTO_ICON_X
         val PHOTO_ICON_WIDTH = dpToPx(60)
         val PHOTO_ICON_HEIGHT = PHOTO_ICON_WIDTH
+
+        val DEBUG_INFO_EXP = 0
+        val DEBUG_INFO_MEM = 1
     }
 
     private val mPaintDark = Paint()
     private val mPaintLight = Paint()
     private val mPaintText = Paint()
+    private val mPaintDebugText = Paint()
 
     private var mShowRatio = false
     private var mRatioWidth = 3
@@ -65,6 +69,10 @@ class FrameView : View {
 
     private var mShowTakePhotoIcon = false
     private var mShowSavePhotosIcon = false
+    private var mShowDebugInfo = true
+
+    private var mDebugInfoHeight = 0
+    private val mDebugInfo = arrayListOf<String>("", "")
 
     @Suppress("DEPRECATION")
     private val mSavePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_save )
@@ -99,6 +107,15 @@ class FrameView : View {
             textSize = dpToPx(32).toFloat()
         }
 
+        with(mPaintDebugText) {
+            style = Paint.Style.FILL_AND_STROKE
+            textSize = dpToPx(16).toFloat()
+        }
+
+        var textRect = Rect()
+        mPaintDebugText.getTextBounds( "Xj", 0, 2, textRect )
+        mDebugInfoHeight = textRect.height() + dpToPx(4)
+
         mTakePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
     }
@@ -121,6 +138,22 @@ class FrameView : View {
                 }
             }
         }
+    }
+
+    /** Show debug info */
+    fun showDebugInfo(show: Boolean) {
+        if (mShowDebugInfo != show) {
+            mShowDebugInfo = show
+            invalidate()
+        }
+    }
+
+    /** Set debug info */
+    fun setDebugInfo( type: Int, info: String ) {
+        if (type < 0 || type >= mDebugInfo.size) return
+
+        mDebugInfo[type] = info
+        if (mShowDebugInfo) invalidate()
     }
 
     /** Show take photo icon (use before the counter is displayed) */
@@ -312,6 +345,17 @@ class FrameView : View {
             canvas.drawText( counterStr, textX + TEXT_SHADOW_PADDING, textY + TEXT_SHADOW_PADDING, mPaintText )
             mPaintText.color = TEXT_COLOR
             canvas.drawText( counterStr, textX, textY, mPaintText )
+        }
+
+        if (mShowDebugInfo) {
+            var textY = height - PHOTO_ICON_Y - (mDebugInfo.size - 1) * mDebugInfoHeight
+            for ( debugInfoLine in mDebugInfo ) {
+                mPaintDebugText.color = TEXT_COLOR_SHADOW
+                canvas.drawText( debugInfoLine, (PHOTO_ICON_X + TEXT_SHADOW_PADDING).toFloat(), (textY  + TEXT_SHADOW_PADDING).toFloat(), mPaintDebugText)
+                mPaintDebugText.color = TEXT_COLOR
+                canvas.drawText( debugInfoLine, PHOTO_ICON_X.toFloat(), textY.toFloat(), mPaintDebugText)
+                textY += mDebugInfoHeight
+            }
         }
     }
 }

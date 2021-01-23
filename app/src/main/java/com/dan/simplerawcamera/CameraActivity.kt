@@ -2,6 +2,7 @@ package com.dan.simplerawcamera
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -35,8 +36,6 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -81,7 +80,11 @@ class CameraActivity : AppCompatActivity() {
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
         /** Get photo name */
-        fun getPhotoBaseFileName( timestamp: Long ): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
+        fun getPhotoBaseFileName(timestamp: Long): String = FILE_NAME_DATE_FORMAT.format(
+            Date(
+                timestamp
+            )
+        )
 
         /** Get best resolution for preview */
         fun getBestResolution(targetWidth: Int, targetRatio: Float, sizes: Array<Size>): Size {
@@ -100,7 +103,12 @@ class CameraActivity : AppCompatActivity() {
         }
 
         /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
-        fun calculateExpDeviation(visibleIso: Int, visibleSpeed: Long, expectedIso: Int, expectedSpeed: Long): Float {
+        fun calculateExpDeviation(
+            visibleIso: Int,
+            visibleSpeed: Long,
+            expectedIso: Int,
+            expectedSpeed: Long
+        ): Float {
             var deltaExpIso: Float = (expectedIso - visibleIso).toFloat() / expectedIso
             var deltaExpSpeed: Float = (expectedSpeed - visibleSpeed).toFloat() / expectedSpeed
             return deltaExpIso + deltaExpSpeed
@@ -220,7 +228,14 @@ class CameraActivity : AppCompatActivity() {
                         }
                     }
 
-                    val bitmap = Bitmap.createBitmap(colors, 0, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_WIDTH, HISTOGRAM_BITMAP_HEIGHT, Bitmap.Config.ARGB_8888)
+                    val bitmap = Bitmap.createBitmap(
+                        colors,
+                        0,
+                        HISTOGRAM_BITMAP_WIDTH,
+                        HISTOGRAM_BITMAP_WIDTH,
+                        HISTOGRAM_BITMAP_HEIGHT,
+                        Bitmap.Config.ARGB_8888
+                    )
 
                     runOnUiThread {
                         mBinding.imgHistogram.setImageBitmap(bitmap)
@@ -291,7 +306,11 @@ class CameraActivity : AppCompatActivity() {
 
     /** Take photo callback */
     private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
             mCurrentPhotoCaptureResult = result
@@ -303,7 +322,11 @@ class CameraActivity : AppCompatActivity() {
 
     /** Preview callback */
     private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
             super.onCaptureCompleted(session, request, result)
 
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
@@ -330,6 +353,14 @@ class CameraActivity : AppCompatActivity() {
 
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
+            mBinding.frameView.setDebugInfo(
+                FrameView.DEBUG_INFO_EXP,
+                "Prev: ISO ${mIsoMeasuredValue}, Speed ${getSpeedStr(mSpeedMeasuredValue)} / EA: ISO ${captureEA.first}, Speed ${
+                    getSpeedStr(
+                        captureEA.second
+                    )
+                } / Delta ${captureEA.third}"
+            )
 
             if (settings.expIsoIsManual && settings.expSpeedIsManual) return
 
@@ -372,7 +403,7 @@ class CameraActivity : AppCompatActivity() {
                     mCameraCaptureSessionStateCallback,
                     getWorkerHandler()
                 )
-            } catch(e: Exception) {
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -388,7 +419,12 @@ class CameraActivity : AppCompatActivity() {
             return Triple(
                 settings.expIsoValue,
                 speedValue,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, speedValue)
+                calculateExpDeviation(
+                    mIsoMeasuredValue,
+                    mSpeedMeasuredValue,
+                    settings.expIsoValue,
+                    speedValue
+                )
             )
         }
 
@@ -404,7 +440,12 @@ class CameraActivity : AppCompatActivity() {
             return Triple(
                 settings.expIsoValue,
                 suggestedSpeed,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, suggestedSpeed)
+                calculateExpDeviation(
+                    mIsoMeasuredValue,
+                    mSpeedMeasuredValue,
+                    settings.expIsoValue,
+                    suggestedSpeed
+                )
             )
         }
 
@@ -427,12 +468,12 @@ class CameraActivity : AppCompatActivity() {
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
 
-    private fun getSpeedValue( div: Long ): Long = Settings.SPEED_MAX_MANUAL / div
+    private fun getSpeedValue(div: Long): Long = Settings.SPEED_MAX_MANUAL / div
     private fun getSpeedValue(): Long = getSpeedValue(settings.expSpeedDivValue)
 
     private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraInfo.sensorOrientation) % 360
 
-    private fun getPhotoExifOrientation( orientation: Int ): Int =
+    private fun getPhotoExifOrientation(orientation: Int): Int =
         when(orientation) {
             90 -> ExifInterface.ORIENTATION_ROTATE_90
             180 -> ExifInterface.ORIENTATION_ROTATE_180
@@ -484,7 +525,11 @@ class CameraActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
         when (requestCode) {
             REQUEST_PERMISSIONS -> handleRequestPermissions(grantResults)
         }
@@ -568,10 +613,12 @@ class CameraActivity : AppCompatActivity() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
         intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
         intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true)
-        intent.addFlags( Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION or
-                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION )
+        intent.addFlags(
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PREFIX_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+        )
         startActivityForResult(intent, INTENT_SELECT_FOLDER)
     }
 
@@ -675,16 +722,19 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mBinding.btnSettings.setOnClickListener {
-            SettingsDialog.show( supportFragmentManager, this ) {
+            SettingsDialog.show(supportFragmentManager, this) {
                 updateFrame()
             }
         }
 
         mBinding.btnSequences.setOnClickListener {
-            SequencesDialog.show( supportFragmentManager, this )
+            SequencesDialog.show(supportFragmentManager, this)
         }
 
-        mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
+        mOrientationEventListener = object: OrientationEventListener(
+            this,
+            SensorManager.SENSOR_DELAY_NORMAL
+        ) {
             override fun onOrientationChanged(orientation: Int) {
                 var screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
                 if (screenOrientation != mScreenOrientation) {
@@ -818,7 +868,7 @@ class CameraActivity : AppCompatActivity() {
         setupCapturePreviewRequest()
     }
 
-    private fun getSpeedStr( speed: Long ): String {
+    private fun getSpeedStr(speed: Long): String {
         if (speed >= 1000000000L) { // 1 second
             val speedSecondsWith1Decimal = (speed / 100000000).toInt()
             val speedSeconds = speedSecondsWith1Decimal / 10
@@ -849,7 +899,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun showSpeed(speed: Long) {
         val extra = if (settings.expSpeedIsManual) " (M)" else " (A)"
-        mBinding.txtSpeed.text = getSpeedStr( speed ) + extra
+        mBinding.txtSpeed.text = getSpeedStr(speed) + extra
     }
 
     private fun showFocus() {
@@ -969,8 +1019,8 @@ class CameraActivity : AppCompatActivity() {
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.setOrientation(mPhotoExifOrientation)
             dngCreator.writeImage(outputStream, image)
-            saveAsync( mPhotoFileNameBase + ".dng" , "image/x-adobe-dng", outputStream.toByteArray())
-        } catch(e: Exception) {
+            saveAsync(mPhotoFileNameBase + ".dng", "image/x-adobe-dng", outputStream.toByteArray())
+        } catch (e: Exception) {
             e.printStackTrace()
         }
         Log.i("TAKE_PHOTO", "DNG: Save ends")
@@ -984,21 +1034,26 @@ class CameraActivity : AppCompatActivity() {
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
             outputStream.write(bytes)
-            saveAsync( mPhotoFileNameBase + ".jpg", "image/jpeg", outputStream.toByteArray())
-        } catch(e: Exception) {
+            saveAsync(mPhotoFileNameBase + ".jpg", "image/jpeg", outputStream.toByteArray())
+        } catch (e: Exception) {
             e.printStackTrace()
         }
         Log.i("TAKE_PHOTO", "JPEG: Save ends")
     }
 
-    fun takePhotoWithCallback( callback: ()->Unit ) {
+    fun takePhotoWithCallback(callback: () -> Unit) {
         mPhotoTakenCallback = callback
-        takePhotoButton( true, PHOTO_BUTTON_SEQUENCE )
+        takePhotoButton(true, PHOTO_BUTTON_SEQUENCE)
     }
 
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
+            val info = Runtime.getRuntime()
+            val freeSize = info.freeMemory() / (1024L * 1024L)
+            val totalSize = info.totalMemory() / (1024L * 1024L)
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEM, "Mem free: ${freeSize} MB / ${totalSize} MB")
+
             var takeNewPhoto = start
 
             if (newFile) {
@@ -1040,8 +1095,10 @@ class CameraActivity : AppCompatActivity() {
                 mPhotoInProgress = true
 
                 when (settings.takePhotoModes) {
-                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask =
+                        PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask =
+                        PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
                     else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                 }
 
@@ -1080,10 +1137,20 @@ class CameraActivity : AppCompatActivity() {
         )
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
+        mImageReaderJpeg = ImageReader.newInstance(
+            mCameraInfo.resolutionWidth,
+            mCameraInfo.resolutionHeight,
+            ImageFormat.JPEG,
+            1
+        )
         mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, getWorkerHandler())
 
-        mImageReaderDng = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
+        mImageReaderDng = ImageReader.newInstance(
+            mCameraInfo.resolutionWidth,
+            mCameraInfo.resolutionHeight,
+            ImageFormat.RAW_SENSOR,
+            1
+        )
         mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, getWorkerHandler())
 
         updateSliders()
@@ -1135,7 +1202,10 @@ class CameraActivity : AppCompatActivity() {
     /** Called once when the camera is selected (common to preview & take photo) */
     private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
         if (mCameraInfo.supportLensStabilisation)
-            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
+            captureRequestBuilder.set(
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
+            )
 
         captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
         captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
@@ -1164,14 +1234,29 @@ class CameraActivity : AppCompatActivity() {
             if (photoMode) {
                 cameraCaptureSession.stopRepeating()
 
-                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
-                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
-                captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
-                captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
+                captureRequestBuilder.set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY
+                )
+                captureRequestBuilder.set(
+                    CaptureRequest.EDGE_MODE,
+                    CaptureRequest.EDGE_MODE_HIGH_QUALITY
+                )
+                captureRequestBuilder.set(
+                    CaptureRequest.HOT_PIXEL_MODE,
+                    CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY
+                )
+                captureRequestBuilder.set(
+                    CaptureRequest.CONTROL_CAPTURE_INTENT,
+                    CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE
+                )
 
                 if (settings.expIsoIsManual || settings.expSpeedIsManual) {
                     val ae = getCaptureEA()
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    captureRequestBuilder.set(
+                        CaptureRequest.CONTROL_AE_MODE,
+                        CaptureRequest.CONTROL_AE_MODE_OFF
+                    )
                     captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
                 } else {
@@ -1203,7 +1288,8 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
                     if (Settings.NOISE_REDUCTION_ENABLED == settings.noiseReduction ||
-                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes) )
+                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes)
+                    )
                         CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
                     else
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -1219,10 +1305,19 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.removeTarget(mImageReaderDng.surface)
                 captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
 
-                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
+                captureRequestBuilder.set(
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE,
+                    CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST
+                )
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
-                captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
-                captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
+                captureRequestBuilder.set(
+                    CaptureRequest.HOT_PIXEL_MODE,
+                    CaptureRequest.HOT_PIXEL_MODE_FAST
+                )
+                captureRequestBuilder.set(
+                    CaptureRequest.CONTROL_CAPTURE_INTENT,
+                    CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW
+                )
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
                     if (Settings.NOISE_REDUCTION_DISABLED == settings.noiseReduction)
@@ -1235,13 +1330,22 @@ class CameraActivity : AppCompatActivity() {
 
         if (photoMode) return
 
-        captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
+        captureRequestBuilder.set(
+            CaptureRequest.CONTROL_CAPTURE_INTENT,
+            CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW
+        )
 
         if (mCameraInfo.focusAllowManual) {
             when(settings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraInfo.focusHyperfocalDistance)
+                    captureRequestBuilder.set(
+                        CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_OFF
+                    )
+                    captureRequestBuilder.set(
+                        CaptureRequest.LENS_FOCUS_DISTANCE,
+                        mCameraInfo.focusHyperfocalDistance
+                    )
                     mBinding.frameView.hideFocusZone()
                 }
                 Settings.FOCUS_TYPE_MANUAL -> {
@@ -1256,12 +1360,28 @@ class CameraActivity : AppCompatActivity() {
                         val y2 = min(mCameraInfo.resolutionHeight, y + delta)
 
                         if (y2 > y1 && x2 > x1) {
-                            val rectangle = MeteringRectangle(x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
+                            val rectangle = MeteringRectangle(
+                                x1,
+                                y1,
+                                x2 - x1,
+                                y2 - y1,
+                                MeteringRectangle.METERING_WEIGHT_MAX
+                            )
 
                             mFocusState = FOCUS_STATE_CLICK
-                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
-                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
-                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                            captureRequestBuilder.set(
+                                CaptureRequest.CONTROL_AF_REGIONS, arrayOf(
+                                    rectangle
+                                )
+                            )
+                            captureRequestBuilder.set(
+                                CaptureRequest.CONTROL_AF_MODE,
+                                CaptureRequest.CONTROL_AF_MODE_AUTO
+                            )
+                            captureRequestBuilder.set(
+                                CaptureRequest.CONTROL_AF_TRIGGER,
+                                CaptureRequest.CONTROL_AF_TRIGGER_START
+                            )
                         }
 
                         mBinding.frameView.showFocusZone(
@@ -1273,11 +1393,17 @@ class CameraActivity : AppCompatActivity() {
                             )
                         )
                     } else if (FOCUS_STATE_LOCKED == mFocusState) {
-                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+                        captureRequestBuilder.set(
+                            CaptureRequest.CONTROL_AF_TRIGGER,
+                            CaptureRequest.CONTROL_AF_TRIGGER_IDLE
+                        )
                     } else if (FOCUS_STATE_MANUAL == mFocusState) {
                         val distance = mCameraInfo.focusRange.lower +
                                 (100 - mBinding.seekBarFocus.progress) * (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) / 100
-                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        captureRequestBuilder.set(
+                            CaptureRequest.CONTROL_AF_MODE,
+                            CaptureRequest.CONTROL_AF_MODE_OFF
+                        )
                         captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                         mBinding.frameView.hideFocusZone()
                     }
@@ -1285,7 +1411,10 @@ class CameraActivity : AppCompatActivity() {
 
                 else -> {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, null)
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                    captureRequestBuilder.set(
+                        CaptureRequest.CONTROL_AF_MODE,
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                    )
                     mBinding.frameView.hideFocusZone()
                 }
             }
@@ -1293,11 +1422,20 @@ class CameraActivity : AppCompatActivity() {
 
         //WORKAROUND: My camera block with click to focus in full manual mode
         if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && settings.expIsoIsManual && settings.expSpeedIsManual) {
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+            captureRequestBuilder.set(
+                CaptureRequest.CONTROL_AE_MODE,
+                CaptureRequest.CONTROL_AE_MODE_ON
+            )
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
         } else if (!settings.expIsoIsManual || !settings.expSpeedIsManual) {
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
+            captureRequestBuilder.set(
+                CaptureRequest.CONTROL_AE_MODE,
+                CaptureRequest.CONTROL_AE_MODE_ON
+            )
+            captureRequestBuilder.set(
+                CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION,
+                settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor
+            )
         } else {
             var manualSpeed = getSpeedValue()
             var manualISO = settings.expIsoValue
@@ -1314,7 +1452,10 @@ class CameraActivity : AppCompatActivity() {
                 manualSpeed = min(Settings.SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
             }
 
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            captureRequestBuilder.set(
+                CaptureRequest.CONTROL_AE_MODE,
+                CaptureRequest.CONTROL_AE_MODE_OFF
+            )
             captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
         }
