@@ -1177,6 +1177,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun updateFrame() {
         mBinding.frameView.showGrid(settings.showGrid)
+        mBinding.frameView.showDebugInfo(settings.showDebugInfo)
 
         when(settings.frameType) {
             Settings.FRAME_TYPE_1_1 -> mBinding.frameView.showRatio(true, 1, 1)

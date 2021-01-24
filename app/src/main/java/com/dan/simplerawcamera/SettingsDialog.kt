@@ -39,6 +39,7 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
         binding.switchContinuousMode.isChecked = cameraActivity.settings.continuousMode
         binding.switchShowGrid.isChecked = cameraActivity.settings.showGrid
         binding.spinnerShowFraming.setSelection( cameraActivity.settings.frameType )
+        binding.switchShowDebugInfo.isChecked = cameraActivity.settings.showDebugInfo
 
         binding.btnSelectFolder.setOnClickListener {
             cameraActivity.startSelectFolder()
@@ -52,6 +53,7 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
             cameraActivity.settings.continuousMode = binding.switchContinuousMode.isChecked
             cameraActivity.settings.showGrid = binding.switchShowGrid.isChecked
             cameraActivity.settings.frameType = binding.spinnerShowFraming.selectedItemPosition
+            cameraActivity.settings.showDebugInfo = binding.switchShowDebugInfo.isChecked
 
             cameraActivity.settings.saveProperties()
 

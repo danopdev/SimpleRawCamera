@@ -175,6 +175,14 @@
                         android:spinnerMode="dropdown" />
                 </LinearLayout>
 
+                <Switch
+                    android:id="@+id/switchShowDebugInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="Show debug info:" />
+
             </LinearLayout>
 
         </ScrollView>

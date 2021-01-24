@@ -53,6 +53,7 @@ class Settings( private val activity: Activity) {
     var sequenceDelayStart: Int = 0
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
+    var showDebugInfo: Boolean = false
 
     init {
         loadProperties()
