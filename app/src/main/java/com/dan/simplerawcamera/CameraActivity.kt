@@ -1074,8 +1074,12 @@ class CameraActivity : AppCompatActivity() {
             var takeNewPhoto = start
 
             if (newFile) {
-                mPhotoCounter++
-                mBinding.frameView.showCounter(mPhotoCounter)
+                val realNewFile = null != mImageJpeg || null != mImageDng
+
+                if (realNewFile) {
+                    mPhotoCounter++
+                    mBinding.frameView.showCounter(mPhotoCounter)
+                }
 
                 mImageJpeg?.let { image ->
                     saveJpeg(image)
@@ -1099,10 +1103,9 @@ class CameraActivity : AppCompatActivity() {
                 mPhotoTakenCallback = null
                 mPhotoButtonMask = mPhotoButtonMask and PHOTO_BUTTON_SEQUENCE.inv()
 
-                if (null != photoTakenCallback) {
+                if (realNewFile && null != photoTakenCallback) {
                     photoTakenCallback.invoke()
                 }
-
             }
 
             mBinding.frameView.showTakePhotoIcon(takeNewPhoto)
