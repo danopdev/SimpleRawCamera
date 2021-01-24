@@ -44,8 +44,8 @@ class FrameView : View {
         val PHOTO_ICON_WIDTH = dpToPx(60)
         val PHOTO_ICON_HEIGHT = PHOTO_ICON_WIDTH
 
-        val DEBUG_INFO_EXP = 0
-        val DEBUG_INFO_MEM = 1
+        val DEBUG_INFO_MEM = 0
+        val DEBUG_INFO_EXP = 1
     }
 
     private val mPaintDark = Paint()
@@ -348,13 +348,13 @@ class FrameView : View {
         }
 
         if (mShowDebugInfo) {
-            var textY = height - PHOTO_ICON_Y - (mDebugInfo.size - 1) * mDebugInfoHeight
+            var textY = height - PHOTO_ICON_Y
             for ( debugInfoLine in mDebugInfo ) {
                 mPaintDebugText.color = TEXT_COLOR_SHADOW
                 canvas.drawText( debugInfoLine, (PHOTO_ICON_X + TEXT_SHADOW_PADDING).toFloat(), (textY  + TEXT_SHADOW_PADDING).toFloat(), mPaintDebugText)
                 mPaintDebugText.color = TEXT_COLOR
                 canvas.drawText( debugInfoLine, PHOTO_ICON_X.toFloat(), textY.toFloat(), mPaintDebugText)
-                textY += mDebugInfoHeight
+                textY -= mDebugInfoHeight
             }
         }
     }
