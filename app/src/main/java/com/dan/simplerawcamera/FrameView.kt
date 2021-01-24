@@ -216,6 +216,13 @@ class FrameView : View {
         }
     }
 
+    fun updateDebugMemInfo() {
+        val info = Runtime.getRuntime()
+        val freeSize = info.freeMemory() / (1024L * 1024L)
+        val totalSize = info.totalMemory() / (1024L * 1024L)
+        setDebugInfo(DEBUG_INFO_MEM, "Mem free: ${freeSize} MB / ${totalSize} MB")
+    }
+
     @SuppressLint("DrawAllocation", "UseCompatLoadingForDrawables")
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)

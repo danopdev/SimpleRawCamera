@@ -972,6 +972,8 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun saveAsyncNextItem() {
+        mBinding.frameView.updateDebugMemInfo()
+
         if(!mSaveAsyncBusy && mSaveAsyncMQ.isNotEmpty()) {
             mSaveAsyncBusy = true
             mBinding.frameView.showSavePhotosIcon(true)
@@ -1049,10 +1051,7 @@ class CameraActivity : AppCompatActivity() {
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
-            val info = Runtime.getRuntime()
-            val freeSize = info.freeMemory() / (1024L * 1024L)
-            val totalSize = info.totalMemory() / (1024L * 1024L)
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEM, "Mem free: ${freeSize} MB / ${totalSize} MB")
+            mBinding.frameView.updateDebugMemInfo()
 
             var takeNewPhoto = start
 
