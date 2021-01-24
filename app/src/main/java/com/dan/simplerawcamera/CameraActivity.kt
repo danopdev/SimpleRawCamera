@@ -147,6 +147,8 @@ class CameraActivity : AppCompatActivity() {
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
     private lateinit var mImageReaderDng: ImageReader
+    private var mImageDng: Image? = null
+    private var mImageJpeg: Image? = null
 
     private var mIsoMeasuredValue = 100
     private var mSpeedMeasuredValue = 1L
@@ -258,6 +260,11 @@ class CameraActivity : AppCompatActivity() {
     private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "JPEG: Received")
+
+            imageReader?.acquireLatestImage()?.let{
+                mImageJpeg = it
+            }
+
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
             if (0 == mPhotoTakeMask)
                 takePhoto(true)
@@ -268,6 +275,11 @@ class CameraActivity : AppCompatActivity() {
     private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
         override fun onImageAvailable(imageReader: ImageReader?) {
             Log.i("TAKE_PHOTO", "DNG: Received")
+
+            imageReader?.acquireLatestImage()?.let{
+                mImageDng = it
+            }
+
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
             if (0 == mPhotoTakeMask)
                 takePhoto(true)
@@ -1065,17 +1077,21 @@ class CameraActivity : AppCompatActivity() {
                 mPhotoCounter++
                 mBinding.frameView.showCounter(mPhotoCounter)
 
-                mImageReaderJpeg.acquireLatestImage()?.let{ image ->
+                mImageJpeg?.let { image ->
                     saveJpeg(image)
                     image.close()
+                    mImageJpeg = null
                 }
 
-                mImageReaderDng.acquireLatestImage()?.let { image ->
+                mImageDng?.let { image ->
                     mCurrentPhotoCaptureResult?.let{ captureResult ->
                         saveDng(image, captureResult)
                     }
                     image.close()
+                    mImageDng = null
                 }
+
+                mCurrentPhotoCaptureResult = null
 
                 takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask) && (null == mPhotoTakenCallback)
 
