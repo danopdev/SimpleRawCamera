@@ -11,7 +11,6 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.res.ResourcesCompat
 import java.util.*
 import kotlin.concurrent.timer
 
@@ -109,7 +108,7 @@ class FrameView : View {
 
         with(mPaintDebugText) {
             style = Paint.Style.FILL_AND_STROKE
-            textSize = dpToPx(16).toFloat()
+            textSize = dpToPx(10).toFloat()
         }
 
         var textRect = Rect()
@@ -118,6 +117,10 @@ class FrameView : View {
 
         mTakePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
+
+        timer(null, false, 1000, 1000) {
+            updateDebugMemInfo()
+        }
     }
 
     /** Show photo counter */
@@ -217,10 +220,8 @@ class FrameView : View {
     }
 
     fun updateDebugMemInfo() {
-        val info = Runtime.getRuntime()
-        val freeSize = info.freeMemory() / (1024L * 1024L)
-        val totalSize = info.totalMemory() / (1024L * 1024L)
-        setDebugInfo(DEBUG_INFO_MEM, "Mem free: ${freeSize} MB / ${totalSize} MB")
+        val memInfo = CameraActivity.getMemInfo()
+        setDebugInfo(DEBUG_INFO_MEM, "Mem: ${memInfo.first} MB / ${memInfo.second} MB")
     }
 
     @SuppressLint("DrawAllocation", "UseCompatLoadingForDrawables")

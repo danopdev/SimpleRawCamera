@@ -79,12 +79,18 @@ class CameraActivity : AppCompatActivity() {
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
+        fun getMemInfo(): Pair<Long, Long> {
+            val info = Runtime.getRuntime()
+            val usedSize = (info.totalMemory() - info.freeMemory()) / (1024L * 1024L)
+            val maxSize = info.maxMemory() / (1024L * 1024L)
+            val freeSize = maxSize - usedSize
+            return Pair(freeSize, maxSize)
+        }
+
+        fun getFreeMemInfo(): Long = getMemInfo().first
+
         /** Get photo name */
-        fun getPhotoBaseFileName(timestamp: Long): String = FILE_NAME_DATE_FORMAT.format(
-            Date(
-                timestamp
-            )
-        )
+        fun getPhotoBaseFileName(timestamp: Long): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
 
         /** Get best resolution for preview */
         fun getBestResolution(targetWidth: Int, targetRatio: Float, sizes: Array<Size>): Size {
