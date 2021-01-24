@@ -68,6 +68,8 @@ class FrameView : View {
 
     private var mShowTakePhotoIcon = false
     private var mShowSavePhotosIcon = false
+    private var mShowSavePhotosErrorIcon = false
+    private var mShowSavePhotosErrorIconTimer: Timer? = null
     private var mShowDebugInfo = true
 
     private var mDebugInfoHeight = 0
@@ -75,6 +77,8 @@ class FrameView : View {
 
     @Suppress("DEPRECATION")
     private val mSavePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_save )
+    @Suppress("DEPRECATION")
+    private val mSavePhotoErrorIcon: Drawable = resources.getDrawable( android.R.drawable.stat_notify_error )
     @Suppress("DEPRECATION")
     private val mTakePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_camera )
 
@@ -117,6 +121,7 @@ class FrameView : View {
 
         mTakePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
+        mSavePhotoErrorIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
 
         timer(null, false, 1000, 1000) {
             updateDebugMemInfo()
@@ -205,6 +210,24 @@ class FrameView : View {
             mShowFocusTimer = timer(null, false, SHOW_FOCUS_TIMEOUT, SHOW_FOCUS_TIMEOUT) {
                 hideFocusZone()
             }
+        }
+    }
+
+    /** Show save error */
+    fun showSaveError() {
+        mShowSavePhotosErrorIconTimer?.cancel()
+        mShowSavePhotosErrorIconTimer = null
+
+        if (!mShowSavePhotosErrorIcon) {
+            mShowSavePhotosErrorIcon = true
+            invalidate()
+        }
+
+        mShowSavePhotosErrorIconTimer = timer(null, false, SHOW_FOCUS_TIMEOUT, SHOW_FOCUS_TIMEOUT) {
+            mShowSavePhotosErrorIconTimer?.cancel()
+            mShowSavePhotosErrorIconTimer = null
+            mShowSavePhotosErrorIcon = false
+            invalidate()
         }
     }
 
