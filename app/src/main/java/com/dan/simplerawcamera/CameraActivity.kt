@@ -36,6 +36,7 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.schedule
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -71,11 +72,14 @@ class CameraActivity : AppCompatActivity() {
         const val PHOTO_TAKE_COMPLETED = 1
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
+        const val PHOTO_TAKE_OUT_OF_MEMORY = 8
 
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
         const val FOCUS_STATE_SEARCHING = 2
         const val FOCUS_STATE_LOCKED = 3
+
+        const val MEMORY_RETRY_TIMEOUT = 250L //ms
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -1114,26 +1118,41 @@ class CameraActivity : AppCompatActivity() {
             val cameraCaptureSession = mCameraCaptureSession
 
             if (takeNewPhoto && null != captureRequestPhoto && null != cameraCaptureSession) {
-                Log.i("TAKE_PHOTO", "New photo")
+                var minMem =
+                    when (settings.takePhotoModes) {
+                        Settings.PHOTO_TYPE_DNG -> mCameraInfo.estimatedDngSize * 2
+                        Settings.PHOTO_TYPE_JPEG -> mCameraInfo.estimatedJpegSize
+                        else -> mCameraInfo.estimatedDngSize * 2 + mCameraInfo.estimatedJpegSize
+                    }
+                minMem = 1 + minMem / (1024 * 1024) //conver to MB
 
-                mPhotoInProgress = true
+                if (mSaveAsyncMQ.isNotEmpty() && minMem > getFreeMemInfo()) {
+                    Log.i("TAKE_PHOTO", "Not enougth memory")
+                    mPhotoTakeMask = PHOTO_TAKE_OUT_OF_MEMORY
+                    Timer("Out of memory", false).schedule(MEMORY_RETRY_TIMEOUT) {
+                        mPhotoTakeMask = 0
+                        takePhoto(true)
+                    }
+                } else {
+                    Log.i("TAKE_PHOTO", "New photo")
 
-                when (settings.takePhotoModes) {
-                    Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask =
-                        PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                    Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask =
-                        PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
-                    else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    mPhotoInProgress = true
+
+                    when (settings.takePhotoModes) {
+                        Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                        Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                        else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    }
+
+                    mPhotoTimestamp = System.currentTimeMillis()
+                    mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
+
+                    cameraCaptureSession.capture(
+                        captureRequestPhoto,
+                        mCameraCaptureSessionPhotoCaptureCallback,
+                        getWorkerHandler()
+                    )
                 }
-
-                mPhotoTimestamp = System.currentTimeMillis()
-                mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
-
-                cameraCaptureSession.capture(
-                    captureRequestPhoto,
-                    mCameraCaptureSessionPhotoCaptureCallback,
-                    getWorkerHandler()
-                )
             } else {
                 mPhotoInProgress = false
                 setupCapturePreviewRequest()
