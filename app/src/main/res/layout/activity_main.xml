@@ -16,29 +16,18 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <FrameLayout
-                android:layout_width="wrap_content"
+            <com.dan.simplerawcamera.SensitiveTextView
+                android:id="@+id/txtFlash"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:visibility="invisible">
-
-                <ImageButton
-                    android:id="@+id/btnFlash"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    app:srcCompat="@android:drawable/ic_menu_compass" />
-
-                <TextView
-                    android:id="@+id/txtFlash"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:clickable="false"
-                    android:text="A"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Large"
-                    android:textColor="@color/black"
-                    android:textStyle="bold"></TextView>
-            </FrameLayout>
+                android:layout_marginBottom="3dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="Flash:\nOFF"
+                android:textAlignment="center"
+                android:textColor="@color/teal_200"
+                android:textStyle="bold"
+                android:visibility="invisible" />
 
             <com.dan.simplerawcamera.SensitiveTextView
                 android:id="@+id/txtCamera"
@@ -47,7 +36,7 @@
                 android:layout_marginBottom="3dp"
                 android:paddingTop="6dp"
                 android:paddingBottom="6dp"
-                android:text="Cam\n1"
+                android:text="CAM:\n1"
                 android:textAlignment="center"
                 android:textColor="@color/teal_200"
                 android:textStyle="bold" />
