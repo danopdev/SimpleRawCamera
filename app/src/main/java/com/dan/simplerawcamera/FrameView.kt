@@ -11,6 +11,7 @@ import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.drawable.DrawableCompat
 import java.util.*
 import kotlin.concurrent.timer
 
@@ -122,6 +123,8 @@ class FrameView : View {
         mTakePhotoIcon.bounds = Rect(PHOTO_ICON_X, PHOTO_ICON_X, PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoErrorIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
+
+        DrawableCompat.setTint(mSavePhotoErrorIcon, Color.RED);
 
         timer(null, false, 1000, 1000) {
             updateDebugMemInfo()

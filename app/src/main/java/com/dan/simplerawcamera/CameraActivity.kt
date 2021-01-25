@@ -1010,7 +1010,7 @@ class CameraActivity : AppCompatActivity() {
                 val fileName = item.first
                 val mimeType = item.second
                 val byteArray = item.third
-                var failed = false
+                var failed = true
 
                 try {
                     mSaveFolder?.let { saveFolder ->
@@ -1018,11 +1018,11 @@ class CameraActivity : AppCompatActivity() {
                             contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
                                 outputStream.write(byteArray)
                                 outputStream.close()
+                                failed = false
                             }
                         }
                     }
                 } catch (e: Exception) {
-                    failed = true
                     e.printStackTrace()
                 }
 
