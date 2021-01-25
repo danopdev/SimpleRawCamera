@@ -40,28 +40,17 @@
                     android:textStyle="bold"></TextView>
             </FrameLayout>
 
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content">
-
-                <ImageButton
-                    android:id="@+id/btnCamera"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    app:srcCompat="@android:drawable/ic_menu_camera" />
-
-                <TextView
-                    android:id="@+id/txtCamera"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:clickable="false"
-                    android:text="1"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Large"
-                    android:textColor="@color/black"
-                    android:textStyle="bold"></TextView>
-            </FrameLayout>
+            <com.dan.simplerawcamera.SensitiveTextView
+                android:id="@+id/txtCamera"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="3dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="Cam\n1"
+                android:textAlignment="center"
+                android:textColor="@color/teal_200"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="0dp"

@@ -37,6 +37,7 @@ import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
+import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.math.log2
 import kotlin.math.max
@@ -81,6 +82,8 @@ class CameraActivity : AppCompatActivity() {
         const val FOCUS_STATE_LOCKED = 3
 
         const val MEMORY_RETRY_TIMEOUT = 250L //ms
+
+        const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -189,6 +192,8 @@ class CameraActivity : AppCompatActivity() {
     private var mOrientationEventListener: OrientationEventListener? = null
     private var mScreenOrientation: Int = 0
     private var mPhotoExifOrientation: Int = 0
+
+    private var mSelectCameraTimer: Timer? = null
 
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -655,7 +660,6 @@ class CameraActivity : AppCompatActivity() {
 
         if (1 == mCameraList.size) {
             mBinding.txtCamera.isVisible = false
-            mBinding.btnCamera.isVisible = false
         }
 
         mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, getWorkerHandler())
@@ -664,7 +668,12 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
-        mBinding.btnCamera.setOnClickListener { selectCamera((settings.cameraIndex + 1) % mCameraList.size) }
+        mBinding.txtCamera.setOnMoveYAxisListener { steps ->
+            val newCameraIndex =
+                if (steps < 0) (settings.cameraIndex - 1 + mCameraList.size) % mCameraList.size
+                else (settings.cameraIndex + 1) % mCameraList.size
+            selectCamera( newCameraIndex, true )
+        }
 
         mCameraInfo = mCameraList[0]
 
@@ -1169,15 +1178,29 @@ class CameraActivity : AppCompatActivity() {
 
     /** Select the camera */
     @SuppressLint("MissingPermission")
-    private fun selectCamera(index: Int) {
+    private fun selectCamera(index: Int, async: Boolean = false) {
+        mSelectCameraTimer?.cancel()
+        mSelectCameraTimer = null
+
+        mBinding.txtCamera.text = "CAM\n${index+1}"
+
+        if (async) {
+            mSelectCameraTimer = timer(null, false, SELECT_CAMERA_ASYNC_DELAY, SELECT_CAMERA_ASYNC_DELAY) {
+                mSelectCameraTimer?.cancel()
+                mSelectCameraTimer = null
+                runOnUiThread {
+                    selectCamera(index)
+                }
+            }
+            return
+        }
+
         mPhotoInProgress = false
         settings.cameraIndex = index
         mCameraInfo = mCameraList[index]
         mFocusState = FOCUS_STATE_MANUAL
 
         closeCamera()
-
-        mBinding.txtCamera.text = index.toString()
 
         val set = ConstraintSet()
         set.clone(mBinding.layoutView)
@@ -1511,10 +1534,14 @@ class CameraActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
         }
 
-        cameraCaptureSession.setRepeatingRequest(
-            captureRequestBuilder.build(),
-            mCameraCaptureSessionPreviewCaptureCallback,
-            getWorkerHandler()
-        )
+        try {
+            cameraCaptureSession.setRepeatingRequest(
+                captureRequestBuilder.build(),
+                mCameraCaptureSessionPreviewCaptureCallback,
+                getWorkerHandler()
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
