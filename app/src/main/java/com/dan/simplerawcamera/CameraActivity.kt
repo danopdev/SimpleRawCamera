@@ -1010,6 +1010,7 @@ class CameraActivity : AppCompatActivity() {
                 val fileName = item.first
                 val mimeType = item.second
                 val byteArray = item.third
+                var failed = false
 
                 try {
                     mSaveFolder?.let { saveFolder ->
@@ -1021,11 +1022,13 @@ class CameraActivity : AppCompatActivity() {
                         }
                     }
                 } catch (e: Exception) {
+                    failed = true
                     e.printStackTrace()
                 }
 
                 mSaveAsyncBusy = false
                 runOnUiThread {
+                    if (failed) mBinding.frameView.showSaveError()
                     saveAsyncNextItem()
                 }
             }

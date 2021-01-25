@@ -31,6 +31,7 @@ class FrameView : View {
 
         const val SHOW_COUNTER_TIMEOUT = 2000L
         const val SHOW_FOCUS_TIMEOUT = 1000L
+        const val SHOW_SAVE_ERROR_TIMEOUT = 10000L
 
         val LINE_WIDTH = dpToPx(1)
 
@@ -222,7 +223,7 @@ class FrameView : View {
             invalidate()
         }
 
-        mShowSavePhotosErrorIconTimer = timer(null, false, SHOW_FOCUS_TIMEOUT, SHOW_FOCUS_TIMEOUT) {
+        mShowSavePhotosErrorIconTimer = timer(null, false, SHOW_SAVE_ERROR_TIMEOUT, SHOW_SAVE_ERROR_TIMEOUT) {
             mShowSavePhotosErrorIconTimer?.cancel()
             mShowSavePhotosErrorIconTimer = null
             mShowSavePhotosErrorIcon = false
@@ -358,6 +359,10 @@ class FrameView : View {
 
         if (mShowSavePhotosIcon) {
             mSavePhotoIcon.draw(canvas)
+        }
+
+        if (mShowSavePhotosErrorIcon) {
+            mSavePhotoErrorIcon.draw(canvas)
         }
 
         if (mShowTakePhotoIcon) {
