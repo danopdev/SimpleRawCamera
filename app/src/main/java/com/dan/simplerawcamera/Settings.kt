@@ -31,6 +31,10 @@ class Settings( private val activity: Activity) {
         const val FRAME_TYPE_3_2 = 3
         const val FRAME_TYPE_16_9 = 4
 
+        const val FLASH_MODE_OFF = 0
+        const val FLASH_MODE_ON = 1
+        const val FLASH_MODE_TORCH = 2
+
         const val NOISE_REDUCTION_DISABLED = 0
         const val NOISE_REDUCTION_JPEG_ONLY = 1
         const val NOISE_REDUCTION_ENABLED = 2
@@ -54,6 +58,7 @@ class Settings( private val activity: Activity) {
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
     var showDebugInfo: Boolean = false
+    var flashMode: Int = FLASH_MODE_OFF
 
     init {
         loadProperties()
