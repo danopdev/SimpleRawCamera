@@ -38,6 +38,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlin.math.abs
+import kotlin.math.log2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.system.exitProcess
@@ -114,13 +115,24 @@ class CameraActivity : AppCompatActivity() {
 
         /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
         fun calculateExpDeviation(
-            visibleIso: Int,
-            visibleSpeed: Long,
+            previewIso: Int,
+            previewSpeed: Long,
             expectedIso: Int,
             expectedSpeed: Long
         ): Float {
-            var deltaExpIso: Float = (expectedIso - visibleIso).toFloat() / expectedIso
-            var deltaExpSpeed: Float = (expectedSpeed - visibleSpeed).toFloat() / expectedSpeed
+
+            var deltaExpIso: Float =
+                if (previewIso >= expectedIso)
+                    log2(previewIso.toFloat() / expectedIso)
+                else
+                    -log2(expectedIso.toFloat() / previewIso)
+
+            var deltaExpSpeed: Float =
+                if (previewSpeed >= expectedSpeed)
+                    log2(previewSpeed.toFloat() / expectedSpeed)
+                else
+                    -log2(expectedSpeed.toFloat() / previewSpeed)
+
             return deltaExpIso + deltaExpSpeed
         }
     }
@@ -375,14 +387,6 @@ class CameraActivity : AppCompatActivity() {
 
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
-            mBinding.frameView.setDebugInfo(
-                FrameView.DEBUG_INFO_EXP,
-                "Prev: ISO ${mIsoMeasuredValue}, Speed ${getSpeedStr(mSpeedMeasuredValue)} / EA: ISO ${captureEA.first}, Speed ${
-                    getSpeedStr(
-                        captureEA.second
-                    )
-                } / Delta ${captureEA.third}"
-            )
 
             if (settings.expIsoIsManual && settings.expSpeedIsManual) return
 
