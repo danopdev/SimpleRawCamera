@@ -658,7 +658,8 @@ class CameraActivity : AppCompatActivity() {
             settings.cameraIndex = 0
 
         if (1 == mCameraList.size) {
-            mBinding.txtCamera.isVisible = false
+            mBinding.txtCameraLabel.visibility = View.INVISIBLE
+            mBinding.txtCamera.visibility = View.INVISIBLE
         }
 
         mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, getWorkerHandler())
@@ -1181,7 +1182,7 @@ class CameraActivity : AppCompatActivity() {
         mSelectCameraTimer?.cancel()
         mSelectCameraTimer = null
 
-        mBinding.txtCamera.text = "CAM:\n${index+1}"
+        mBinding.txtCamera.text = "${index+1}"
 
         if (async) {
             mSelectCameraTimer = timer(null, false, SELECT_CAMERA_ASYNC_DELAY, SELECT_CAMERA_ASYNC_DELAY) {
