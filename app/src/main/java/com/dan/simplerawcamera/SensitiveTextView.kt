@@ -27,7 +27,7 @@ class SensitiveTextView : AppCompatTextView {
         val BG_COLOR_PRESSED = Color.rgb(48, 48, 48 )
 
         val STEP_X = dpToPx(30)
-        val STEP_Y = dpToPx(30)
+        val STEP_Y = dpToPx(50)
 
         const val DIRECTION_NONE = 0
         const val DIRECTION_NOT_DEFINED = 1
