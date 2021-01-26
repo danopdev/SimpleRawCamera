@@ -61,16 +61,12 @@ Currently always AUTO.
 * Focus:
   * Add face detection
 
-* Optimizations:
-  * Continuous photo mode: limit the number of continuous photos to avoid using all the RAM
-
 * Settings:
   * Add "location" option
 
 * Flash (not supported yet)
   * OFF
   * ON
-  * Red Eye
-  * Continuous flash (flashlight)
+  * Continuous flash (torch)
 
 * White balance (not supported yet)
