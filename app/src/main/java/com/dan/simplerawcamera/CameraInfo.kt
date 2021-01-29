@@ -197,21 +197,21 @@ class CameraInfo(
         Log.i("CAMERA_INFO", "ISOs: ${isoSteps}")
     }
 
-    fun getClosestIso(iso: Int): Int {
+    fun getClosestIsoIndex(iso: Int): Int {
         var index = 1
         while (index < isoSteps.size) {
             if (isoSteps[index] > iso) break
             index++
         }
-        return isoSteps[index-1]
+        return index-1
     }
 
-    fun getClosestSpeed(speed: Long): Long {
+    fun getClosestSpeedIndex(speed: Long): Int {
         var index = 1
         while (index < speedSteps.size) {
             if (speedSteps[index] > speed) break
             index++
         }
-        return speedSteps[index-1]
+        return index-1
     }
 }
