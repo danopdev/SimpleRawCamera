@@ -35,6 +35,7 @@ class CameraInfo(
 ) {
 
     companion object {
+
         /**
          List all available and valid (for this application) cameras.
          */
@@ -73,7 +74,7 @@ class CameraInfo(
 
                         val exposureCompensantionRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
                         val exposureCompensantionStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
-                        val exposureCompensantionMulitplyFactor = exposureCompensantionStep.denominator
+                        val exposureCompensantionMulitplyFactor = exposureCompensantionStep.denominator / Settings.EXP_STEPS_PER_1EV
                         val exposureCompensantionRange = Range(
                             exposureCompensantionRangeFull.lower / exposureCompensantionMulitplyFactor,
                             exposureCompensantionRangeFull.upper / exposureCompensantionMulitplyFactor
@@ -129,9 +130,88 @@ class CameraInfo(
 
             return validCameras
         }
+
+        fun getSpeedStepsArray( speedRange: Range<Long>): ArrayList<Long> {
+            val speedList = arrayListOf(1000000000L) //start with 1 second
+            var speed = 1000000000L;
+            var speed1EVLess: Long;
+
+            //append speeds bigger that 1s by 0.5s step
+            while(true) {
+                speed += 500000000L;
+                if (speed > speedRange.upper || speed > Settings.SPEED_MAX_MANUAL) break
+                speedList.add(speed)
+            }
+
+            //insert in front speeds less then 1s by Settings.EXP_STEPS_PER_1EV
+            speed = 1000000000L;
+
+            while(true) {
+                speed1EVLess = speed / 2
+
+                for (i in Settings.SPEED_MAX_MANUAL-1 downTo 0) {
+                    speed = speed1EVLess * i / Settings.SPEED_MAX_MANUAL
+                    if (speed < speedRange.lower) break
+                    speedList.add(0, speed)
+                }
+
+                speed = speed1EVLess
+                if (speed < speedRange.lower) break
+            }
+
+            if (speedList[0] > speedRange.lower) {
+                speedList.add(0, speedRange.lower)
+            }
+
+            return speedList;
+        }
+
+        fun getIsoStepsArray( isoRange: Range<Int>): ArrayList<Int> {
+            val isoList = arrayListOf(isoRange.lower)
+            var nextIso: Int
+            var currentIso = isoList.last()
+
+            while(true) {
+                nextIso = currentIso * 2
+                if (nextIso > isoRange.upper) break
+
+                for (i in 1..Settings.EXP_STEPS_PER_1EV) {
+                    isoList.add(currentIso * i / Settings.EXP_STEPS_PER_1EV)
+                }
+
+                currentIso = nextIso
+            }
+
+            return isoList
+        }
     }
 
     val areDimensionsSwapped = sensorOrientation == 0 || sensorOrientation == 180
     val estimatedDngSize = resolutionWidth *  resolutionWidth * 2 + 100000
     val estimatedJpegSize = estimatedDngSize / 3
+    val speedSteps = getSpeedStepsArray(speedRange)
+    val isoSteps = getIsoStepsArray(isoRange)
+
+    init {
+        Log.i("CAMERA_INFO", "Speeds: ${speedSteps}")
+        Log.i("CAMERA_INFO", "ISOs: ${isoSteps}")
+    }
+
+    fun getClosestIso(iso: Int): Int {
+        var index = 1
+        while (index < isoSteps.size) {
+            if (isoSteps[index] > iso) break
+            index++
+        }
+        return isoSteps[index-1]
+    }
+
+    fun getClosestSpeed(speed: Long): Long {
+        var index = 1
+        while (index < speedSteps.size) {
+            if (speedSteps[index] > speed) break
+            index++
+        }
+        return speedSteps[index-1]
+    }
 }

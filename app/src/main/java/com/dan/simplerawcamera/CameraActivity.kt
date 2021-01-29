@@ -869,11 +869,12 @@ class CameraActivity : AppCompatActivity() {
 
     private fun showExpComponsation(value: Int) {
         var exp = "Exp: "
+        val expFloat = value.toFloat() / Settings.EXP_STEPS_PER_1EV
 
         if (value >= 0) {
-            exp += "+${value}"
+            exp += "+%.1f".format(expFloat)
         } else {
-            exp += value.toString()
+            exp += "%.1f".format(expFloat)
         }
 
         mBinding.txtExpComponsation.text = exp
