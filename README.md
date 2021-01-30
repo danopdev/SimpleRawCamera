@@ -13,8 +13,8 @@ It support only ISO & Speed (as most smart phone cameras have fixed aperture).
 
 Supported modes:
 * Full auto
-* Full manual (1 EV step only)
-* Semi-automatic (1 EV step only):
+* Full manual (1/2 EV step only)
+* Semi-automatic (1/2 EV step only):
   * Manual ISO with automatic Speed
   * Manual Speed with automatic ISO (WARNING: the ISO range is limited and it may not be possible to have one for the specified speed)
 
@@ -56,7 +56,6 @@ Currently always AUTO.
 
 * Exposure:
   * Try to adjust exposure (except for full manual mode) to avoid burning highlights
-  * Switch from 1 EV step to 1/2 EV step
 
 * Focus:
   * Add face detection
