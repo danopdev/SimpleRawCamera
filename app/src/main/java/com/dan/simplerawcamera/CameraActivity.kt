@@ -445,15 +445,14 @@ class CameraActivity : AppCompatActivity() {
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
 
         if (settings.expIsoIsManual && settings.expSpeedIsManual) {
-            val speedValue = getSpeedValue()
             return Triple(
                 settings.expIsoValue,
-                speedValue,
+                settings.expSpeedValue,
                 calculateExpDeviation(
                     mIsoMeasuredValue,
                     mSpeedMeasuredValue,
                     settings.expIsoValue,
-                    speedValue
+                    settings.expSpeedValue
                 )
             )
         }
@@ -479,7 +478,7 @@ class CameraActivity : AppCompatActivity() {
             )
         }
 
-        val speedValue = getSpeedValue()
+        val speedValue = settings.expSpeedValue
         val speedRatio = mSpeedMeasuredValue / speedValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
@@ -497,9 +496,6 @@ class CameraActivity : AppCompatActivity() {
 
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
-
-    private fun getSpeedValue(div: Long): Long = Settings.SPEED_MAX_MANUAL / div
-    private fun getSpeedValue(): Long = getSpeedValue(settings.expSpeedDivValue)
 
     private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraInfo.sensorOrientation) % 360
 
@@ -818,24 +814,13 @@ class CameraActivity : AppCompatActivity() {
     private fun trackIso(delta: Int) {
         if (!settings.expIsoIsManual) return
 
-        val increase = delta > 0
-        var counter = abs(delta)
-        var value = settings.expIsoValue
+        val newValue = mCameraInfo.getIso(settings.expIsoValue, delta)
 
-        while (counter > 0) {
-            if (increase) {
-                if (value >= mCameraInfo.isoRange.upper) break
-                value *= 2
-            } else {
-                if (value <= mCameraInfo.isoRange.lower) break
-                value /= 2
-            }
-            counter -= 1
+        if (newValue != settings.expIsoValue) {
+            settings.expIsoValue = newValue
+            showIso(newValue)
+            setupCapturePreviewRequest()
         }
-
-        showIso(value)
-        settings.expIsoValue = value
-        setupCapturePreviewRequest()
     }
 
     private fun showIso(value: Int) {
@@ -847,24 +832,19 @@ class CameraActivity : AppCompatActivity() {
     private fun trackExpCompensation(delta: Int) {
         if (settings.expIsoIsManual && settings.expSpeedIsManual) return
 
-        val increase = delta > 0
-        var counter = abs(delta)
-        var value = settings.expCompensationValue
+        var newValue = settings.expCompensationValue + delta
 
-        while (counter > 0) {
-            if (increase) {
-                if (value >= mCameraInfo.exposureCompensantionRange.upper) break
-                value++
-            } else {
-                if (value <= mCameraInfo.exposureCompensantionRange.lower) break
-                value--
-            }
-            counter -= 1
+        if (newValue < mCameraInfo.exposureCompensantionRange.lower) {
+            newValue = mCameraInfo.exposureCompensantionRange.lower
+        } else if (newValue > mCameraInfo.exposureCompensantionRange.upper) {
+            newValue = mCameraInfo.exposureCompensantionRange.upper
         }
 
-        showExpComponsation(value)
-        settings.expCompensationValue = value
-        setupCapturePreviewRequest()
+        if (newValue != settings.expCompensationValue) {
+            settings.expCompensationValue = newValue
+            showExpComponsation(newValue)
+            setupCapturePreviewRequest()
+        }
     }
 
     private fun showExpComponsation(value: Int) {
@@ -884,28 +864,17 @@ class CameraActivity : AppCompatActivity() {
     private fun trackSpeed(delta: Int) {
         if (!settings.expSpeedIsManual) return
 
-        val increase = delta > 0
-        var counter = abs(delta)
-        var speedDiv = settings.expSpeedDivValue
+        val newSpeed = mCameraInfo.getSpeed(settings.expSpeedValue, delta);
 
-        while (counter > 0) {
-            if (increase) {
-                if (speedDiv == 1L || getSpeedValue(speedDiv / 2) > mCameraInfo.speedRange.upper) break
-                speedDiv /= 2
-            } else {
-                if (getSpeedValue(speedDiv * 2) < mCameraInfo.speedRange.lower) break
-                speedDiv *= 2
-            }
-            counter -= 1
+        if (newSpeed != settings.expSpeedValue) {
+            settings.expSpeedValue = newSpeed
+            showSpeed(newSpeed)
+            setupCapturePreviewRequest()
         }
-
-        showSpeed(getSpeedValue(speedDiv))
-        settings.expSpeedDivValue = speedDiv
-        setupCapturePreviewRequest()
     }
 
     private fun getSpeedStr(speed: Long): String {
-        if (speed >= 1000000000L) { // 1 second
+        if (speed >= 300000000L) { // 1 second
             val speedSecondsWith1Decimal = (speed / 100000000).toInt()
             val speedSeconds = speedSecondsWith1Decimal / 10
             val speedDecimals = speedSecondsWith1Decimal % 10
@@ -923,7 +892,7 @@ class CameraActivity : AppCompatActivity() {
                 (denominator / 100) * 100
             else if (128 == denominator)
                 125
-            else if (denominator >= 30)
+            else if (denominator >= 20)
                 (denominator / 10) * 10
             else if (16 == denominator)
                 15
@@ -973,7 +942,7 @@ class CameraActivity : AppCompatActivity() {
             showIso(settings.expIsoValue)
 
         if (settings.expSpeedIsManual)
-            showSpeed(getSpeedValue())
+            showSpeed(settings.expSpeedValue)
 
         showFocus()
         showExpComponsation(settings.expCompensationValue)
@@ -1513,7 +1482,7 @@ class CameraActivity : AppCompatActivity() {
                 settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor
             )
         } else {
-            var manualSpeed = getSpeedValue()
+            var manualSpeed = settings.expSpeedValue
             var manualISO = settings.expIsoValue
 
             if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {

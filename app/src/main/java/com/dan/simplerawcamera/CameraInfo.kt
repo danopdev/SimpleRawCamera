@@ -222,10 +222,7 @@ class CameraInfo(
     }
 
     private fun getArrayIndex(currentIndex: Int, direction: Int, arraySize: Int): Int {
-        var newIndex = currentIndex
-        if (direction < 0) newIndex--
-        else if (direction > 0) newIndex++
-
+        var newIndex = currentIndex + direction
         if (newIndex < 0) return 0
         if (newIndex >= arraySize) return arraySize-1
         return newIndex

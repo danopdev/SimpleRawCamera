@@ -47,7 +47,7 @@ class Settings( private val activity: Activity) {
     var expIsoIsManual: Boolean = false
     var expIsoValue: Int = 100
     var expSpeedIsManual: Boolean = false
-    var expSpeedDivValue: Long = SPEED_MAX_MANUAL / SPEED_DEFAULT_MANUAL
+    var expSpeedValue: Long = 7812500L // 1/125 seconds
     var expCompensationValue: Int = 0
     var focusType: Int = FOCUS_TYPE_CONTINOUS
     var focusManualProgress: Int = 0
