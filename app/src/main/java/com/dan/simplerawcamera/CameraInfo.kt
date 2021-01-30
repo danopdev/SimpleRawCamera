@@ -136,9 +136,18 @@ class CameraInfo(
             var speed = 1000000000L;
             var speed1EVLess: Long;
 
-            //append speeds bigger that 1s by 0.5s step
+            /*
+             * Speeds bigger then 1s:
+             *    * 1-4 seconds: step is 0.5s
+             *    * >= 4 seconds: step is 1s
+             */
             while(true) {
-                speed += 500000000L;
+                if (speed >= 4000000000L) {
+                    speed += 1000000000L
+                } else {
+                    speed += 500000000L;
+                }
+
                 if (speed > speedRange.upper || speed > Settings.SPEED_MAX_MANUAL) break
                 speedList.add(speed)
             }
