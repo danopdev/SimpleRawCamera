@@ -197,7 +197,8 @@ class CameraInfo(
         Log.i("CAMERA_INFO", "ISOs: ${isoSteps}")
     }
 
-    fun getClosestIsoIndex(iso: Int): Int {
+    private fun getClosestIsoIndex(iso: Int): Int {
+        //TODO: switch to binary search
         var index = 1
         while (index < isoSteps.size) {
             if (isoSteps[index] > iso) break
@@ -206,7 +207,8 @@ class CameraInfo(
         return index-1
     }
 
-    fun getClosestSpeedIndex(speed: Long): Int {
+    private fun getClosestSpeedIndex(speed: Long): Int {
+        //TODO: switch to binary search
         var index = 1
         while (index < speedSteps.size) {
             if (speedSteps[index] > speed) break
@@ -214,4 +216,20 @@ class CameraInfo(
         }
         return index-1
     }
+
+    private fun getArrayIndex(currentIndex: Int, direction: Int, arraySize: Int): Int {
+        var newIndex = currentIndex
+        if (direction < 0) newIndex--
+        else if (direction > 0) newIndex++
+
+        if (newIndex < 0) return 0
+        if (newIndex >= arraySize) return arraySize-1
+        return newIndex
+    }
+
+    fun getSpeed( realSpeed: Long, direction: Int): Long =
+        speedSteps[getArrayIndex(getClosestSpeedIndex(realSpeed), direction, speedSteps.size)]
+
+    fun getIso( realIso: Int, direction: Int): Int =
+        isoSteps[getArrayIndex(getClosestIsoIndex(realIso), direction, isoSteps.size)]
 }
