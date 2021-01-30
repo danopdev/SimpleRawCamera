@@ -201,11 +201,6 @@ class CameraInfo(
     val speedSteps = getSpeedStepsArray(speedRange)
     val isoSteps = getIsoStepsArray(isoRange)
 
-    init {
-        Log.i("CAMERA_INFO", "Speeds: ${speedSteps}")
-        Log.i("CAMERA_INFO", "ISOs: ${isoSteps}")
-    }
-
     private fun getClosestIsoIndex(iso: Int): Int {
         //TODO: switch to binary search
         var index = 1
