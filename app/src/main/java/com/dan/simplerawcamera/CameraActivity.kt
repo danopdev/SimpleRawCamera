@@ -1363,11 +1363,11 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
                     if (Settings.NOISE_REDUCTION_ENABLED == settings.noiseReduction ||
-                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes)
-                    )
+                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes)) {
                         CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
-                    else
+                    } else {
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
+                    }
                 )
 
                 mCaptureRequest = captureRequestBuilder.build()
@@ -1395,10 +1395,11 @@ class CameraActivity : AppCompatActivity() {
                 )
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
-                    if (Settings.NOISE_REDUCTION_DISABLED == settings.noiseReduction)
+                    if (Settings.NOISE_REDUCTION_DISABLED == settings.noiseReduction) {
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
-                    else
+                    } else {
                         CaptureRequest.NOISE_REDUCTION_MODE_FAST
+                    }
                 )
             }
         }
