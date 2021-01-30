@@ -158,8 +158,8 @@ class CameraInfo(
             while(true) {
                 speed1EVLess = speed / 2
 
-                for (i in Settings.SPEED_MAX_MANUAL-1 downTo 0) {
-                    speed = speed1EVLess * i / Settings.SPEED_MAX_MANUAL
+                for (i in Settings.EXP_STEPS_PER_1EV-1 downTo 0) {
+                    speed = speed1EVLess + speed1EVLess * i / Settings.EXP_STEPS_PER_1EV
                     if (speed < speedRange.lower) break
                     speedList.add(0, speed)
                 }
@@ -182,10 +182,10 @@ class CameraInfo(
 
             while(true) {
                 nextIso = currentIso * 2
-                if (nextIso > isoRange.upper) break
+                if (nextIso > (isoRange.upper+1)) break
 
                 for (i in 1..Settings.EXP_STEPS_PER_1EV) {
-                    isoList.add(currentIso * i / Settings.EXP_STEPS_PER_1EV)
+                    isoList.add(currentIso + currentIso * i / Settings.EXP_STEPS_PER_1EV)
                 }
 
                 currentIso = nextIso
