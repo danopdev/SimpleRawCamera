@@ -191,82 +191,85 @@ class CameraActivity : AppCompatActivity() {
 
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
-        private var isBusy = false
+        private var mIsBusy = false
+
+        private fun genHistogram(image: Image) {
+            if (mIsBusy) return
+
+            mIsBusy = true
+
+            val imageW = image.width
+            val imageH = image.height
+
+            val yPlane = image.planes[0]
+            val yPlaneBuffer = yPlane.buffer
+            val yBytes = ByteArray(yPlaneBuffer.capacity())
+            yPlaneBuffer.get(yBytes)
+
+            val rowStride = yPlane.rowStride
+
+            GlobalScope.launch(Dispatchers.Main) {
+                val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
+                for (line in 0 until imageH) {
+                    var index = line * rowStride
+                    for (column in 0 until imageW) {
+                        var yValue = yBytes[index].toInt()
+
+                        if (yValue < 0) yValue += 256
+
+                        if (yValue < 5) yValue = 0
+                        else if (yValue >= 250) yValue = 245
+                        else yValue -= 5
+
+                        values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 245]++
+                        index++
+                    }
+                }
+
+                var maxHeight = 10
+                for (value in values)
+                    maxHeight = max(maxHeight, value)
+                maxHeight++
+
+                val color = Color.rgb(192, 192, 192)
+                val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT)
+
+                for (x in values.indices) {
+                    val value = values[x]
+                    val fill =
+                        HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+
+                    var y = 0
+                    while (y < fill) {
+                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
+                        y++
+                    }
+                    while (y < HISTOGRAM_BITMAP_HEIGHT) {
+                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
+                        y++
+                    }
+                }
+
+                val bitmap = Bitmap.createBitmap(
+                    colors,
+                    0,
+                    HISTOGRAM_BITMAP_WIDTH,
+                    HISTOGRAM_BITMAP_WIDTH,
+                    HISTOGRAM_BITMAP_HEIGHT,
+                    Bitmap.Config.ARGB_8888
+                )
+
+                runOnUiThread {
+                    mBinding.imgHistogram.setImageBitmap(bitmap)
+                    mIsBusy = false
+                }
+            }
+        }
 
         override fun onImageAvailable(imageReader: ImageReader?) {
             if (null == imageReader) return
             val image = imageReader.acquireLatestImage() ?: return
-
-            if (!isBusy) {
-                isBusy = true
-                val imageW = image.width
-                val imageH = image.height
-
-                val yPlane = image.planes[0]
-                val yPlaneBuffer = yPlane.buffer
-                val yBytes = ByteArray(yPlaneBuffer.capacity())
-                yPlaneBuffer.get(yBytes)
-
-                val rowStride = yPlane.rowStride
-
-                GlobalScope.launch(Dispatchers.Main) {
-                    val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
-                    for (line in 0 until imageH) {
-                        var index = line * rowStride
-                        for (column in 0 until imageW) {
-                            var yValue = yBytes[index].toInt()
-
-                            if (yValue < 0) yValue += 256
-
-                            if (yValue < 5) yValue = 0
-                            else if (yValue >= 250) yValue = 245
-                            else yValue -= 5
-
-                            values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 245]++
-                            index++
-                        }
-                    }
-
-                    var maxHeight = 10
-                    for (value in values)
-                        maxHeight = max(maxHeight, value)
-                    maxHeight++
-
-                    val color = Color.rgb(192, 192, 192)
-                    val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT)
-
-                    for (x in values.indices) {
-                        val value = values[x]
-                        val fill =
-                            HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
-
-                        var y = 0
-                        while (y < fill) {
-                            colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
-                            y++
-                        }
-                        while (y < HISTOGRAM_BITMAP_HEIGHT) {
-                            colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
-                            y++
-                        }
-                    }
-
-                    val bitmap = Bitmap.createBitmap(
-                        colors,
-                        0,
-                        HISTOGRAM_BITMAP_WIDTH,
-                        HISTOGRAM_BITMAP_WIDTH,
-                        HISTOGRAM_BITMAP_HEIGHT,
-                        Bitmap.Config.ARGB_8888
-                    )
-
-                    runOnUiThread {
-                        mBinding.imgHistogram.setImageBitmap(bitmap)
-                        isBusy = false
-                    }
-                }
-            }
-
+            genHistogram(image)
             image.close()
         }
     }
