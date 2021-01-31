@@ -396,6 +396,8 @@ class CameraActivity : AppCompatActivity() {
 
         @Suppress("DEPRECATION")
         override fun onOpened(cameraDevice: CameraDevice) {
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: open")
+
             mCameraDevice = cameraDevice
 
             val sizes = mCameraInfo.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
@@ -1158,6 +1160,7 @@ class CameraActivity : AppCompatActivity() {
 
         updateSliders()
 
+        mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: opening")
         mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, getWorkerHandler())
     }
 
@@ -1177,6 +1180,8 @@ class CameraActivity : AppCompatActivity() {
 
         mCaptureRequestBuilder = null
         mCaptureRequestBuilder = null
+
+        mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: closed")
     }
 
     private fun updateFrame() {
@@ -1242,12 +1247,12 @@ class CameraActivity : AppCompatActivity() {
 
                 if (settings.expIsoIsManual || settings.expSpeedIsManual) {
                     val ae = getCaptureEA()
-                    mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "PREVIEW - ISO: ${ae.first}, SPEED: ${getSpeedStr(ae.second)}")
+                    mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${ae.first}, Speed: ${getSpeedStr(ae.second)}")
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, ae.second)
                     captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, ae.first)
                 } else {
-                    mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "PREVIEW - AUTO")
+                    mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto")
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
@@ -1361,11 +1366,11 @@ class CameraActivity : AppCompatActivity() {
 
         //WORKAROUND: My camera block with click to focus in full manual mode
         if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && settings.expIsoIsManual && settings.expSpeedIsManual) {
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "PREVIEW - AUTO (FOCUS)")
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto (FOCUS)")
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
         } else if (!settings.expIsoIsManual || !settings.expSpeedIsManual) {
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "PREVIEW - AUTO")
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto")
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
         } else {
@@ -1382,7 +1387,7 @@ class CameraActivity : AppCompatActivity() {
                 manualSpeed = min(Settings.SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
             }
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "PREVIEW - ISO: ${manualISO}, SPEED: ${getSpeedStr(manualSpeed)}")
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${manualISO}, Speed: ${getSpeedStr(manualSpeed)}")
 
 
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)

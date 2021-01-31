@@ -47,6 +47,7 @@ class FrameView : View {
 
         val DEBUG_INFO_MEM = 0
         val DEBUG_INFO_PREVIEW = 1
+        val DEBUG_INFO_CAMERA_STATE = 2
     }
 
     private val mPaintDark = Paint()
@@ -75,7 +76,7 @@ class FrameView : View {
     private var mShowDebugInfo = true
 
     private var mDebugInfoHeight = 0
-    private val mDebugInfo = arrayListOf<String>("", "")
+    private val mDebugInfo = arrayListOf<String>("", "", "")
 
     @Suppress("DEPRECATION")
     private val mSavePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_save )
