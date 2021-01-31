@@ -357,6 +357,8 @@ class CameraActivity : AppCompatActivity() {
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO: ${mIsoMeasuredValue}, Speed: ${getSpeedStr(mSpeedMeasuredValue)}")
+
             when(mFocusState) {
                 FOCUS_STATE_CLICK -> {
                     var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
