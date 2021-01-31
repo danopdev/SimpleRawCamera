@@ -357,7 +357,7 @@ class CameraActivity : AppCompatActivity() {
             mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO: ${mIsoMeasuredValue}, Speed: ${getSpeedStr(mSpeedMeasuredValue)}")
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO: ${mIsoMeasuredValue}, Speed: ${getSpeedStr(mSpeedMeasuredValue)} (${mSpeedMeasuredValue})")
 
             when(mFocusState) {
                 FOCUS_STATE_CLICK -> {
@@ -1391,7 +1391,7 @@ class CameraActivity : AppCompatActivity() {
 
             mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${manualISO}, Speed: ${getSpeedStr(manualSpeed)}")
 
-
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
             captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
