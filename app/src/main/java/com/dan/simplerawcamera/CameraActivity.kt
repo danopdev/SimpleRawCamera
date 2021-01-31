@@ -1234,6 +1234,8 @@ class CameraActivity : AppCompatActivity() {
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
 
+        Log.i("TAKE_PHOTO", "setupCaptureRequest(${photoMode}, ${force})")
+
         if (photoMode != mCaptureModeIsPhoto || force) {
             mCaptureModeIsPhoto = photoMode
 
