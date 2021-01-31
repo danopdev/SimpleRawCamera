@@ -116,12 +116,7 @@ class CameraActivity : AppCompatActivity() {
         }
 
         /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
-        fun calculateExpDeviation(
-            previewIso: Int,
-            previewSpeed: Long,
-            expectedIso: Int,
-            expectedSpeed: Long
-        ): Float {
+        fun calculateExpDeviation(previewIso: Int, previewSpeed: Long, expectedIso: Int, expectedSpeed: Long): Float {
 
             var deltaExpIso: Float =
                 if (previewIso >= expectedIso)
