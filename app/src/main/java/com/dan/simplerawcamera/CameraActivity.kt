@@ -164,7 +164,9 @@ class CameraActivity : AppCompatActivity() {
     private var mImageJpeg: Image? = null
 
     private var mIsoMeasuredValue = 100
-    private var mSpeedMeasuredValue = 1L
+    private var mSpeedMeasuredValue = 7812500L // 1/128
+    private var mIsoManualPreviewValue = 100
+    private var mSpeedManualPreviewValue = 7812500L // 1/128
 
     private var mFocusState = FOCUS_STATE_MANUAL
     private var mFocusClick = false
@@ -354,10 +356,28 @@ class CameraActivity : AppCompatActivity() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
 
-            mIsoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
-            mSpeedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
+            val isoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
+            val speedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO: ${mIsoMeasuredValue}, Speed: ${getSpeedStr(mSpeedMeasuredValue)} (${mSpeedMeasuredValue})")
+            mBinding.frameView.setDebugInfo(
+                FrameView.DEBUG_INFO_MEASURED, "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})")
+
+            //WORKAROUND: fix dummy speed jumps to 94696ns in full manual mode
+            if (!mPhotoInProgress && !mCaptureModeIsPhoto && settings.expIsoIsManual && settings.expSpeedIsManual) {
+                if ( (speedMeasuredValue <= (mSpeedManualPreviewValue - 10 * mSpeedManualPreviewValue / 100)) ||
+                     (speedMeasuredValue >= (mSpeedManualPreviewValue + 10 * mSpeedManualPreviewValue / 100)) ||
+                     (isoMeasuredValue <= (mIsoManualPreviewValue - 10 * mIsoManualPreviewValue / 100)) ||
+                     (isoMeasuredValue >= (mIsoManualPreviewValue + 10 * mIsoManualPreviewValue / 100))) {
+                         runOnUiThread {
+                             Log.i("TAKE_PHOTO", "Preview LOCK detected !")
+                             setupCapturePreviewRequest(false)
+                         }
+                         return
+                     }
+            }
+
+            mIsoMeasuredValue = isoMeasuredValue
+            mSpeedMeasuredValue = speedMeasuredValue
 
             when(mFocusState) {
                 FOCUS_STATE_CLICK -> {
@@ -1376,25 +1396,25 @@ class CameraActivity : AppCompatActivity() {
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
         } else {
-            var manualSpeed = settings.expSpeedValue
-            var manualISO = settings.expIsoValue
+            mSpeedManualPreviewValue = settings.expSpeedValue
+            mIsoManualPreviewValue = settings.expIsoValue
 
-            if (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
-                while (manualSpeed > Settings.SPEED_MANUAL_MIN_PREVIEW) {
-                    if ((2*manualISO) > mCameraInfo.isoRange.upper) break
-                    manualISO *= 2
-                    manualSpeed /= 2
+            if (mSpeedManualPreviewValue > Settings.SPEED_MANUAL_MIN_PREVIEW) {
+                while (mSpeedManualPreviewValue > Settings.SPEED_MANUAL_MIN_PREVIEW) {
+                    if ((2*mIsoManualPreviewValue) > mCameraInfo.isoRange.upper) break
+                    mIsoManualPreviewValue *= 2
+                    mSpeedManualPreviewValue /= 2
                 }
 
-                manualSpeed = min(Settings.SPEED_MANUAL_MIN_PREVIEW, manualSpeed)
+                mSpeedManualPreviewValue = min(Settings.SPEED_MANUAL_MIN_PREVIEW, mSpeedManualPreviewValue)
             }
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${manualISO}, Speed: ${getSpeedStr(manualSpeed)}")
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${mIsoManualPreviewValue}, Speed: ${getSpeedStr(mSpeedManualPreviewValue)}")
 
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_CANCEL)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, manualSpeed)
-            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, manualISO)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, mSpeedManualPreviewValue)
+            captureRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, mIsoManualPreviewValue)
         }
 
         try {

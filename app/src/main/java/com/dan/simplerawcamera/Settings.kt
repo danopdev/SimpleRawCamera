@@ -14,7 +14,7 @@ class Settings( private val activity: Activity) {
     companion object {
         const val EXP_STEPS_PER_1EV = 2;
 
-        const val SPEED_MANUAL_MIN_PREVIEW = 62500000L // 1/16 sec
+        const val SPEED_MANUAL_MIN_PREVIEW = 15625000L // 1/64 sec
         const val SPEED_MAX_MANUAL = 8000000000L // 8 sec
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
 
