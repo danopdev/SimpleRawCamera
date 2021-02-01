@@ -362,8 +362,11 @@ class CameraActivity : AppCompatActivity() {
             mBinding.frameView.setDebugInfo(
                 FrameView.DEBUG_INFO_MEASURED, "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})")
 
+            /*
             //WORKAROUND: fix dummy speed jumps to 94696ns in full manual mode
-            if (!mPhotoInProgress && !mCaptureModeIsPhoto && settings.expIsoIsManual && settings.expSpeedIsManual) {
+            if (!mPhotoInProgress && !mCaptureModeIsPhoto &&
+                settings.expIsoIsManual && settings.expSpeedIsManual &&
+                FOCUS_STATE_CLICK != mFocusState && FOCUS_STATE_SEARCHING != mFocusState ) {
                 if ( (speedMeasuredValue <= (mSpeedManualPreviewValue - 10 * mSpeedManualPreviewValue / 100)) ||
                      (speedMeasuredValue >= (mSpeedManualPreviewValue + 10 * mSpeedManualPreviewValue / 100)) ||
                      (isoMeasuredValue <= (mIsoManualPreviewValue - 10 * mIsoManualPreviewValue / 100)) ||
@@ -375,6 +378,7 @@ class CameraActivity : AppCompatActivity() {
                          return
                      }
             }
+            */
 
             mIsoMeasuredValue = isoMeasuredValue
             mSpeedMeasuredValue = speedMeasuredValue
