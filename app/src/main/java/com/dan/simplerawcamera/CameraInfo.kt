@@ -58,8 +58,8 @@ class CameraInfo(
 
                         Log.i("CAM ${cameraId}", "ISO Range: ${isoRealRange.lower} - ${isoRealRange.upper}")
                         Log.i("CAM ${cameraId}", "ISO Boost Range: ${isoBoostRange.lower} - ${isoBoostRange.upper}")
-                        //val isoRange = Range(min(isoRealRange.lower, isoBoostRange.lower), max(isoRealRange.upper, isoBoostRange.upper))
-                        val isoRange = isoRealRange
+                        val isoRange = Range(min(isoRealRange.lower, isoBoostRange.lower), max(isoRealRange.upper, isoBoostRange.upper))
+                        //val isoRange = isoRealRange
 
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
 
