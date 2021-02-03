@@ -522,7 +522,7 @@ class CameraActivity : AppCompatActivity() {
         mSequenceTimer?.cancel()
         mSequenceTimer = null
         mSequenceStarted = false
-
+        mBinding.frameView.setSequencePhotoDelay(0)
         updateSliders()
     }
 
