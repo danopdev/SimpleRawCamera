@@ -40,6 +40,10 @@ class Settings( private val activity: Activity) {
         const val NOISE_REDUCTION_DISABLED = 0
         const val NOISE_REDUCTION_JPEG_ONLY = 1
         const val NOISE_REDUCTION_ENABLED = 2
+
+        val SEQUENCE_DELAY_START_OPTIONS = arrayOf(2, 5, 10)
+        val SEQUENCE_DELAY_BETWEEN_OPTIONS = arrayOf(0, 1, 5, 10, 30, 60, 120, 300, 600)
+        val SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(1, 3, 5, 10, 0)
     }
 
     var saveUri: String = ""
@@ -56,9 +60,10 @@ class Settings( private val activity: Activity) {
     var continuousMode: Boolean = true
     var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
     var noiseReduction: Int = NOISE_REDUCTION_DISABLED
-    var sequenceDelayStart: Int = 0
+    var sequenceDelayStart: Int = 2
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
+    var showSequence: Boolean = false
     var showDebugInfo: Boolean = false
     var flashMode: Int = FLASH_MODE_OFF
 
@@ -103,5 +108,17 @@ class Settings( private val activity: Activity) {
         }
 
         editor.commit()
+    }
+
+    fun getArrayValue( value: Int, delta: Int, array: Array<Int> ): Int {
+        var index = array.indexOf(value)
+        if (index < 0) index = 0
+
+        index += delta
+
+        if (index < 0) index = 0
+        else if (index >= array.size) index = array.size-1
+
+        return array[index]
     }
 }

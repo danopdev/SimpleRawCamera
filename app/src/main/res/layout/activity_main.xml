@@ -66,13 +66,23 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:orientation="vertical"></LinearLayout>
+                android:orientation="vertical">
 
-            <ImageButton
-                android:id="@+id/btnSequences"
-                android:layout_width="wrap_content"
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/imageView"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:srcCompat="@android:drawable/ic_menu_camera" />
+
+            <Switch
+                android:id="@+id/switchSequences"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:showText="false"
+                android:textOff=" "
+                android:thumbTint="@color/teal_200" />
 
             <ImageButton
                 android:id="@+id/btnSettings"
@@ -86,6 +96,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:gravity="center"
             android:orientation="vertical">
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -97,7 +108,7 @@
                     android:id="@+id/layoutWithRatio"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintBottom_toTopOf="@id/layoutSequences"
                     app:layout_constraintDimensionRatio="4:3"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
@@ -122,6 +133,56 @@
                         app:layout_constraintTop_toTopOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutSequences"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="64dp"
+                    android:layout_marginRight="64dp"
+                    android:gravity="fill_horizontal"
+                    android:orientation="vertical"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent">
+
+                    <com.dan.simplerawcamera.SensitiveTextView
+                        android:id="@+id/txtSequenceDelayStart"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:text="Delay start: 1 second"
+                        android:textAlignment="center"
+                        android:textColor="@color/teal_200"
+                        android:textStyle="bold" />
+
+                    <com.dan.simplerawcamera.SensitiveTextView
+                        android:id="@+id/txtSequenceDelayBetween"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:text="Delay between: 1 second"
+                        android:textAlignment="center"
+                        android:textColor="@color/teal_200"
+                        android:textStyle="bold" />
+
+                    <com.dan.simplerawcamera.SensitiveTextView
+                        android:id="@+id/txtSequenceNumberOfPhotos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="3dp"
+                        android:paddingTop="3dp"
+                        android:paddingBottom="3dp"
+                        android:text="Number of photos: infinite"
+                        android:textAlignment="center"
+                        android:textColor="@color/teal_200"
+                        android:textStyle="bold" />
+
+                </LinearLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 

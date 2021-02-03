@@ -76,6 +76,8 @@ class FrameView : View {
     private var mShowSavePhotosErrorIconTimer: Timer? = null
     private var mShowDebugInfo = true
 
+    private var mSequencePhotoDelay = 0
+
     private var mDebugInfoHeight = 0
     private val mDebugInfo = arrayListOf<String>("", "", "", "")
 
@@ -131,6 +133,14 @@ class FrameView : View {
 
         timer(null, false, 1000, 1000) {
             updateDebugMemInfo()
+        }
+    }
+
+    /** Sequence: show the delay until the next sequence photo */
+    fun setSequencePhotoDelay(value: Int) {
+        if (value != mSequencePhotoDelay) {
+            mSequencePhotoDelay = value
+            invalidate()
         }
     }
 
@@ -376,16 +386,29 @@ class FrameView : View {
         }
 
         if (mCounter > 0) {
-            val counterStr = mCounter.toString()
+            val str = "(${mCounter})"
             var textRect = Rect()
-            mPaintText.getTextBounds( counterStr, 0, counterStr.length, textRect )
+            mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (PHOTO_ICON_X + (PHOTO_ICON_WIDTH - textRect.width()) / 2).toFloat()
             val textY = (PHOTO_ICON_Y + (PHOTO_ICON_HEIGHT + textRect.height()) / 2).toFloat()
 
             mPaintText.color = TEXT_COLOR_SHADOW
-            canvas.drawText( counterStr, textX + TEXT_SHADOW_PADDING, textY + TEXT_SHADOW_PADDING, mPaintText )
+            canvas.drawText( str, textX + TEXT_SHADOW_PADDING, textY + TEXT_SHADOW_PADDING, mPaintText )
             mPaintText.color = TEXT_COLOR
-            canvas.drawText( counterStr, textX, textY, mPaintText )
+            canvas.drawText( str, textX, textY, mPaintText )
+        }
+
+        if (mSequencePhotoDelay > 0) {
+            val str = mSequencePhotoDelay.toString()
+            var textRect = Rect()
+            mPaintText.getTextBounds( str, 0, str.length, textRect )
+            val textX = (width - PHOTO_ICON_X - textRect.width()).toFloat()
+            val textY = (PHOTO_ICON_Y + (PHOTO_ICON_HEIGHT + textRect.height()) / 2).toFloat()
+
+            mPaintText.color = TEXT_COLOR_SHADOW
+            canvas.drawText( str, textX + TEXT_SHADOW_PADDING, textY + TEXT_SHADOW_PADDING, mPaintText )
+            mPaintText.color = TEXT_COLOR
+            canvas.drawText( str, textX, textY, mPaintText )
         }
 
         if (mShowDebugInfo) {

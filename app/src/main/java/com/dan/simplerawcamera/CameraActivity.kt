@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.*
 import android.hardware.SensorManager
 import android.hardware.camera2.*
@@ -26,7 +27,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.documentfile.provider.DocumentFile
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
@@ -191,6 +191,11 @@ class CameraActivity : AppCompatActivity() {
 
     private var mSelectCameraTimer: Timer? = null
 
+    private var mSequenceStarted = false
+    private var mSequenceTimer: Timer? = null
+    private var mSequencePhotoCounter = 0
+    private var mSequencePhotoDelayCounter = 0
+
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var mIsBusy = false
@@ -238,8 +243,7 @@ class CameraActivity : AppCompatActivity() {
 
                 for (x in values.indices) {
                     val value = values[x]
-                    val fill =
-                        HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+                    val fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
 
                     var y = 0
                     while (y < fill) {
@@ -342,7 +346,11 @@ class CameraActivity : AppCompatActivity() {
 
     /** Take photo callback */
     private val mCameraCaptureSessionPhotoCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
             mCurrentPhotoCaptureResult = result
@@ -359,26 +367,7 @@ class CameraActivity : AppCompatActivity() {
             val isoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             val speedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
-            mBinding.frameView.setDebugInfo(
-                FrameView.DEBUG_INFO_MEASURED, "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})")
-
-            /*
-            //WORKAROUND: fix dummy speed jumps to 94696ns in full manual mode
-            if (!mPhotoInProgress && !mCaptureModeIsPhoto &&
-                settings.expIsoIsManual && settings.expSpeedIsManual &&
-                FOCUS_STATE_CLICK != mFocusState && FOCUS_STATE_SEARCHING != mFocusState ) {
-                if ( (speedMeasuredValue <= (mSpeedManualPreviewValue - 10 * mSpeedManualPreviewValue / 100)) ||
-                     (speedMeasuredValue >= (mSpeedManualPreviewValue + 10 * mSpeedManualPreviewValue / 100)) ||
-                     (isoMeasuredValue <= (mIsoManualPreviewValue - 10 * mIsoManualPreviewValue / 100)) ||
-                     (isoMeasuredValue >= (mIsoManualPreviewValue + 10 * mIsoManualPreviewValue / 100))) {
-                         runOnUiThread {
-                             Log.i("TAKE_PHOTO", "Preview LOCK detected !")
-                             setupCapturePreviewRequest(false)
-                         }
-                         return
-                     }
-            }
-            */
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})")
 
             mIsoMeasuredValue = isoMeasuredValue
             mSpeedMeasuredValue = speedMeasuredValue
@@ -429,7 +418,8 @@ class CameraActivity : AppCompatActivity() {
             val previewSize = getBestResolution(
                 mBinding.surfaceView.width,
                 mCameraInfo.resolutionWidth.toFloat() / mCameraInfo.resolutionHeight,
-                sizes)
+                sizes
+            )
 
             mRotatedPreviewWidth = if (mCameraInfo.areDimensionsSwapped) previewSize.height else previewSize.width
             mRotatedPreviewHeight = if (mCameraInfo.areDimensionsSwapped) previewSize.width else previewSize.height
@@ -495,6 +485,54 @@ class CameraActivity : AppCompatActivity() {
         )
     }
 
+
+    private fun sequenceTakeNextPhotoAfterDelay(delay: Int) {
+        val msDelay = if (delay <= 0) 100L else 1000L
+        mSequencePhotoDelayCounter = delay
+        mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
+
+        mSequenceTimer = timer(null, false, msDelay, msDelay) {
+            mSequencePhotoDelayCounter--
+            mBinding.frameView.setSequencePhotoDelay(0)
+            if (mSequencePhotoDelayCounter <= 0) {
+                mSequenceTimer?.cancel()
+                mSequenceTimer = null
+                runOnUiThread {
+                    if (mSequenceStarted) sequenceTakeNextPhoto()
+                }
+            }
+        }
+    }
+
+    private fun sequenceTakeNextPhoto() {
+        takePhotoWithCallback {
+            mSequencePhotoCounter++
+
+            if (mSequenceStarted) {
+                if (settings.sequenceNumberOfPhotos > 0 && mSequencePhotoCounter >= settings.sequenceNumberOfPhotos) {
+                    sequenceStop()
+                } else {
+                    sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
+                }
+            }
+        }
+    }
+
+    private fun sequenceStop() {
+        mSequenceTimer?.cancel()
+        mSequenceTimer = null
+        mSequenceStarted = false
+
+        updateSliders()
+    }
+
+    private fun sequenceStart() {
+        mSequencePhotoCounter = 0
+        mSequenceStarted = true
+        updateSliders()
+        sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayStart)
+    }
+
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
     private fun getWorkerHandler(): Handler? { return null }
 
@@ -510,9 +548,7 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        if (!askPermissions())
-            onPermissionsAllowed()
+        if (!askPermissions()) onPermissionsAllowed()
     }
 
     override fun onResume() {
@@ -567,8 +603,7 @@ class CameraActivity : AppCompatActivity() {
                 settings.saveUri = data.toString()
                 settings.saveProperties()
 
-                if (mFirstCall)
-                    onValidSaveFolder()
+                if (mFirstCall) onValidSaveFolder()
             }
         }
     }
@@ -646,8 +681,9 @@ class CameraActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun onValidSaveFolder() {
-        if (settings.cameraIndex < 0 || settings.cameraIndex >= mCameraList.size)
+        if (settings.cameraIndex < 0 || settings.cameraIndex >= mCameraList.size) {
             settings.cameraIndex = 0
+        }
 
         if (1 == mCameraList.size) {
             mBinding.txtCameraLabel.visibility = View.INVISIBLE
@@ -658,13 +694,39 @@ class CameraActivity : AppCompatActivity() {
 
         setContentView(mBinding.root)
 
+        mBinding.switchSequences.isChecked = settings.showSequence
+
+        mBinding.txtSequenceDelayStart.setOnMoveXAxisListener { steps ->
+            val newValue = settings.getArrayValue( settings.sequenceDelayStart, steps, Settings.SEQUENCE_DELAY_START_OPTIONS )
+            if (newValue != settings.sequenceDelayStart) {
+                settings.sequenceDelayStart = newValue
+                updateSequenceDelayStart()
+            }
+        }
+
+        mBinding.txtSequenceDelayBetween.setOnMoveXAxisListener { steps ->
+            val newValue = settings.getArrayValue( settings.sequenceDelayBetween, steps, Settings.SEQUENCE_DELAY_BETWEEN_OPTIONS )
+            if (newValue != settings.sequenceDelayBetween) {
+                settings.sequenceDelayBetween = newValue
+                updateSequenceDelayBetween()
+            }
+        }
+
+        mBinding.txtSequenceNumberOfPhotos.setOnMoveXAxisListener { steps ->
+            val newValue = settings.getArrayValue( settings.sequenceNumberOfPhotos, steps, Settings.SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS )
+            if (newValue != settings.sequenceNumberOfPhotos) {
+                settings.sequenceNumberOfPhotos = newValue
+                updateSequenceNumberOfPhotos()
+            }
+        }
+
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
         mBinding.txtCamera.setOnMoveYAxisListener { steps ->
             val newCameraIndex =
                 if (steps < 0) (settings.cameraIndex - 1 + mCameraList.size) % mCameraList.size
                 else (settings.cameraIndex + 1) % mCameraList.size
-            selectCamera( newCameraIndex, true )
+            selectCamera(newCameraIndex, true)
         }
 
         mCameraInfo = mCameraList[0]
@@ -740,9 +802,19 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mBinding.btnPhoto.setOnTouchListener { _, motionEvent ->
-            when(motionEvent.actionMasked) {
-                MotionEvent.ACTION_DOWN -> takePhotoButton(true, PHOTO_BUTTON_SCREEN)
-                MotionEvent.ACTION_UP -> takePhotoButton(false, PHOTO_BUTTON_SCREEN)
+            if (settings.showSequence) {
+                if (MotionEvent.ACTION_UP == motionEvent.actionMasked) {
+                    if (mSequenceStarted) {
+                        sequenceStop()
+                    } else {
+                        sequenceStart()
+                    }
+                }
+            } else {
+                when (motionEvent.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> takePhotoButton(true, PHOTO_BUTTON_SCREEN)
+                    MotionEvent.ACTION_UP -> takePhotoButton(false, PHOTO_BUTTON_SCREEN)
+                }
             }
 
             false
@@ -754,14 +826,13 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
-        mBinding.btnSequences.setOnClickListener {
-            SequencesDialog.show(supportFragmentManager, this)
+        mBinding.switchSequences.setOnCheckedChangeListener { _, isChecked ->
+            settings.showSequence = isChecked
+            sequenceStop()
+            updateSliders()
         }
 
-        mOrientationEventListener = object: OrientationEventListener(
-            this,
-            SensorManager.SENSOR_DELAY_NORMAL
-        ) {
+        mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
             override fun onOrientationChanged(orientation: Int) {
                 var screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
                 if (screenOrientation != mScreenOrientation) {
@@ -931,18 +1002,64 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun getSecondsText(value: Int) =
+        if (1 == value)
+            "1 second"
+        else
+            "${value} seconds"
+
+    private fun getNumberOfPhotosText(value: Int) =
+        if (0 == value)
+            "infinite"
+        else if (1 == value)
+            "1 photo"
+        else
+            "${value} photos"
+
+    private fun updateSequenceDelayStart() {
+        mBinding.txtSequenceDelayStart.text = "Delay start: ${getSecondsText(settings.sequenceDelayStart)}"
+    }
+
+    private fun updateSequenceDelayBetween() {
+        mBinding.txtSequenceDelayBetween.text = "Delay between: ${getSecondsText(settings.sequenceDelayBetween)}"
+    }
+
+    private fun updateSequenceNumberOfPhotos() {
+        mBinding.txtSequenceNumberOfPhotos.text = "Number of photos: ${getNumberOfPhotosText(settings.sequenceNumberOfPhotos)}"
+    }
+
     private fun updateSliders() {
         mBinding.txtExpComponsation.visibility = if (!settings.expIsoIsManual || !settings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
 
-        if (settings.expIsoIsManual)
-            showIso(settings.expIsoValue)
-
-        if (settings.expSpeedIsManual)
-            showSpeed(settings.expSpeedValue)
+        if (settings.expIsoIsManual) showIso(settings.expIsoValue)
+        if (settings.expSpeedIsManual) showSpeed(settings.expSpeedValue)
 
         showFocus()
         showExpComponsation(settings.expCompensationValue)
         setupCapturePreviewRequest()
+
+        updateSequenceDelayStart()
+        updateSequenceDelayBetween()
+        updateSequenceNumberOfPhotos()
+
+        if (settings.showSequence) {
+            mBinding.layoutSequences.visibility = View.VISIBLE
+
+            if (mSequenceStarted) {
+                mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
+                mBinding.txtSequenceDelayStart.isEnabled = false
+                mBinding.txtSequenceDelayBetween.isEnabled = false
+                mBinding.txtSequenceNumberOfPhotos.isEnabled = false
+            } else {
+                mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.BLUE)
+                mBinding.txtSequenceDelayStart.isEnabled = true
+                mBinding.txtSequenceDelayBetween.isEnabled = true
+                mBinding.txtSequenceNumberOfPhotos.isEnabled = true
+            }
+        } else {
+            mBinding.layoutSequences.visibility = View.GONE
+            mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.RED)
+        }
     }
 
     private fun takePhotoButton(pressed: Boolean, source: Int) {
@@ -1121,8 +1238,10 @@ class CameraActivity : AppCompatActivity() {
                     mPhotoInProgress = true
 
                     when (settings.takePhotoModes) {
-                        Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask = PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                        Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                        Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask =
+                            PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                        Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask =
+                            PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
                         else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                     }
 
@@ -1170,10 +1289,7 @@ class CameraActivity : AppCompatActivity() {
 
         val set = ConstraintSet()
         set.clone(mBinding.layoutView)
-        set.setDimensionRatio(
-            mBinding.layoutWithRatio.getId(),
-            "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}"
-        )
+        set.setDimensionRatio(mBinding.layoutWithRatio.getId(), "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}")
         set.applyTo(mBinding.layoutView)
 
         mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
@@ -1283,8 +1399,12 @@ class CameraActivity : AppCompatActivity() {
                 }
 
                 when( settings.takePhotoModes ) {
-                    Settings.PHOTO_TYPE_DNG -> { captureRequestBuilder.addTarget(mImageReaderDng.surface) }
-                    Settings.PHOTO_TYPE_JPEG -> { captureRequestBuilder.addTarget(mImageReaderJpeg.surface) }
+                    Settings.PHOTO_TYPE_DNG -> {
+                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                    }
+                    Settings.PHOTO_TYPE_JPEG -> {
+                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                    }
                     else -> {
                         captureRequestBuilder.addTarget(mImageReaderDng.surface)
                         captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
@@ -1301,7 +1421,8 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.set(
                     CaptureRequest.NOISE_REDUCTION_MODE,
                     if (Settings.NOISE_REDUCTION_ENABLED == settings.noiseReduction ||
-                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes)) {
+                        (Settings.NOISE_REDUCTION_JPEG_ONLY == settings.noiseReduction && Settings.PHOTO_TYPE_JPEG == settings.takePhotoModes)
+                    ) {
                         CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY
                     } else {
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
@@ -1357,7 +1478,13 @@ class CameraActivity : AppCompatActivity() {
 
                         if (y2 > y1 && x2 > x1) {
                             mFocusState = FOCUS_STATE_CLICK
-                            val rectangle = MeteringRectangle(x1, y1, x2 - x1, y2 - y1, MeteringRectangle.METERING_WEIGHT_MAX)
+                            val rectangle = MeteringRectangle(
+                                x1,
+                                y1,
+                                x2 - x1,
+                                y2 - y1,
+                                MeteringRectangle.METERING_WEIGHT_MAX
+                            )
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, arrayOf(rectangle))
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO)
                             captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
