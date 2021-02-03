@@ -16,3 +16,4 @@ local.properties
 /.idea/markdown-navigator.xml
 /.idea/markdown-navigator-enh.xml
 /app/release
+*.log
