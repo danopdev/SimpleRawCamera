@@ -193,7 +193,6 @@ class CameraActivity : AppCompatActivity() {
 
     private var mSequenceStarted = false
     private var mSequenceTimer: Timer? = null
-    private var mSequencePhotoCounter = 0
     private var mSequencePhotoDelayCounter = 0
 
     /** Generate histogram */
@@ -506,10 +505,8 @@ class CameraActivity : AppCompatActivity() {
 
     private fun sequenceTakeNextPhoto() {
         takePhotoWithCallback {
-            mSequencePhotoCounter++
-
             if (mSequenceStarted) {
-                if (settings.sequenceNumberOfPhotos > 0 && mSequencePhotoCounter >= settings.sequenceNumberOfPhotos) {
+                if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos) {
                     sequenceStop()
                 } else {
                     sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
@@ -523,12 +520,15 @@ class CameraActivity : AppCompatActivity() {
         mSequenceTimer = null
         mSequenceStarted = false
         mBinding.frameView.setSequencePhotoDelay(0)
+        mPhotoCounter = 0
+        mBinding.frameView.showCounter(mPhotoCounter)
         updateSliders()
     }
 
     private fun sequenceStart() {
-        mSequencePhotoCounter = 0
         mSequenceStarted = true
+        mPhotoCounter = 0
+        mBinding.frameView.showCounter(mPhotoCounter)
         updateSliders()
         sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayStart)
     }
@@ -1081,7 +1081,7 @@ class CameraActivity : AppCompatActivity() {
             Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
 
             if (0 != mask && 0 == oldMask) {
-                mPhotoCounter = 0
+                if (!mSequenceStarted) mPhotoCounter = 0
                 mPhotoTakeMask = 0
                 setupCapturePhotoRequest()
                 takePhoto(false, true)
