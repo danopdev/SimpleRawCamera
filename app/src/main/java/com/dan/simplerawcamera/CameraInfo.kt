@@ -53,13 +53,7 @@ class CameraInfo(
 
                         if ((characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int) < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
 
-                        val isoRealRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
-                        val isoBoostRange = characteristics.get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE) as Range<Int>
-
-                        Log.i("CAM ${cameraId}", "ISO Range: ${isoRealRange.lower} - ${isoRealRange.upper}")
-                        Log.i("CAM ${cameraId}", "ISO Boost Range: ${isoBoostRange.lower} - ${isoBoostRange.upper}")
-                        val isoRange = Range(min(isoRealRange.lower, isoBoostRange.lower), max(isoRealRange.upper, isoBoostRange.upper))
-                        //val isoRange = isoRealRange
+                        val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
 
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
 
