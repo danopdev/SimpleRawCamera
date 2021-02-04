@@ -50,28 +50,19 @@ class SensitiveTextView : AppCompatTextView {
 
         if (null == canvas) return
 
-        var charLeft = "o"
-        var charRight = "o"
+        var charLeft = "+"
+        var charRight = "+"
         var charRightIsRotated = false
         var charOffset = 0
 
-        when(mDirection) {
-            DIRECTION_NOT_DEFINED -> {
-                charLeft = "+"
-                charRight = "+"
-            }
-
-            DIRECTION_X_AXIS -> {
-                charLeft = "<"
-                charRight = ">"
-            }
-
-            DIRECTION_Y_AXIS -> {
-                charLeft = "^"
-                charRight = "^"
-                charRightIsRotated = true
-                charOffset = dpToPx(3)
-            }
+        if (DIRECTION_X_AXIS == mDirection || (DIRECTION_NONE == mDirection && null != mOnMoveXAxis && null == mOnMoveYAxis)) {
+            charLeft = "<"
+            charRight = ">"
+        } else if (DIRECTION_Y_AXIS == mDirection || (DIRECTION_NONE == mDirection && null == mOnMoveXAxis && null != mOnMoveYAxis)) {
+            charLeft = "^"
+            charRight = "^"
+            charRightIsRotated = true
+            charOffset = dpToPx(5)
         }
 
         val paint = this.paint
