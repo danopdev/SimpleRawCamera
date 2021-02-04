@@ -386,7 +386,7 @@ class FrameView : View {
         }
 
         if (mCounter > 0) {
-            val str = "(${mCounter})"
+            val str = mCounter.toString()
             var textRect = Rect()
             mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (PHOTO_ICON_X + (PHOTO_ICON_WIDTH - textRect.width()) / 2).toFloat()
@@ -399,7 +399,7 @@ class FrameView : View {
         }
 
         if (mSequencePhotoDelay > 0) {
-            val str = mSequencePhotoDelay.toString()
+            val str = "(${mSequencePhotoDelay})"
             var textRect = Rect()
             mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (width - PHOTO_ICON_X - textRect.width()).toFloat()

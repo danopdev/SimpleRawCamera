@@ -492,7 +492,7 @@ class CameraActivity : AppCompatActivity() {
 
         mSequenceTimer = timer(null, false, msDelay, msDelay) {
             mSequencePhotoDelayCounter--
-            mBinding.frameView.setSequencePhotoDelay(0)
+            mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
             if (mSequencePhotoDelayCounter <= 0) {
                 mSequenceTimer?.cancel()
                 mSequenceTimer = null
@@ -505,6 +505,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun sequenceTakeNextPhoto() {
         takePhotoWithCallback {
+            Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: ${mPhotoCounter}")
             if (mSequenceStarted) {
                 if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos) {
                     sequenceStop()
