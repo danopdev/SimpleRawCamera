@@ -504,6 +504,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun sequenceTakeNextPhoto() {
         takePhotoButton(true, PHOTO_BUTTON_SEQUENCE)
+        takePhotoButton(false, PHOTO_BUTTON_SEQUENCE)
     }
 
     private fun sequencePhotoTaken() {
