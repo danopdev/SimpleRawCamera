@@ -8,8 +8,6 @@ import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Log
 import android.util.Range
 import android.util.Rational
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  Contains camera characteristics (don't need to query again)
