@@ -108,8 +108,8 @@
                     android:id="@+id/layoutWithRatio"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    app:layout_constraintBottom_toTopOf="@id/layoutSequences"
                     app:layout_constraintDimensionRatio="4:3"
+                    app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
@@ -132,57 +132,57 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toTopOf="parent" />
 
+                    <LinearLayout
+                        android:id="@+id/layoutSequences"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="fill_horizontal"
+                        android:orientation="vertical"
+                        android:paddingStart="64dp"
+                        android:paddingEnd="64dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent">
+
+                        <com.dan.simplerawcamera.SensitiveTextView
+                            android:id="@+id/txtSequenceDelayStart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="3dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="Delay start: 1 second"
+                            android:textAlignment="center"
+                            android:textColor="@color/teal_200"
+                            android:textStyle="bold" />
+
+                        <com.dan.simplerawcamera.SensitiveTextView
+                            android:id="@+id/txtSequenceDelayBetween"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="3dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="Delay between: 1 second"
+                            android:textAlignment="center"
+                            android:textColor="@color/teal_200"
+                            android:textStyle="bold" />
+
+                        <com.dan.simplerawcamera.SensitiveTextView
+                            android:id="@+id/txtSequenceNumberOfPhotos"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="3dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="Number of photos: infinite"
+                            android:textAlignment="center"
+                            android:textColor="@color/teal_200"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
                 </androidx.constraintlayout.widget.ConstraintLayout>
-
-                <LinearLayout
-                    android:id="@+id/layoutSequences"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="64dp"
-                    android:layout_marginRight="64dp"
-                    android:gravity="fill_horizontal"
-                    android:orientation="vertical"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent">
-
-                    <com.dan.simplerawcamera.SensitiveTextView
-                        android:id="@+id/txtSequenceDelayStart"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="3dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp"
-                        android:text="Delay start: 1 second"
-                        android:textAlignment="center"
-                        android:textColor="@color/teal_200"
-                        android:textStyle="bold" />
-
-                    <com.dan.simplerawcamera.SensitiveTextView
-                        android:id="@+id/txtSequenceDelayBetween"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="3dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp"
-                        android:text="Delay between: 1 second"
-                        android:textAlignment="center"
-                        android:textColor="@color/teal_200"
-                        android:textStyle="bold" />
-
-                    <com.dan.simplerawcamera.SensitiveTextView
-                        android:id="@+id/txtSequenceNumberOfPhotos"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="3dp"
-                        android:paddingTop="3dp"
-                        android:paddingBottom="3dp"
-                        android:text="Number of photos: infinite"
-                        android:textAlignment="center"
-                        android:textColor="@color/teal_200"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
