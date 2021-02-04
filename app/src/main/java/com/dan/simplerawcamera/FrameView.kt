@@ -399,7 +399,7 @@ class FrameView : View {
         }
 
         if (mSequencePhotoDelay > 0) {
-            val str = "(${mSequencePhotoDelay})"
+            val str = "Wait: ${mSequencePhotoDelay} s"
             var textRect = Rect()
             mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (width - PHOTO_ICON_X - textRect.width()).toFloat()
