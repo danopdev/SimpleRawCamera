@@ -155,7 +155,6 @@ class CameraActivity : AppCompatActivity() {
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
     private var mPhotoInProgress = false
-    private var mPhotoTakenCallback: (()->Unit)? = null
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -504,14 +503,16 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun sequenceTakeNextPhoto() {
-        takePhotoWithCallback {
-            Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: ${mPhotoCounter}")
-            if (mSequenceStarted) {
-                if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos) {
-                    sequenceStop()
-                } else {
-                    sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
-                }
+        takePhotoButton(true, PHOTO_BUTTON_SEQUENCE)
+    }
+
+    private fun sequencePhotoTaken() {
+        Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: ${mPhotoCounter}")
+        if (mSequenceStarted) {
+            if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos) {
+                sequenceStop()
+            } else {
+                sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
             }
         }
     }
@@ -1165,11 +1166,6 @@ class CameraActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "JPEG: Save ends")
     }
 
-    fun takePhotoWithCallback(callback: () -> Unit) {
-        mPhotoTakenCallback = callback
-        takePhotoButton(true, PHOTO_BUTTON_SEQUENCE)
-    }
-
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
@@ -1201,14 +1197,12 @@ class CameraActivity : AppCompatActivity() {
 
                 mCurrentPhotoCaptureResult = null
 
-                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask) && (null == mPhotoTakenCallback)
+                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask) && !mSequenceStarted
 
-                val photoTakenCallback = mPhotoTakenCallback
-                mPhotoTakenCallback = null
                 mPhotoButtonMask = mPhotoButtonMask and PHOTO_BUTTON_SEQUENCE.inv()
 
-                if (realNewFile && null != photoTakenCallback) {
-                    photoTakenCallback.invoke()
+                if (realNewFile && mSequenceStarted) {
+                    sequencePhotoTaken()
                 }
             }
 
