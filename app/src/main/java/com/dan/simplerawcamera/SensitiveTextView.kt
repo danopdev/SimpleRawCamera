@@ -23,7 +23,7 @@ class SensitiveTextView : AppCompatTextView {
 
         val PADDING = dpToPx(1).toFloat()
 
-        val BG_COLOR_NORMAL = Color.argb(255, 0, 0, 0 )
+        val BG_COLOR_NORMAL = Color.argb(0x80, 0, 0, 0 )
         val BG_COLOR_PRESSED = Color.rgb(48, 48, 48 )
 
         val STEP_X = dpToPx(30)
@@ -41,9 +41,13 @@ class SensitiveTextView : AppCompatTextView {
     private var mOnMoveXAxis: ((Int)->Unit)? = null
     private var mOnMoveYAxis: ((Int)->Unit)? = null
 
-    constructor(context: Context) : super(context, null) {}
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) {}
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {}
+    constructor(context: Context) : super(context, null) { init() }
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
+    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) { init() }
+
+    private fun init() {
+        setBackgroundColor(BG_COLOR_NORMAL)
+    }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
