@@ -143,6 +143,14 @@
                     android:text="Continuous mode:" />
 
                 <Switch
+                    android:id="@+id/switchLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="Set photos location:" />
+
+                <Switch
                     android:id="@+id/switchShowGrid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -174,6 +182,14 @@
                         android:entries="@array/framing_types"
                         android:spinnerMode="dropdown" />
                 </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switchHapticFeedback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:text="Haptic feedback:" />
 
                 <Switch
                     android:id="@+id/switchShowDebugInfo"

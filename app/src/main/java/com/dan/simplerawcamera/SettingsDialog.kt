@@ -40,6 +40,8 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
         binding.switchShowGrid.isChecked = cameraActivity.settings.showGrid
         binding.spinnerShowFraming.setSelection( cameraActivity.settings.frameType )
         binding.switchShowDebugInfo.isChecked = cameraActivity.settings.showDebugInfo
+        binding.switchLocation.isChecked = cameraActivity.settings.useLocation
+        binding.switchHapticFeedback.isChecked = cameraActivity.settings.enableHapticFeedback
 
         binding.btnSelectFolder.setOnClickListener {
             cameraActivity.startSelectFolder()
@@ -54,6 +56,8 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
             cameraActivity.settings.showGrid = binding.switchShowGrid.isChecked
             cameraActivity.settings.frameType = binding.spinnerShowFraming.selectedItemPosition
             cameraActivity.settings.showDebugInfo = binding.switchShowDebugInfo.isChecked
+            cameraActivity.settings.useLocation = binding.switchLocation.isChecked
+            cameraActivity.settings.enableHapticFeedback = binding.switchHapticFeedback.isChecked
 
             cameraActivity.settings.saveProperties()
 
