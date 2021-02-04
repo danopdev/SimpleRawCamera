@@ -113,7 +113,7 @@ class FrameView : View {
 
         with(mPaintText) {
             style = Paint.Style.FILL_AND_STROKE
-            textSize = dpToPx(32).toFloat()
+            textSize = dpToPx(24).toFloat()
         }
 
         with(mPaintDebugText) {
