@@ -1407,7 +1407,11 @@ class CameraActivity : AppCompatActivity() {
                     }
                 }
 
-                mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                if (settings.useLocation) {
+                    mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                } else {
+                    mLocation = null
+                }
                 captureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION, mLocation)
 
                 val photoOrientation = getPhotoOrientation()
