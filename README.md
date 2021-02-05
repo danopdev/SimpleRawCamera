@@ -60,9 +60,6 @@ Currently always AUTO.
 * Focus:
   * Add face detection
 
-* Settings:
-  * Add "location" option
-
 * Flash (not supported yet)
   * OFF
   * ON
