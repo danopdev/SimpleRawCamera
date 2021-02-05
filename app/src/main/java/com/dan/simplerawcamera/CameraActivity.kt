@@ -441,6 +441,12 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun giveHapticFeedback(view: View) {
+        if (settings.enableHapticFeedback) {
+            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING)
+        }
+    }
+
     /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (!settings.expIsoIsManual && !settings.expSpeedIsManual) {
@@ -702,6 +708,7 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtSequenceDelayStart.setOnMoveXAxisListener { steps ->
             val newValue = settings.getArrayValue( settings.sequenceDelayStart, steps, Settings.SEQUENCE_DELAY_START_OPTIONS )
             if (newValue != settings.sequenceDelayStart) {
+                giveHapticFeedback(mBinding.txtSequenceDelayStart)
                 settings.sequenceDelayStart = newValue
                 updateSequenceDelayStart()
             }
@@ -711,6 +718,7 @@ class CameraActivity : AppCompatActivity() {
             val newValue = settings.getArrayValue( settings.sequenceDelayBetween, steps, Settings.SEQUENCE_DELAY_BETWEEN_OPTIONS )
             if (newValue != settings.sequenceDelayBetween) {
                 settings.sequenceDelayBetween = newValue
+                giveHapticFeedback(mBinding.txtSequenceDelayBetween)
                 updateSequenceDelayBetween()
             }
         }
@@ -719,6 +727,7 @@ class CameraActivity : AppCompatActivity() {
             val newValue = settings.getArrayValue( settings.sequenceNumberOfPhotos, steps, Settings.SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS )
             if (newValue != settings.sequenceNumberOfPhotos) {
                 settings.sequenceNumberOfPhotos = newValue
+                giveHapticFeedback(mBinding.txtSequenceNumberOfPhotos)
                 updateSequenceNumberOfPhotos()
             }
         }
@@ -729,6 +738,7 @@ class CameraActivity : AppCompatActivity() {
             val newCameraIndex =
                 if (steps < 0) (settings.cameraIndex - 1 + mCameraList.size) % mCameraList.size
                 else (settings.cameraIndex + 1) % mCameraList.size
+            giveHapticFeedback(mBinding.txtCamera)
             selectCamera(newCameraIndex, true)
         }
 
@@ -736,6 +746,7 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.txtIso.setOnMoveYAxisListener {
             settings.expIsoIsManual = !settings.expIsoIsManual
+            giveHapticFeedback(mBinding.txtIso)
             updateSliders()
         }
 
@@ -743,6 +754,7 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.txtSpeed.setOnMoveYAxisListener {
             settings.expSpeedIsManual = !settings.expSpeedIsManual
+            giveHapticFeedback(mBinding.txtSpeed)
             updateSliders()
         }
 
@@ -762,6 +774,7 @@ class CameraActivity : AppCompatActivity() {
                 if (newFocusType != settings.focusType) {
                     settings.focusType = newFocusType
                     mFocusClick = false
+                    giveHapticFeedback(mBinding.txtFocus)
                     showFocus()
                     setupCapturePreviewRequest()
                 }
@@ -797,6 +810,7 @@ class CameraActivity : AppCompatActivity() {
                     mFocusClickPosition.x = (100 * motionEvent.x / view.width).toInt()
                     mFocusClickPosition.y = (100 * motionEvent.y / view.height).toInt()
                     mFocusClick = true
+                    giveHapticFeedback(mBinding.surfaceView)
                     setupCapturePreviewRequest()
                 }
             }
@@ -831,6 +845,7 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.switchSequences.setOnCheckedChangeListener { _, isChecked ->
             settings.showSequence = isChecked
+            giveHapticFeedback(mBinding.switchSequences)
             sequenceStop()
             updateSliders()
         }
@@ -888,6 +903,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (newValue != settings.expIsoValue) {
             settings.expIsoValue = newValue
+            giveHapticFeedback(mBinding.txtIso)
             showIso(newValue)
             setupCapturePreviewRequest()
         }
@@ -912,6 +928,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (newValue != settings.expCompensationValue) {
             settings.expCompensationValue = newValue
+            giveHapticFeedback(mBinding.txtExpComponsation)
             showExpComponsation(newValue)
             setupCapturePreviewRequest()
         }
@@ -938,6 +955,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (newSpeed != settings.expSpeedValue) {
             settings.expSpeedValue = newSpeed
+            giveHapticFeedback(mBinding.txtExpComponsation)
             showSpeed(newSpeed)
             setupCapturePreviewRequest()
         }

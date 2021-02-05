@@ -66,7 +66,7 @@ class Settings( private val activity: Activity) {
     var showSequence: Boolean = false
     var showDebugInfo: Boolean = false
     var flashMode: Int = FLASH_MODE_OFF
-    var enableHapticFeedback = false
+    var enableHapticFeedback = true
     var useLocation = true
 
     init {
