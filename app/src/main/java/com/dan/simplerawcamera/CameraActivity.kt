@@ -675,6 +675,13 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun getFlashModeValue(previewMode: Boolean): Int {
+        if (!mCameraInfo.hasFlash || Settings.FLASH_MODE_OFF == settings.flashMode) return CaptureRequest.FLASH_MODE_OFF
+        if (Settings.FLASH_MODE_TORCH == settings.flashMode) return CaptureRequest.FLASH_MODE_TORCH
+        if (previewMode) return CaptureRequest.FLASH_MODE_OFF
+        return CaptureRequest.FLASH_MODE_SINGLE
+    }
+
     fun startSelectFolder() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
         intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
@@ -733,6 +740,20 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
+
+        mBinding.txtFlash.setOnMoveYAxisListener { steps ->
+            if (mCameraInfo.hasFlash) {
+                var newValue = settings.flashMode + steps
+                while (newValue < 0) newValue += Settings.FLASH_MODES.size
+                newValue %= Settings.FLASH_MODES.size
+
+                if (newValue != settings.flashMode) {
+                    settings.flashMode = newValue
+                    updateFlashMode()
+                    setupCapturePreviewRequest()
+                }
+            }
+        }
 
         mBinding.txtCamera.setOnMoveYAxisListener { steps ->
             val newCameraIndex =
@@ -1049,6 +1070,17 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtSequenceNumberOfPhotos.text = "Number of photos: ${getNumberOfPhotosText(settings.sequenceNumberOfPhotos)}"
     }
 
+    private fun updateFlashMode() {
+        if (mCameraInfo.hasFlash) {
+            mBinding.txtFlash.text = Settings.FLASH_MODES[settings.flashMode]
+            mBinding.txtFlash.visibility = View.VISIBLE
+            mBinding.txtFlashLabel.visibility = View.VISIBLE
+        } else {
+            mBinding.txtFlash.visibility = View.INVISIBLE
+            mBinding.txtFlashLabel.visibility = View.INVISIBLE
+        }
+    }
+
     private fun updateSliders() {
         mBinding.txtExpComponsation.visibility = if (!settings.expIsoIsManual || !settings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
 
@@ -1062,6 +1094,7 @@ class CameraActivity : AppCompatActivity() {
         updateSequenceDelayStart()
         updateSequenceDelayBetween()
         updateSequenceNumberOfPhotos()
+        updateFlashMode()
 
         if (settings.showSequence) {
             mBinding.layoutSequences.visibility = View.VISIBLE
@@ -1400,6 +1433,7 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
+                captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(false))
 
                 if (settings.expIsoIsManual || settings.expSpeedIsManual) {
                     val ae = getCaptureEA()
@@ -1474,6 +1508,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (photoMode) return
 
+        captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(true))
         captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
 
         if (mCameraInfo.focusAllowManual) {

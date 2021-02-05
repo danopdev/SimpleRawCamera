@@ -29,8 +29,10 @@ Supported modes:
 
 ## Flash
 
-Not supported yet.
-Currently always OFF.
+* Flash (not supported yet)
+  * OFF
+  * ON (only on the first photo for continuous photo)
+  * Continuous flash (torch)
 
 ## White balance
 
@@ -59,10 +61,5 @@ Currently always AUTO.
 
 * Focus:
   * Add face detection
-
-* Flash (not supported yet)
-  * OFF
-  * ON
-  * Continuous flash (torch)
 
 * White balance (not supported yet)
