@@ -72,7 +72,8 @@
                 android:id="@+id/imageView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:srcCompat="@android:drawable/ic_menu_gallery" />
+                android:tint="@color/teal_200"
+                app:srcCompat="@android:drawable/ic_lock_idle_alarm" />
 
             <Switch
                 android:id="@+id/switchSequences"
