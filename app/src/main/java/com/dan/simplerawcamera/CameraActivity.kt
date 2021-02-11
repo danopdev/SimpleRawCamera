@@ -113,13 +113,13 @@ class CameraActivity : AppCompatActivity() {
         /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
         fun calculateExpDeviation(previewIso: Int, previewSpeed: Long, expectedIso: Int, expectedSpeed: Long): Float {
 
-            var deltaExpIso: Float =
+            val deltaExpIso: Float =
                 if (previewIso >= expectedIso)
                     log2(previewIso.toFloat() / expectedIso)
                 else
                     -log2(expectedIso.toFloat() / previewIso)
 
-            var deltaExpSpeed: Float =
+            val deltaExpSpeed: Float =
                 if (previewSpeed >= expectedSpeed)
                     log2(previewSpeed.toFloat() / expectedSpeed)
                 else
@@ -367,14 +367,14 @@ class CameraActivity : AppCompatActivity() {
 
             when(mFocusState) {
                 FOCUS_STATE_CLICK -> {
-                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    val focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
                     if (CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN == focusState) {
                         mFocusState = FOCUS_STATE_SEARCHING
                     }
                 }
 
                 FOCUS_STATE_SEARCHING -> {
-                    var focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
+                    val focusState = result.get(CaptureResult.CONTROL_AF_STATE) as Int
                     if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == focusState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == focusState) {
                         mFocusState = FOCUS_STATE_LOCKED
                         runOnUiThread {
@@ -385,6 +385,7 @@ class CameraActivity : AppCompatActivity() {
             }
 
             val captureEA = getCaptureEA()
+            mBinding.txtExpDelta.visibility = if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
             if (settings.expIsoIsManual && settings.expSpeedIsManual) return
@@ -862,7 +863,7 @@ class CameraActivity : AppCompatActivity() {
 
         mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
             override fun onOrientationChanged(orientation: Int) {
-                var screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
+                val screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
                 if (screenOrientation != mScreenOrientation) {
                     mScreenOrientation = screenOrientation
                     Log.i("EXIF", "Orientation: ${screenOrientation}")
@@ -961,7 +962,7 @@ class CameraActivity : AppCompatActivity() {
     private fun trackSpeed(delta: Int) {
         if (!settings.expSpeedIsManual) return
 
-        val newSpeed = mCameraInfo.getSpeed(settings.expSpeedValue, delta);
+        val newSpeed = mCameraInfo.getSpeed(settings.expSpeedValue, delta)
 
         if (newSpeed != settings.expSpeedValue) {
             settings.expSpeedValue = newSpeed
