@@ -146,7 +146,7 @@ class CameraInfo(
 
             //insert in front speeds less then 1s by Settings.EXP_STEPS_PER_1EV
             var div = 1L
-            var divNext = 0L
+            var divNext: Long
             while(true) {
                 divNext = div * 2L
 
