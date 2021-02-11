@@ -65,11 +65,6 @@ class CameraActivity : AppCompatActivity() {
 
         const val FOCUS_REGION_SIZE_PERCENT = 5
 
-        const val PHOTO_BUTTON_SCREEN = 1
-        const val PHOTO_BUTTON_VOLUMNE_UP = 2
-        const val PHOTO_BUTTON_VOLUMNE_DOWN = 4
-        const val PHOTO_BUTTON_SEQUENCE = 8
-
         const val PHOTO_TAKE_COMPLETED = 1
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
@@ -149,7 +144,7 @@ class CameraActivity : AppCompatActivity() {
     private var mCaptureModeIsPhoto = false
     private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
 
-    private var mPhotoButtonMask = 0
+    private var mPhotoButtonPressed = false
     private var mPhotoTakeMask = 0
     private var mPhotoTimestamp = 0L
     private var mPhotoFileNameBase = ""
@@ -489,7 +484,6 @@ class CameraActivity : AppCompatActivity() {
         )
     }
 
-
     private fun sequenceTakeNextPhotoAfterDelay(delay: Int) {
         val msDelay = if (delay <= 0) 100L else 1000L
         mSequencePhotoDelayCounter = delay
@@ -502,15 +496,12 @@ class CameraActivity : AppCompatActivity() {
                 mSequenceTimer?.cancel()
                 mSequenceTimer = null
                 runOnUiThread {
-                    if (mSequenceStarted) sequenceTakeNextPhoto()
+                    if (mSequenceStarted) {
+                        takePhoto(false, true)
+                    }
                 }
             }
         }
-    }
-
-    private fun sequenceTakeNextPhoto() {
-        takePhotoButton(true, PHOTO_BUTTON_SEQUENCE)
-        takePhotoButton(false, PHOTO_BUTTON_SEQUENCE)
     }
 
     private fun sequencePhotoTaken() {
@@ -540,6 +531,14 @@ class CameraActivity : AppCompatActivity() {
         mBinding.frameView.showCounter(mPhotoCounter)
         updateSliders()
         sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayStart)
+    }
+
+    private fun sequenceToggle() {
+        if (mSequenceStarted) {
+            sequenceStop()
+        } else {
+            sequenceStart()
+        }
     }
 
     /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
@@ -840,19 +839,9 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mBinding.btnPhoto.setOnTouchListener { _, motionEvent ->
-            if (settings.showSequence) {
-                if (MotionEvent.ACTION_UP == motionEvent.actionMasked) {
-                    if (mSequenceStarted) {
-                        sequenceStop()
-                    } else {
-                        sequenceStart()
-                    }
-                }
-            } else {
-                when (motionEvent.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> takePhotoButton(true, PHOTO_BUTTON_SCREEN)
-                    MotionEvent.ACTION_UP -> takePhotoButton(false, PHOTO_BUTTON_SCREEN)
-                }
+            when (motionEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> takePhotoButton(true)
+                MotionEvent.ACTION_UP -> takePhotoButton(false)
             }
 
             false
@@ -887,12 +876,12 @@ class CameraActivity : AppCompatActivity() {
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         when(keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                takePhotoButton(false, PHOTO_BUTTON_VOLUMNE_UP)
+                takePhotoButton(false)
                 return true
             }
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                takePhotoButton(false, PHOTO_BUTTON_VOLUMNE_DOWN)
+                takePhotoButton(false)
                 return true
             }
         }
@@ -903,12 +892,12 @@ class CameraActivity : AppCompatActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when(keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
-                takePhotoButton(true, PHOTO_BUTTON_VOLUMNE_UP)
+                takePhotoButton(true)
                 return true
             }
 
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                takePhotoButton(true, PHOTO_BUTTON_VOLUMNE_DOWN)
+                takePhotoButton(true)
                 return true
             }
         }
@@ -1116,33 +1105,6 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun takePhotoButton(pressed: Boolean, source: Int) {
-        val mask =
-            if (pressed) {
-                mPhotoButtonMask or source
-            } else {
-                mPhotoButtonMask and source.inv()
-            }
-
-        updateTakePhotoButtonMask(mask)
-    }
-
-    /** Update take photo button pressed based on difference sources: screen button, volume up or volume down */
-    private fun updateTakePhotoButtonMask(mask: Int) {
-        if (mask != mPhotoButtonMask) {
-            val oldMask = mPhotoButtonMask
-            mPhotoButtonMask = mask
-            Log.i("TAKE_PHOTO", "Mask: " + mask.toString())
-
-            if (0 != mask && 0 == oldMask) {
-                if (!mSequenceStarted) mPhotoCounter = 0
-                mPhotoTakeMask = 0
-                setupCapturePhotoRequest()
-                takePhoto(false, true)
-            }
-        }
-    }
-
     private fun saveAsyncNextItem() {
         mBinding.frameView.updateDebugMemInfo()
 
@@ -1218,10 +1180,33 @@ class CameraActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "JPEG: Save ends")
     }
 
+    /** Update take photo button pressed */
+    private fun takePhotoButton(pressed: Boolean) {
+        if (mPhotoButtonPressed == pressed) return
+
+        mPhotoButtonPressed = pressed
+        Log.i("TAKE_PHOTO", "Button pressed: ${mPhotoButtonPressed}")
+
+        if (pressed) {
+            if (settings.showSequence) {
+                sequenceToggle()
+            } else {
+                takePhoto(false, true)
+            }
+        }
+    }
+
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
             mBinding.frameView.updateDebugMemInfo()
+
+            if (start) {
+                if (!mSequenceStarted) {
+                    mPhotoCounter = 0
+                }
+                setupCapturePhotoRequest()
+            }
 
             var takeNewPhoto = start
 
@@ -1249,9 +1234,7 @@ class CameraActivity : AppCompatActivity() {
 
                 mCurrentPhotoCaptureResult = null
 
-                takeNewPhoto = settings.continuousMode && (0 != mPhotoButtonMask) && !mSequenceStarted
-
-                mPhotoButtonMask = mPhotoButtonMask and PHOTO_BUTTON_SEQUENCE.inv()
+                takeNewPhoto = settings.continuousMode && mPhotoButtonPressed && !mSequenceStarted
 
                 if (realNewFile && mSequenceStarted) {
                     sequencePhotoTaken()
