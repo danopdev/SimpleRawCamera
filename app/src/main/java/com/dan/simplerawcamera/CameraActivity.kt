@@ -972,10 +972,10 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun getSpeedStr(speed: Long): String {
-        if (speed >= 300000000L) { // 1 second
-            val speedSecondsWith1Decimal = (speed / 100000000).toInt()
-            val speedSeconds = speedSecondsWith1Decimal / 10
-            val speedDecimals = speedSecondsWith1Decimal % 10
+        if (speed >= 300000000L) { // 300ms
+            val speedSecondsWith1Decimal = (speed / 10000000).toInt()
+            val speedSeconds = speedSecondsWith1Decimal / 100
+            val speedDecimals = ((speedSecondsWith1Decimal + 5) / 10) % 10
 
             if (0 == speedDecimals)
                 return "${speedSeconds}\""
@@ -984,7 +984,7 @@ class CameraActivity : AppCompatActivity() {
 
         val denominator = (1000000000L / speed).toInt()
         val roundedDenominator =
-            if (denominator >= 1000)
+            if (denominator >= 1900)
                 (denominator / 1000) * 1000
             else if (denominator >= 500)
                 (denominator / 100) * 100

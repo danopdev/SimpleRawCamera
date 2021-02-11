@@ -126,8 +126,7 @@ class CameraInfo(
 
         fun getSpeedStepsArray( speedRange: Range<Long>): ArrayList<Long> {
             val speedList = arrayListOf(1000000000L) //start with 1 second
-            var speed = 1000000000L;
-            var speed1EVLess: Long;
+            var speed = 1000000000L
 
             /*
              * Speeds bigger then 1s:
@@ -146,19 +145,20 @@ class CameraInfo(
             }
 
             //insert in front speeds less then 1s by Settings.EXP_STEPS_PER_1EV
-            speed = 1000000000L;
-
+            var div = 1L
+            var divNext = 0L
             while(true) {
-                speed1EVLess = speed / 2
+                divNext = div * 2L
 
-                for (i in Settings.EXP_STEPS_PER_1EV-1 downTo 0) {
-                    speed = speed1EVLess + speed1EVLess * i / Settings.EXP_STEPS_PER_1EV
-                    if (speed < speedRange.lower) break
-                    speedList.add(0, speed)
-                }
-
-                speed = speed1EVLess
+                speed = (1000000000.0 / ((divNext + div) / 2.0)).toLong()
                 if (speed < speedRange.lower) break
+                speedList.add(0, speed)
+
+                speed = 1000000000L / divNext
+                if (speed < speedRange.lower) break
+                speedList.add(0, speed)
+
+                div = divNext
             }
 
             if (speedList[0] > speedRange.lower) {
