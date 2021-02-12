@@ -65,6 +65,11 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
             dismiss()
         }
 
+        binding.txtVersion.text =
+            binding.txtVersion.text.toString()
+                .replace("{app}", getString(R.string.app_name))
+                .replace("{version}", BuildConfig.VERSION_NAME)
+
         return binding.root
     }
 }
