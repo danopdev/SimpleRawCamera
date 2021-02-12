@@ -17,3 +17,4 @@ local.properties
 /.idea/markdown-navigator-enh.xml
 /app/release
 *.log
+/app/keystore.config
