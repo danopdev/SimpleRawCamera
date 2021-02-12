@@ -12,7 +12,7 @@ import kotlin.reflect.full.declaredMemberProperties
 class Settings( private val activity: Activity) {
 
     companion object {
-        const val EXP_STEPS_PER_1EV = 2;
+        const val EXP_STEPS_PER_1EV = 2
 
         const val SPEED_MANUAL_MIN_PREVIEW = 15625000L // 1/64 sec
         const val SPEED_MAX_MANUAL = 8000000000L // 8 sec
@@ -61,7 +61,7 @@ class Settings( private val activity: Activity) {
     var frameType: Int = FRAME_TYPE_NONE
     var continuousMode: Boolean = true
     var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
-    var noiseReduction: Int = NOISE_REDUCTION_DISABLED
+    var noiseReduction: Int = NOISE_REDUCTION_JPEG_ONLY
     var sequenceDelayStart: Int = 2
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
