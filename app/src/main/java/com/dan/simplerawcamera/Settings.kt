@@ -18,6 +18,15 @@ class Settings( private val activity: Activity) {
         const val SPEED_MAX_MANUAL = 8000000000L // 8 sec
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
 
+        const val ISO_MODE_AUTO = 0
+        const val ISO_MODE_MANUAL = 1
+        val ISO_MODE_TO_STRING = arrayOf("A", "M")
+
+        const val SPEED_MODE_AUTO = 0
+        const val SPEED_MODE_MANUAL = 1
+        const val SPEED_MODE_PROTECT_HIGHLIGHTS = 2
+        val SPEED_MODE_TO_STRING = arrayOf("A", "M", "H")
+
         const val FOCUS_TYPE_CONTINOUS = 0
         const val FOCUS_TYPE_HYPERFOCAL = 1
         const val FOCUS_TYPE_MANUAL = 2
@@ -50,10 +59,10 @@ class Settings( private val activity: Activity) {
 
     var saveUri: String = ""
     var cameraIndex: Int = 0
-    var expIsoIsManual: Boolean = false
-    var expIsoValue: Int = 100
-    var expSpeedIsManual: Boolean = false
-    var expSpeedValue: Long = 7812500L // 1/125 seconds
+    var isoMode: Int = ISO_MODE_AUTO
+    var isoValue: Int = 100
+    var speedMode: Int = SPEED_MODE_AUTO
+    var speedValue: Long = 7812500L // 1/125 seconds
     var expCompensationValue: Int = 0
     var focusType: Int = FOCUS_TYPE_CONTINOUS
     var focusManualProgress: Int = 0

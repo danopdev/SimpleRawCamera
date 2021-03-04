@@ -388,10 +388,10 @@ class CameraActivity : AppCompatActivity() {
             mBinding.txtExpDelta.visibility = if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
-            if (settings.expIsoIsManual && settings.expSpeedIsManual) return
+            if (Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) return
 
-            if (!settings.expIsoIsManual) showIso(captureEA.first)
-            if (!settings.expSpeedIsManual) showSpeed(captureEA.second)
+            if (Settings.ISO_MODE_AUTO == settings.isoMode) showIso(captureEA.first)
+            if (Settings.SPEED_MODE_AUTO == settings.speedMode) showSpeed(captureEA.second)
         }
     }
 
@@ -445,33 +445,33 @@ class CameraActivity : AppCompatActivity() {
 
     /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
-        if (!settings.expIsoIsManual && !settings.expSpeedIsManual) {
+        if (Settings.ISO_MODE_AUTO == settings.isoMode && Settings.SPEED_MODE_AUTO == settings.speedMode) {
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
         }
 
-        if (settings.expIsoIsManual && settings.expSpeedIsManual) {
+        if (Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) {
             return Triple(
-                settings.expIsoValue,
-                settings.expSpeedValue,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, settings.expSpeedValue)
+                settings.isoValue,
+                settings.speedValue,
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.isoValue, settings.speedValue)
             )
         }
 
-        if (settings.expIsoIsManual) {
-            val isoRatio = mIsoMeasuredValue.toFloat() / settings.expIsoValue
+        if (Settings.ISO_MODE_AUTO != settings.isoMode) {
+            val isoRatio = mIsoMeasuredValue.toFloat() / settings.isoValue
 
             var suggestedSpeed = (mSpeedMeasuredValue * isoRatio).toLong()
             if (suggestedSpeed < mCameraInfo.speedRange.lower) suggestedSpeed = mCameraInfo.speedRange.lower
             else if (suggestedSpeed > mCameraInfo.speedRange.upper) suggestedSpeed = mCameraInfo.speedRange.upper
 
             return Triple(
-                settings.expIsoValue,
+                settings.isoValue,
                 suggestedSpeed,
-                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.expIsoValue, suggestedSpeed)
+                calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, settings.isoValue, suggestedSpeed)
             )
         }
 
-        val speedValue = settings.expSpeedValue
+        val speedValue = settings.speedValue
         val speedRatio = mSpeedMeasuredValue / speedValue
 
         var suggestedIso = (mIsoMeasuredValue * speedRatio).toInt()
@@ -766,7 +766,7 @@ class CameraActivity : AppCompatActivity() {
         mCameraInfo = mCameraList[0]
 
         mBinding.txtIso.setOnMoveYAxisListener {
-            settings.expIsoIsManual = !settings.expIsoIsManual
+            settings.isoMode = 1 - settings.isoMode
             giveHapticFeedback(mBinding.txtIso)
             updateSliders()
         }
@@ -774,7 +774,14 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtIso.setOnMoveXAxisListener { trackIso(it) }
 
         mBinding.txtSpeed.setOnMoveYAxisListener {
-            settings.expSpeedIsManual = !settings.expSpeedIsManual
+            if (it < 0) {
+                settings.speedMode--
+                if (settings.speedMode < Settings.SPEED_MODE_AUTO) settings.speedMode = Settings.SPEED_MODE_PROTECT_HIGHLIGHTS
+            } else {
+                settings.speedMode++
+                if (settings.speedMode > Settings.SPEED_MODE_PROTECT_HIGHLIGHTS) settings.speedMode = Settings.SPEED_MODE_AUTO
+            }
+
             giveHapticFeedback(mBinding.txtSpeed)
             updateSliders()
         }
@@ -908,12 +915,12 @@ class CameraActivity : AppCompatActivity() {
 
     /** ISO slider/button is changed */
     private fun trackIso(delta: Int) {
-        if (!settings.expIsoIsManual) return
+        if (Settings.ISO_MODE_MANUAL != settings.isoMode) return
 
-        val newValue = mCameraInfo.getIso(settings.expIsoValue, delta)
+        val newValue = mCameraInfo.getIso(settings.isoValue, delta)
 
-        if (newValue != settings.expIsoValue) {
-            settings.expIsoValue = newValue
+        if (newValue != settings.isoValue) {
+            settings.isoValue = newValue
             giveHapticFeedback(mBinding.txtIso)
             showIso(newValue)
             setupCapturePreviewRequest()
@@ -921,13 +928,12 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showIso(value: Int) {
-        val extra = if (settings.expIsoIsManual) "M" else "A"
-        mBinding.txtIso.text = "${value} ISO (${extra})"
+        mBinding.txtIso.text = "${value} ISO (${Settings.ISO_MODE_TO_STRING[settings.isoMode]})"
     }
 
     /** Exposure compensation slider/button is changed */
     private fun trackExpCompensation(delta: Int) {
-        if (settings.expIsoIsManual && settings.expSpeedIsManual) return
+        if (Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) return
 
         var newValue = settings.expCompensationValue + delta
 
@@ -960,12 +966,12 @@ class CameraActivity : AppCompatActivity() {
 
     /** Speed slider/button is changed */
     private fun trackSpeed(delta: Int) {
-        if (!settings.expSpeedIsManual) return
+        if (Settings.SPEED_MODE_MANUAL != settings.speedMode) return
 
-        val newSpeed = mCameraInfo.getSpeed(settings.expSpeedValue, delta)
+        val newSpeed = mCameraInfo.getSpeed(settings.speedValue, delta)
 
-        if (newSpeed != settings.expSpeedValue) {
-            settings.expSpeedValue = newSpeed
+        if (newSpeed != settings.speedValue) {
+            settings.speedValue = newSpeed
             giveHapticFeedback(mBinding.txtExpComponsation)
             showSpeed(newSpeed)
             setupCapturePreviewRequest()
@@ -1002,8 +1008,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showSpeed(speed: Long) {
-        val extra = if (settings.expSpeedIsManual) " (M)" else " (A)"
-        mBinding.txtSpeed.text = getSpeedStr(speed) + extra
+        mBinding.txtSpeed.text = "${getSpeedStr(speed)} (${Settings.SPEED_MODE_TO_STRING[settings.speedMode]})"
     }
 
     private fun showFocus() {
@@ -1072,10 +1077,10 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun updateSliders() {
-        mBinding.txtExpComponsation.visibility = if (!settings.expIsoIsManual || !settings.expSpeedIsManual) View.VISIBLE else View.INVISIBLE
+        mBinding.txtExpComponsation.visibility = if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) View.VISIBLE else View.INVISIBLE
 
-        if (settings.expIsoIsManual) showIso(settings.expIsoValue)
-        if (settings.expSpeedIsManual) showSpeed(settings.expSpeedValue)
+        if (Settings.ISO_MODE_MANUAL == settings.isoMode) showIso(settings.isoValue)
+        if (Settings.SPEED_MODE_AUTO != settings.speedMode) showSpeed(settings.speedValue)
 
         showFocus()
         showExpComponsation(settings.expCompensationValue)
@@ -1419,7 +1424,7 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
                 captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(false))
 
-                if (settings.expIsoIsManual || settings.expSpeedIsManual) {
+                if (Settings.ISO_MODE_AUTO != settings.isoMode || Settings.SPEED_MODE_AUTO != settings.speedMode) {
                     val ae = getCaptureEA()
                     mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - ISO: ${ae.first}, Speed: ${getSpeedStr(ae.second)}")
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
@@ -1555,17 +1560,17 @@ class CameraActivity : AppCompatActivity() {
         }
 
         //WORKAROUND: My camera block with click to focus in full manual mode
-        if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && settings.expIsoIsManual && settings.expSpeedIsManual) {
+        if ((FOCUS_STATE_CLICK == mFocusState || FOCUS_STATE_SEARCHING == mFocusState) && Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) {
             mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto (FOCUS)")
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 0)
-        } else if (!settings.expIsoIsManual || !settings.expSpeedIsManual) {
+        } else if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) {
             mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto")
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
         } else {
-            mSpeedManualPreviewValue = settings.expSpeedValue
-            mIsoManualPreviewValue = settings.expIsoValue
+            mSpeedManualPreviewValue = settings.speedValue
+            mIsoManualPreviewValue = settings.isoValue
 
             if (mSpeedManualPreviewValue > Settings.SPEED_MANUAL_MIN_PREVIEW) {
                 while (mSpeedManualPreviewValue > Settings.SPEED_MANUAL_MIN_PREVIEW) {
