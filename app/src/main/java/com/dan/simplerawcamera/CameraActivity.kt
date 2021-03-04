@@ -231,32 +231,39 @@ class CameraActivity : AppCompatActivity() {
                     maxHeight = max(maxHeight, value)
                 maxHeight++
 
+                val bmpWidth = HISTOGRAM_BITMAP_WIDTH + 2
+                val bmpHeight = HISTOGRAM_BITMAP_HEIGHT + 2
                 val color = Color.rgb(192, 192, 192)
-                val colors = IntArray(HISTOGRAM_BITMAP_WIDTH * HISTOGRAM_BITMAP_HEIGHT)
+                val colors = IntArray(bmpWidth * bmpHeight)
 
                 for (x in values.indices) {
                     val value = values[x]
                     val fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
 
                     var y = 0
-                    while (y < fill) {
-                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = 0
+                    while (y <= fill) {
+                        colors[x + 1 + (y + 1) * bmpWidth] = 0
                         y++
                     }
                     while (y < HISTOGRAM_BITMAP_HEIGHT) {
-                        colors[x + y * HISTOGRAM_BITMAP_WIDTH] = color
+                        colors[x + 1 + (y + 1) * bmpWidth] = color
                         y++
                     }
                 }
 
-                val bitmap = Bitmap.createBitmap(
-                    colors,
-                    0,
-                    HISTOGRAM_BITMAP_WIDTH,
-                    HISTOGRAM_BITMAP_WIDTH,
-                    HISTOGRAM_BITMAP_HEIGHT,
-                    Bitmap.Config.ARGB_8888
-                )
+                val colorBorder = Color.rgb(64, 64, 64)
+
+                for( x in 0 until bmpWidth) {
+                    colors[x] = colorBorder
+                    colors[x + (bmpHeight-1) * bmpWidth] = colorBorder
+                }
+
+                for( y in 1 until bmpHeight-1) {
+                    colors[y * bmpWidth] = colorBorder
+                    colors[bmpWidth - 1 + y * bmpWidth] = colorBorder
+                }
+
+                val bitmap = Bitmap.createBitmap(colors, 0, bmpWidth, bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
 
                 runOnUiThread {
                     mBinding.imgHistogram.setImageBitmap(bitmap)
