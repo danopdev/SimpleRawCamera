@@ -79,6 +79,11 @@ class CameraActivity : AppCompatActivity() {
 
         const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
 
+        const val HIGHLIGHTS_STATUS_OK = 0
+        const val HIGHLIGHTS_STATUS_OVER_EXPOSED = 1
+        const val HIGHLIGHTS_STATUS_UNDER_EXPOSED = 2
+        const val HIGHLIGHTS_CHECK_FREQUENCY = 1
+
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
         fun getMemInfo(): Pair<Long, Long> {
@@ -192,6 +197,7 @@ class CameraActivity : AppCompatActivity() {
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var mIsBusy = false
+        private var mHighlightsCheck = HIGHLIGHTS_CHECK_FREQUENCY
 
         private fun genHistogram(image: Image) {
             if (mIsBusy) return
@@ -265,8 +271,53 @@ class CameraActivity : AppCompatActivity() {
 
                 val bitmap = Bitmap.createBitmap(colors, 0, bmpWidth, bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
 
+                var highlightsStatus = HIGHLIGHTS_STATUS_OK
+
+                mHighlightsCheck++
+                if (mHighlightsCheck > HIGHLIGHTS_CHECK_FREQUENCY) {
+                    mHighlightsCheck = 0
+
+                    var valuesCounter = 0
+                    var index = values.size - 1
+
+                    //check for over exposed
+                    while (index >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX) {
+                        valuesCounter += values[index]
+                        index--
+                    }
+
+                    if (valuesCounter >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD) {
+                        highlightsStatus = HIGHLIGHTS_STATUS_OVER_EXPOSED
+                        Log.i("HIGH_LIGHTS", "Over exposed, counter=${valuesCounter}")
+                    } else {
+                        //check for under exposed
+                        while (index >= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_START_INDEX) {
+                            valuesCounter += values[index]
+                            index--
+                        }
+
+                        if (valuesCounter <= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD) {
+                            highlightsStatus = HIGHLIGHTS_STATUS_UNDER_EXPOSED
+                            Log.i("HIGH_LIGHTS", "Under exposed, counter=${valuesCounter}")
+                        }
+                    }
+                }
+
                 runOnUiThread {
                     mBinding.imgHistogram.setImageBitmap(bitmap)
+
+                    if (Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode && HIGHLIGHTS_STATUS_OK != highlightsStatus) {
+                        val newSpeedValue = mCameraInfo.getSpeed(
+                            settings.speedValue,
+                            if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1);
+
+                        if (newSpeedValue != settings.speedValue && newSpeedValue <= Settings.PROTECT_HIGHLIGHTS_MAX_SPEED) {
+                            settings.speedValue = newSpeedValue
+                            showSpeed(newSpeedValue)
+                            setupCapturePreviewRequest()
+                        }
+                    }
+
                     mIsBusy = false
                 }
             }
