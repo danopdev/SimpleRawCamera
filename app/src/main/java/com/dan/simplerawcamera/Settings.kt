@@ -104,6 +104,10 @@ class Settings( private val activity: Activity) {
                 String::class.createType() -> property.setter.call( this, preferences.getString( property.name, property.getter.call(this) as String ) )
             }
         }
+
+        if (ISO_MODE_MANUAL != isoMode && SPEED_MODE_PROTECT_HIGHLIGHTS == speedMode) {
+            speedMode = SPEED_MODE_MANUAL
+        }
     }
 
     fun saveProperties() {

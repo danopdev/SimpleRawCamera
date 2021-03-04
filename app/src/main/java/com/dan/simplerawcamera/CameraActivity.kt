@@ -775,6 +775,11 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtIso.setOnMoveYAxisListener {
             settings.isoMode = 1 - settings.isoMode
             giveHapticFeedback(mBinding.txtIso)
+
+            if (Settings.ISO_MODE_MANUAL != settings.isoMode && Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode) {
+                settings.speedMode = Settings.SPEED_MODE_MANUAL
+            }
+
             updateSliders()
         }
 
@@ -783,10 +788,17 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtSpeed.setOnMoveYAxisListener {
             if (it < 0) {
                 settings.speedMode--
-                if (settings.speedMode < Settings.SPEED_MODE_AUTO) settings.speedMode = Settings.SPEED_MODE_PROTECT_HIGHLIGHTS
+                if (settings.speedMode < Settings.SPEED_MODE_AUTO) {
+                    settings.speedMode =
+                        if (Settings.ISO_MODE_MANUAL == settings.isoMode) Settings.SPEED_MODE_PROTECT_HIGHLIGHTS
+                        else Settings.SPEED_MODE_MANUAL
+                }
             } else {
                 settings.speedMode++
-                if (settings.speedMode > Settings.SPEED_MODE_PROTECT_HIGHLIGHTS) settings.speedMode = Settings.SPEED_MODE_AUTO
+                if (settings.speedMode > Settings.SPEED_MODE_PROTECT_HIGHLIGHTS ||
+                    (Settings.ISO_MODE_MANUAL != settings.isoMode && Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode) ) {
+                    settings.speedMode = Settings.SPEED_MODE_AUTO
+                }
             }
 
             giveHapticFeedback(mBinding.txtSpeed)
