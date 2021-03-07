@@ -33,7 +33,7 @@ class Settings( private val activity: Activity) {
         const val SPEED_MODE_PROTECT_HIGHLIGHTS = 2
         val SPEED_MODE_TO_STRING = arrayOf("A", "M", "HL")
 
-        const val FOCUS_TYPE_CONTINOUS = 0
+        const val FOCUS_TYPE_CONTINUOUS = 0
         const val FOCUS_TYPE_HYPERFOCAL = 1
         const val FOCUS_TYPE_MANUAL = 2
         const val FOCUS_TYPE_MAX = 3
@@ -70,7 +70,7 @@ class Settings( private val activity: Activity) {
     var speedMode: Int = SPEED_MODE_AUTO
     var speedValue: Long = 7812500L // 1/125 seconds
     var expCompensationValue: Int = 0
-    var focusType: Int = FOCUS_TYPE_CONTINOUS
+    var focusType: Int = FOCUS_TYPE_CONTINUOUS
     var focusManualProgress: Int = 0
     var showGrid: Boolean = true
     var frameType: Int = FRAME_TYPE_NONE
