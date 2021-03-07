@@ -20,8 +20,8 @@ class CameraInfo(
     val resolutionHeight: Int,
     val isoRange: Range<Int>,
     val speedRange: Range<Long>,
-    val exposureCompensantionRange: Range<Int>,
-    val exposureCompensantionMulitplyFactor: Int,
+    val exposureCompensationRange: Range<Int>,
+    val exposureCompensationMultiplyFactor: Int,
     val focusRange: Range<Float>,
     val focusHyperfocalDistance: Float,
     val focusAllowManual: Boolean,
@@ -65,12 +65,12 @@ class CameraInfo(
                         Log.i("CAM ${cameraId}", "faceMax: ${faceMax}")
                         Log.i("CAM ${cameraId}", "faceModes: ${str}")
 
-                        val exposureCompensantionRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
-                        val exposureCompensantionStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
-                        val exposureCompensantionMulitplyFactor = exposureCompensantionStep.denominator / Settings.EXP_STEPS_PER_1EV
-                        val exposureCompensantionRange = Range(
-                            exposureCompensantionRangeFull.lower / exposureCompensantionMulitplyFactor,
-                            exposureCompensantionRangeFull.upper / exposureCompensantionMulitplyFactor
+                        val exposureCompensationRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
+                        val exposureCompensationStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
+                        val exposureCompensationMultiplyFactor = exposureCompensationStep.denominator / Settings.EXP_STEPS_PER_1EV
+                        val exposureCompensationRange = Range(
+                            exposureCompensationRangeFull.lower / exposureCompensationMultiplyFactor,
+                            exposureCompensationRangeFull.upper / exposureCompensationMultiplyFactor
                         )
 
                         val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
@@ -101,8 +101,8 @@ class CameraInfo(
                                 resolutionRect.height(),
                                 isoRange,
                                 speedRange,
-                                exposureCompensantionRange,
-                                exposureCompensantionMulitplyFactor,
+                                exposureCompensationRange,
+                                exposureCompensationMultiplyFactor,
                                 focusRange,
                                 focusHyperfocalDistance,
                                 focusMaxRegions >= 1,

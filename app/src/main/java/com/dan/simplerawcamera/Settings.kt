@@ -7,7 +7,7 @@ import kotlin.reflect.full.createType
 import kotlin.reflect.full.declaredMemberProperties
 
 /**
- Settings: all public var fields will be save / restaured
+ Settings: all public var fields will be saved
  */
 class Settings( private val activity: Activity) {
 

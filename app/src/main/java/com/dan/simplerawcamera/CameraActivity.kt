@@ -115,7 +115,7 @@ class CameraActivity : AppCompatActivity() {
             return bestSize
         }
 
-        /** Calculate the diffrence between the preview / histogram and the manual / semi-manual photo settings */
+        /** Calculate the difference between the preview / histogram and the manual / semi-manual photo settings */
         fun calculateExpDeviation(previewIso: Int, previewSpeed: Long, expectedIso: Int, expectedSpeed: Long): Float {
 
             val deltaExpIso: Float =
@@ -501,7 +501,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    /** Returns exposure informations: ISO, Speed and the differece between this values and the preview options */
+    /** Returns exposure information: ISO, Speed and the difference between this values and the preview options */
     private fun getCaptureEA() : Triple<Int, Long, Float> {
         if (Settings.ISO_MODE_AUTO == settings.isoMode && Settings.SPEED_MODE_AUTO == settings.speedMode) {
             return Triple(mIsoMeasuredValue, mSpeedMeasuredValue, 0f)
@@ -1007,21 +1007,21 @@ class CameraActivity : AppCompatActivity() {
 
         var newValue = settings.expCompensationValue + delta
 
-        if (newValue < mCameraInfo.exposureCompensantionRange.lower) {
-            newValue = mCameraInfo.exposureCompensantionRange.lower
-        } else if (newValue > mCameraInfo.exposureCompensantionRange.upper) {
-            newValue = mCameraInfo.exposureCompensantionRange.upper
+        if (newValue < mCameraInfo.exposureCompensationRange.lower) {
+            newValue = mCameraInfo.exposureCompensationRange.lower
+        } else if (newValue > mCameraInfo.exposureCompensationRange.upper) {
+            newValue = mCameraInfo.exposureCompensationRange.upper
         }
 
         if (newValue != settings.expCompensationValue) {
             settings.expCompensationValue = newValue
             giveHapticFeedback(mBinding.txtExpComponsation)
-            showExpComponsation(newValue)
+            showExpCompensation(newValue)
             setupCapturePreviewRequest()
         }
     }
 
-    private fun showExpComponsation(value: Int) {
+    private fun showExpCompensation(value: Int) {
         var exp = "Exp: "
         val expFloat = value.toFloat() / Settings.EXP_STEPS_PER_1EV
 
@@ -1153,7 +1153,7 @@ class CameraActivity : AppCompatActivity() {
         if (Settings.SPEED_MODE_AUTO != settings.speedMode) showSpeed(settings.speedValue)
 
         showFocus()
-        showExpComponsation(settings.expCompensationValue)
+        showExpCompensation(settings.expCompensationValue)
         setupCapturePreviewRequest()
 
         updateSequenceDelayStart()
@@ -1329,10 +1329,10 @@ class CameraActivity : AppCompatActivity() {
                         Settings.PHOTO_TYPE_JPEG -> mCameraInfo.estimatedJpegSize
                         else -> mCameraInfo.estimatedDngSize * 2 + mCameraInfo.estimatedJpegSize
                     }
-                minMem = 1 + minMem / (1024 * 1024) //conver to MB
+                minMem = 1 + minMem / (1024 * 1024) //convert to MB
 
                 if (mSaveAsyncMQ.isNotEmpty() && minMem > getFreeMemInfo()) {
-                    Log.i("TAKE_PHOTO", "Not enougth memory")
+                    Log.i("TAKE_PHOTO", "Not enough memory")
                     mPhotoTakeMask = PHOTO_TAKE_OUT_OF_MEMORY
                     Timer("Out of memory", false).schedule(MEMORY_RETRY_TIMEOUT) {
                         mPhotoTakeMask = 0
