@@ -31,7 +31,7 @@ class Settings( private val activity: Activity) {
         const val SPEED_MODE_AUTO = 0
         const val SPEED_MODE_MANUAL = 1
         const val SPEED_MODE_PROTECT_HIGHLIGHTS = 2
-        val SPEED_MODE_TO_STRING = arrayOf("A", "M", "H")
+        val SPEED_MODE_TO_STRING = arrayOf("A", "M", "HL")
 
         const val FOCUS_TYPE_CONTINOUS = 0
         const val FOCUS_TYPE_HYPERFOCAL = 1
