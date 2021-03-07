@@ -15,7 +15,7 @@ import com.dan.simplerawcamera.databinding.SettingsBinding
 class SettingsDialog(private val cameraActivity: CameraActivity, private val listenerOK: ()->Unit ) : DialogFragment() {
 
     companion object {
-        const val DIALOG_TAG = "SETTINGS_DIALOG"
+        private const val DIALOG_TAG = "SETTINGS_DIALOG"
 
         fun show(fragmentManager: FragmentManager, cameraActivity: CameraActivity, listenerOK: () -> Unit ) {
             with( SettingsDialog( cameraActivity, listenerOK ) ) {

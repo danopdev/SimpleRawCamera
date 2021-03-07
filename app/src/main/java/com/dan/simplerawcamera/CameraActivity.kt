@@ -223,9 +223,11 @@ class CameraActivity : AppCompatActivity() {
 
                         if (yValue < 0) yValue += 256
 
-                        if (yValue < 5) yValue = 0
-                        else if (yValue >= 250) yValue = 245
-                        else yValue -= 5
+                        when {
+                            yValue < 5 -> yValue = 0
+                            yValue >= 250 -> yValue = 245
+                            else -> yValue -= 5
+                        }
 
                         values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 245]++
                         index++
@@ -309,7 +311,7 @@ class CameraActivity : AppCompatActivity() {
                     if (Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode && HIGHLIGHTS_STATUS_OK != highlightsStatus) {
                         val newSpeedValue = mCameraInfo.getSpeed(
                             settings.speedValue,
-                            if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1);
+                            if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1)
 
                         if (newSpeedValue != settings.speedValue && newSpeedValue <= Settings.PROTECT_HIGHLIGHTS_MAX_SPEED) {
                             settings.speedValue = newSpeedValue
@@ -332,8 +334,8 @@ class CameraActivity : AppCompatActivity() {
     }
 
     /** JPEG Reader Listener */
-    private val mImageReaderJpegListener = object: ImageReader.OnImageAvailableListener {
-        override fun onImageAvailable(imageReader: ImageReader?) {
+    private val mImageReaderJpegListener =
+        ImageReader.OnImageAvailableListener { imageReader ->
             Log.i("TAKE_PHOTO", "JPEG: Received")
 
             imageReader?.acquireLatestImage()?.let{
@@ -343,11 +345,10 @@ class CameraActivity : AppCompatActivity() {
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
             if (0 == mPhotoTakeMask) takePhoto(true)
         }
-    }
 
     /** DNG Reader Listener */
-    private val mImageReaderDngListener = object: ImageReader.OnImageAvailableListener {
-        override fun onImageAvailable(imageReader: ImageReader?) {
+    private val mImageReaderDngListener =
+        ImageReader.OnImageAvailableListener { imageReader ->
             Log.i("TAKE_PHOTO", "DNG: Received")
 
             imageReader?.acquireLatestImage()?.let{
@@ -357,7 +358,6 @@ class CameraActivity : AppCompatActivity() {
             mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
             if (0 == mPhotoTakeMask) takePhoto(true)
         }
-    }
 
     /** Surface for preview */
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
@@ -466,7 +466,7 @@ class CameraActivity : AppCompatActivity() {
             mCameraDevice = cameraDevice
 
             val sizes = mCameraInfo.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
-            if (null == sizes || 0 == sizes.size) throw Exception("No sizes available")
+            if (null == sizes || sizes.isEmpty()) throw Exception("No sizes available")
             val previewSize = getBestResolution(
                 mBinding.surfaceView.width,
                 mCameraInfo.resolutionWidth.toFloat() / mCameraInfo.resolutionHeight,
@@ -564,9 +564,9 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun sequencePhotoTaken() {
-        Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: ${mPhotoCounter}")
+        Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: $mPhotoCounter")
         if (mSequenceStarted) {
-            if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos) {
+            if (settings.sequenceNumberOfPhotos in 1..mPhotoCounter) {
                 sequenceStop()
             } else {
                 sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
@@ -858,7 +858,7 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.txtSpeed.setOnMoveXAxisListener { trackSpeed(it) }
 
-        mBinding.txtExpComponsation.setOnMoveXAxisListener { trackExpCompensation(it) }
+        mBinding.txtExpCompensation.setOnMoveXAxisListener { trackExpCompensation(it) }
 
         mBinding.txtFocus.setOnMoveYAxisListener { steps ->
             if (mCameraInfo.focusAllowManual) {
@@ -943,7 +943,7 @@ class CameraActivity : AppCompatActivity() {
                 val screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
                 if (screenOrientation != mScreenOrientation) {
                     mScreenOrientation = screenOrientation
-                    Log.i("EXIF", "Orientation: ${screenOrientation}")
+                    Log.i("EXIF", "Orientation: $screenOrientation")
                 }
             }
         }
@@ -998,7 +998,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showIso(value: Int) {
-        mBinding.txtIso.text = "${value} ISO (${Settings.ISO_MODE_TO_STRING[settings.isoMode]})"
+        mBinding.txtIso.text = "$value ISO (${Settings.ISO_MODE_TO_STRING[settings.isoMode]})"
     }
 
     /** Exposure compensation slider/button is changed */
@@ -1015,7 +1015,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (newValue != settings.expCompensationValue) {
             settings.expCompensationValue = newValue
-            giveHapticFeedback(mBinding.txtExpComponsation)
+            giveHapticFeedback(mBinding.txtExpCompensation)
             showExpCompensation(newValue)
             setupCapturePreviewRequest()
         }
@@ -1025,13 +1025,13 @@ class CameraActivity : AppCompatActivity() {
         var exp = "Exp: "
         val expFloat = value.toFloat() / Settings.EXP_STEPS_PER_1EV
 
-        if (value >= 0) {
-            exp += "+%.1f".format(expFloat)
+        exp += if (value >= 0) {
+            "+%.1f".format(expFloat)
         } else {
-            exp += "%.1f".format(expFloat)
+            "%.1f".format(expFloat)
         }
 
-        mBinding.txtExpComponsation.text = exp
+        mBinding.txtExpCompensation.text = exp
     }
 
     /** Speed slider/button is changed */
@@ -1042,7 +1042,7 @@ class CameraActivity : AppCompatActivity() {
 
         if (newSpeed != settings.speedValue) {
             settings.speedValue = newSpeed
-            giveHapticFeedback(mBinding.txtExpComponsation)
+            giveHapticFeedback(mBinding.txtExpCompensation)
             showSpeed(newSpeed)
             setupCapturePreviewRequest()
         }
@@ -1061,18 +1061,14 @@ class CameraActivity : AppCompatActivity() {
 
         val denominator = (1000000000L / speed).toInt()
         val roundedDenominator =
-            if (denominator >= 1900)
-                (denominator / 1000) * 1000
-            else if (denominator >= 500)
-                (denominator / 100) * 100
-            else if (128 == denominator)
-                125
-            else if (denominator >= 20)
-                (denominator / 10) * 10
-            else if (16 == denominator)
-                15
-            else
-                denominator
+            when {
+                denominator >= 1900 -> (denominator / 1000) * 1000
+                denominator >= 500 -> (denominator / 100) * 100
+                128 == denominator -> 125
+                denominator >= 20 -> (denominator / 10) * 10
+                16 == denominator -> 15
+                else -> denominator
+            }
 
         return "1/${roundedDenominator}"
     }
@@ -1113,15 +1109,14 @@ class CameraActivity : AppCompatActivity() {
         if (1 == value)
             "1 second"
         else
-            "${value} seconds"
+            "$value seconds"
 
     private fun getNumberOfPhotosText(value: Int) =
-        if (0 == value)
-            "infinite"
-        else if (1 == value)
-            "1 photo"
-        else
-            "${value} photos"
+        when (value) {
+            0 -> "infinite"
+            1 -> "1 photo"
+            else -> "$value photos"
+        }
 
     private fun updateSequenceDelayStart() {
         mBinding.txtSequenceDelayStart.text = "Delay start: ${getSecondsText(settings.sequenceDelayStart)}"
@@ -1147,7 +1142,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun updateSliders() {
-        mBinding.txtExpComponsation.visibility = if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) View.VISIBLE else View.INVISIBLE
+        mBinding.txtExpCompensation.visibility = if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) View.VISIBLE else View.INVISIBLE
 
         if (Settings.ISO_MODE_MANUAL == settings.isoMode) showIso(settings.isoValue)
         if (Settings.SPEED_MODE_AUTO != settings.speedMode) showSpeed(settings.speedValue)
@@ -1234,7 +1229,7 @@ class CameraActivity : AppCompatActivity() {
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.setOrientation(mPhotoExifOrientation)
             dngCreator.writeImage(outputStream, image)
-            saveAsync(mPhotoFileNameBase + ".dng", "image/x-adobe-dng", outputStream.toByteArray())
+            saveAsync("$mPhotoFileNameBase.dng", "image/x-adobe-dng", outputStream.toByteArray())
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1249,7 +1244,7 @@ class CameraActivity : AppCompatActivity() {
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
             outputStream.write(bytes)
-            saveAsync(mPhotoFileNameBase + ".jpg", "image/jpeg", outputStream.toByteArray())
+            saveAsync("$mPhotoFileNameBase.jpg", "image/jpeg", outputStream.toByteArray())
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1261,7 +1256,7 @@ class CameraActivity : AppCompatActivity() {
         if (mPhotoButtonPressed == pressed) return
 
         mPhotoButtonPressed = pressed
-        Log.i("TAKE_PHOTO", "Button pressed: ${mPhotoButtonPressed}")
+        Log.i("TAKE_PHOTO", "Button pressed: $mPhotoButtonPressed")
 
         if (pressed) {
             if (settings.showSequence) {
@@ -1343,12 +1338,10 @@ class CameraActivity : AppCompatActivity() {
 
                     mPhotoInProgress = true
 
-                    when (settings.takePhotoModes) {
-                        Settings.PHOTO_TYPE_DNG -> mPhotoTakeMask =
-                            PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                        Settings.PHOTO_TYPE_JPEG -> mPhotoTakeMask =
-                            PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
-                        else -> mPhotoTakeMask = PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    mPhotoTakeMask = when (settings.takePhotoModes) {
+                        Settings.PHOTO_TYPE_DNG -> PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                        Settings.PHOTO_TYPE_JPEG -> PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                        else -> PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                     }
 
                     mPhotoTimestamp = System.currentTimeMillis()
@@ -1395,7 +1388,7 @@ class CameraActivity : AppCompatActivity() {
 
         val set = ConstraintSet()
         set.clone(mBinding.layoutView)
-        set.setDimensionRatio(mBinding.layoutWithRatio.getId(), "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}")
+        set.setDimensionRatio(mBinding.layoutWithRatio.id, "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}")
         set.applyTo(mBinding.layoutView)
 
         mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
@@ -1518,10 +1511,10 @@ class CameraActivity : AppCompatActivity() {
                     }
                 }
 
-                if (settings.useLocation) {
-                    mLocation = mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
+                mLocation = if (settings.useLocation) {
+                    mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 } else {
-                    mLocation = null
+                    null
                 }
                 captureRequestBuilder.set(CaptureRequest.JPEG_GPS_LOCATION, mLocation)
 
@@ -1637,7 +1630,7 @@ class CameraActivity : AppCompatActivity() {
         } else if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) {
             mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto")
             captureRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensantionMulitplyFactor)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, settings.expCompensationValue * mCameraInfo.exposureCompensationMultiplyFactor)
         } else {
             mSpeedManualPreviewValue = settings.speedValue
             mIsoManualPreviewValue = settings.isoValue

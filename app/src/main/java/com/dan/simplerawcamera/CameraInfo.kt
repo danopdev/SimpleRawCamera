@@ -56,14 +56,14 @@ class CameraInfo(
                         val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
 
                         val aeMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE) as Int
-                        Log.i("CAM ${cameraId}", "aeMaxRegions: ${aeMaxRegions}")
+                        Log.i("CAM $cameraId", "aeMaxRegions: $aeMaxRegions")
 
                         val faceMax = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT) as Int
                         val faceModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES) as IntArray
                         var str = ""
-                        faceModes.forEach { str += " " + it.toString() }
-                        Log.i("CAM ${cameraId}", "faceMax: ${faceMax}")
-                        Log.i("CAM ${cameraId}", "faceModes: ${str}")
+                        faceModes.forEach { str += " $it" }
+                        Log.i("CAM $cameraId", "faceMax: $faceMax")
+                        Log.i("CAM $cameraId", "faceModes: $str")
 
                         val exposureCompensationRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
                         val exposureCompensationStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
@@ -134,10 +134,10 @@ class CameraInfo(
              *    * >= 4 seconds: step is 1s
              */
             while(true) {
-                if (speed >= 4000000000L) {
-                    speed += 1000000000L
+                speed += if (speed >= 4000000000L) {
+                    1000000000L
                 } else {
-                    speed += 500000000L;
+                    500000000L
                 }
 
                 if (speed > speedRange.upper || speed > Settings.SPEED_MAX_MANUAL) break
@@ -165,7 +165,7 @@ class CameraInfo(
                 speedList.add(0, speedRange.lower)
             }
 
-            return speedList;
+            return speedList
         }
 
         fun getIsoStepsArray( isoRange: Range<Int>): ArrayList<Int> {
@@ -215,7 +215,7 @@ class CameraInfo(
     }
 
     private fun getArrayIndex(currentIndex: Int, direction: Int, arraySize: Int): Int {
-        var newIndex = currentIndex + direction
+        val newIndex = currentIndex + direction
         if (newIndex < 0) return 0
         if (newIndex >= arraySize) return arraySize-1
         return newIndex

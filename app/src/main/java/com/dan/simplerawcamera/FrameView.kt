@@ -27,7 +27,7 @@ class FrameView : View {
 
     companion object {
         fun dpToPx(dp: Int): Int {
-            return (dp * Resources.getSystem().getDisplayMetrics().density).toInt()
+            return (dp * Resources.getSystem().displayMetrics.density).toInt()
         }
 
         const val SHOW_COUNTER_TIMEOUT = 2000L
@@ -38,17 +38,17 @@ class FrameView : View {
 
         val TEXT_SHADOW_PADDING = dpToPx(1)
         val TEXT_COLOR = Color.rgb(192, 192, 192)
-        val TEXT_COLOR_SHADOW = Color.BLACK
+        const val TEXT_COLOR_SHADOW = Color.BLACK
 
         val PHOTO_ICON_X = dpToPx(5)
         val PHOTO_ICON_Y = PHOTO_ICON_X
         val PHOTO_ICON_WIDTH = dpToPx(60)
         val PHOTO_ICON_HEIGHT = PHOTO_ICON_WIDTH
 
-        val DEBUG_INFO_MEM = 0
-        val DEBUG_INFO_PREVIEW = 1
-        val DEBUG_INFO_CAMERA_STATE = 2
-        val DEBUG_INFO_MEASURED = 3
+        const val DEBUG_INFO_MEM = 0
+        const val DEBUG_INFO_PREVIEW = 1
+        const val DEBUG_INFO_CAMERA_STATE = 2
+        const val DEBUG_INFO_MEASURED = 3
     }
 
     private val mPaintDark = Paint()
@@ -79,7 +79,7 @@ class FrameView : View {
     private var mSequencePhotoDelay = 0
 
     private var mDebugInfoHeight = 0
-    private val mDebugInfo = arrayListOf<String>("", "", "", "")
+    private val mDebugInfo = arrayListOf("", "", "", "")
 
     @Suppress("DEPRECATION")
     private val mSavePhotoIcon: Drawable = resources.getDrawable( android.R.drawable.ic_menu_save )
@@ -121,7 +121,7 @@ class FrameView : View {
             textSize = dpToPx(10).toFloat()
         }
 
-        var textRect = Rect()
+        val textRect = Rect()
         mPaintDebugText.getTextBounds( "Xj", 0, 2, textRect )
         mDebugInfoHeight = textRect.height() + dpToPx(4)
 
@@ -129,7 +129,7 @@ class FrameView : View {
         mSavePhotoIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
         mSavePhotoErrorIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
 
-        DrawableCompat.setTint(mSavePhotoErrorIcon, Color.RED);
+        DrawableCompat.setTint(mSavePhotoErrorIcon, Color.RED)
 
         timer(null, false, 1000, 1000) {
             updateDebugMemInfo()
@@ -216,7 +216,7 @@ class FrameView : View {
 
     /** Show click to focus zone */
     fun showFocusZone(rect: Rect) {
-        if (!mShowFocusZone || !mShowFocusZoneRect.equals(rect)) {
+        if (!mShowFocusZone || mShowFocusZoneRect != rect) {
             hideFocusZone()
 
             mShowFocusZoneRect = rect
@@ -387,7 +387,7 @@ class FrameView : View {
 
         if (mCounter > 0) {
             val str = mCounter.toString()
-            var textRect = Rect()
+            val textRect = Rect()
             mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (PHOTO_ICON_X + (PHOTO_ICON_WIDTH - textRect.width()) / 2).toFloat()
             val textY = (PHOTO_ICON_Y + (PHOTO_ICON_HEIGHT + textRect.height()) / 2).toFloat()
@@ -399,8 +399,8 @@ class FrameView : View {
         }
 
         if (mSequencePhotoDelay > 0) {
-            val str = "Wait: ${mSequencePhotoDelay} s"
-            var textRect = Rect()
+            val str = "Wait: $mSequencePhotoDelay s"
+            val textRect = Rect()
             mPaintText.getTextBounds( str, 0, str.length, textRect )
             val textX = (width - PHOTO_ICON_X - textRect.width()).toFloat()
             val textY = (PHOTO_ICON_Y + (PHOTO_ICON_HEIGHT + textRect.height()) / 2).toFloat()

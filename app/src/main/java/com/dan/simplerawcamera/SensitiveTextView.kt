@@ -40,6 +40,7 @@ class SensitiveTextView : AppCompatTextView {
     private var mDirection: Int = DIRECTION_NONE
     private var mOnMoveXAxis: ((Int)->Unit)? = null
     private var mOnMoveYAxis: ((Int)->Unit)? = null
+    private val mTextRect = Rect()
 
     constructor(context: Context) : super(context, null) { init() }
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs, 0) { init() }
@@ -71,15 +72,13 @@ class SensitiveTextView : AppCompatTextView {
 
         val paint = this.paint
 
-        val textRect = Rect()
-        paint.getTextBounds( charLeft, 0, 1, textRect )
-
-        canvas.drawText( charLeft, PADDING, (height + textRect.height()) / 2f + charOffset, paint )
+        paint.getTextBounds( charLeft, 0, 1, mTextRect )
+        canvas.drawText( charLeft, PADDING, (height + mTextRect.height()) / 2f + charOffset, paint )
 
         if (charRightIsRotated) {
-            canvas.rotate(180f, width - (PADDING + textRect.width()) / 2, height / 2f)
+            canvas.rotate(180f, width - (PADDING + mTextRect.width()) / 2, height / 2f)
         }
-        canvas.drawText( charRight, width - PADDING - textRect.width(), (height + textRect.height()) / 2f + charOffset, paint )
+        canvas.drawText( charRight, width - PADDING - mTextRect.width(), (height + mTextRect.height()) / 2f + charOffset, paint )
    }
 
     override fun onTouchEvent(ev: MotionEvent): Boolean {
@@ -139,12 +138,12 @@ class SensitiveTextView : AppCompatTextView {
         mStartX = ev.x
         mStartY = ev.y
 
-        if (null != mOnMoveXAxis && null == mOnMoveYAxis) {
-            mDirection = DIRECTION_X_AXIS
+        mDirection = if (null != mOnMoveXAxis && null == mOnMoveYAxis) {
+            DIRECTION_X_AXIS
         } else if (null == mOnMoveXAxis && null != mOnMoveYAxis) {
-            mDirection = DIRECTION_Y_AXIS
+            DIRECTION_Y_AXIS
         } else {
-            mDirection = DIRECTION_NOT_DEFINED
+            DIRECTION_NOT_DEFINED
         }
 
         setBackgroundColor(BG_COLOR_PRESSED)
