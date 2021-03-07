@@ -14,7 +14,7 @@ class Settings( private val activity: Activity) {
     companion object {
         const val EXP_STEPS_PER_1EV = 2
 
-        const val PROTECT_HIGHLIGHTS_MAX_SPEED = 31250000L // 1/32 sec
+        const val PROTECT_HIGHLIGHTS_MAX_SPEED = 125000000L // 1/8 sec
         const val PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD = 1 //pixels in the histogram
         const val PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX = 64
         const val PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD = 2 //pixels in the histogram
