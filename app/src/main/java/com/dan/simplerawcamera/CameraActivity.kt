@@ -82,7 +82,8 @@ class CameraActivity : AppCompatActivity() {
         const val HIGHLIGHTS_STATUS_OK = 0
         const val HIGHLIGHTS_STATUS_OVER_EXPOSED = 1
         const val HIGHLIGHTS_STATUS_UNDER_EXPOSED = 2
-        const val HIGHLIGHTS_CHECK_FREQUENCY = 1
+
+        const val CAMERA_WAIT_CONFIGURATION_COUNTER = 2
 
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
@@ -149,6 +150,8 @@ class CameraActivity : AppCompatActivity() {
     private var mCaptureModeIsPhoto = false
     private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
 
+    private var mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER
+
     private var mPhotoButtonPressed = false
     private var mPhotoTakeMask = 0
     private var mPhotoTimestamp = 0L
@@ -197,10 +200,11 @@ class CameraActivity : AppCompatActivity() {
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var mIsBusy = false
-        private var mHighlightsCheck = HIGHLIGHTS_CHECK_FREQUENCY
 
         private fun genHistogram(image: Image) {
-            if (mIsBusy) return
+            if (mCameraWaitConfigurationCounter > 0) mCameraWaitConfigurationCounter--
+
+            if (mIsBusy && mCameraWaitConfigurationCounter > 0) return
 
             mIsBusy = true
 
@@ -275,48 +279,46 @@ class CameraActivity : AppCompatActivity() {
 
                 var highlightsStatus = HIGHLIGHTS_STATUS_OK
 
-                mHighlightsCheck++
-                if (mHighlightsCheck > HIGHLIGHTS_CHECK_FREQUENCY) {
-                    mHighlightsCheck = 0
+                var valuesCounter = 0
+                var index = values.size - 1
 
-                    var valuesCounter = 0
-                    var index = values.size - 1
+                //check for over exposed
+                while (index >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX) {
+                    valuesCounter += values[index]
+                    index--
+                }
 
-                    //check for over exposed
-                    while (index >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX) {
+                if (valuesCounter >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD) {
+                    highlightsStatus = HIGHLIGHTS_STATUS_OVER_EXPOSED
+                    Log.i("HIGH_LIGHTS", "Over exposed, counter=${valuesCounter}")
+                } else {
+                    //check for under exposed
+                    while (index >= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_START_INDEX) {
                         valuesCounter += values[index]
                         index--
                     }
 
-                    if (valuesCounter >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD) {
-                        highlightsStatus = HIGHLIGHTS_STATUS_OVER_EXPOSED
-                        Log.i("HIGH_LIGHTS", "Over exposed, counter=${valuesCounter}")
-                    } else {
-                        //check for under exposed
-                        while (index >= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_START_INDEX) {
-                            valuesCounter += values[index]
-                            index--
-                        }
-
-                        if (valuesCounter <= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD) {
-                            highlightsStatus = HIGHLIGHTS_STATUS_UNDER_EXPOSED
-                            Log.i("HIGH_LIGHTS", "Under exposed, counter=${valuesCounter}")
-                        }
+                    if (valuesCounter <= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD) {
+                        highlightsStatus = HIGHLIGHTS_STATUS_UNDER_EXPOSED
+                        Log.i("HIGH_LIGHTS", "Under exposed, counter=${valuesCounter}")
                     }
                 }
 
                 runOnUiThread {
-                    mBinding.imgHistogram.setImageBitmap(bitmap)
+                    if (0 == mCameraWaitConfigurationCounter) {
+                        mBinding.imgHistogram.setImageBitmap(bitmap)
 
-                    if (Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode && HIGHLIGHTS_STATUS_OK != highlightsStatus) {
-                        val newSpeedValue = mCameraInfo.getSpeed(
-                            settings.speedValue,
-                            if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1)
+                        if (Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode && HIGHLIGHTS_STATUS_OK != highlightsStatus) {
+                            val newSpeedValue = mCameraInfo.getSpeed(
+                                settings.speedValue,
+                                if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1
+                            )
 
-                        if (newSpeedValue != settings.speedValue && newSpeedValue <= Settings.PROTECT_HIGHLIGHTS_MAX_SPEED) {
-                            settings.speedValue = newSpeedValue
-                            showSpeed(newSpeedValue)
-                            setupCapturePreviewRequest()
+                            if (newSpeedValue != settings.speedValue && newSpeedValue <= Settings.PROTECT_HIGHLIGHTS_MAX_SPEED) {
+                                settings.speedValue = newSpeedValue
+                                showSpeed(newSpeedValue)
+                                setupCapturePreviewRequest()
+                            }
                         }
                     }
 
@@ -1468,6 +1470,8 @@ class CameraActivity : AppCompatActivity() {
     /** Specific preview or take photo options */
     @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
+        mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER + 100
+
         if (mPhotoInProgress) return
 
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
@@ -1662,5 +1666,7 @@ class CameraActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+
+        mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER
     }
 }
