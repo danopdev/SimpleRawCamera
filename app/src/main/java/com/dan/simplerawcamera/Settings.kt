@@ -14,12 +14,6 @@ class Settings( private val activity: Activity) {
     companion object {
         const val EXP_STEPS_PER_1EV = 2
 
-        const val PROTECT_HIGHLIGHTS_MAX_SPEED = 125000000L // 1/8 sec
-        const val PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD = 1 //pixels in the histogram
-        const val PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX = 63
-        const val PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD = 0 //pixels in the histogram
-        const val PROTECT_HIGHLIGHTS_UNDER_EXPOSED_START_INDEX = 45
-
         const val SPEED_MANUAL_MIN_PREVIEW = 15625000L // 1/64 sec
         const val SPEED_MAX_MANUAL = 8000000000L // 8 sec
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
@@ -30,8 +24,7 @@ class Settings( private val activity: Activity) {
 
         const val SPEED_MODE_AUTO = 0
         const val SPEED_MODE_MANUAL = 1
-        const val SPEED_MODE_PROTECT_HIGHLIGHTS = 2
-        val SPEED_MODE_TO_STRING = arrayOf("A", "M", "HL")
+        val SPEED_MODE_TO_STRING = arrayOf("A", "M")
 
         const val FOCUS_TYPE_CONTINUOUS = 0
         const val FOCUS_TYPE_HYPERFOCAL = 1
@@ -110,11 +103,7 @@ class Settings( private val activity: Activity) {
                 String::class.createType() -> property.setter.call( this, preferences.getString( property.name, property.getter.call(this) as String ) )
             }
         }
-
-        if (ISO_MODE_MANUAL != isoMode && SPEED_MODE_PROTECT_HIGHLIGHTS == speedMode) {
-            speedMode = SPEED_MODE_MANUAL
-        }
-    }
+   }
 
     fun saveProperties() {
         val preferences = activity.getPreferences(Context.MODE_PRIVATE)

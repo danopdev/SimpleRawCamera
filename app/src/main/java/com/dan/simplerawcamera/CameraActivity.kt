@@ -79,12 +79,6 @@ class CameraActivity : AppCompatActivity() {
 
         const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
 
-        const val HIGHLIGHTS_STATUS_OK = 0
-        const val HIGHLIGHTS_STATUS_OVER_EXPOSED = 1
-        const val HIGHLIGHTS_STATUS_UNDER_EXPOSED = 2
-
-        const val CAMERA_WAIT_CONFIGURATION_COUNTER = 2
-
         val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
         fun getMemInfo(): Pair<Long, Long> {
@@ -150,8 +144,6 @@ class CameraActivity : AppCompatActivity() {
     private var mCaptureModeIsPhoto = false
     private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
 
-    private var mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER
-
     private var mPhotoButtonPressed = false
     private var mPhotoTakeMask = 0
     private var mPhotoTimestamp = 0L
@@ -202,9 +194,7 @@ class CameraActivity : AppCompatActivity() {
         private var mIsBusy = false
 
         private fun genHistogram(image: Image) {
-            if (mCameraWaitConfigurationCounter > 0) mCameraWaitConfigurationCounter--
-
-            if (mIsBusy && mCameraWaitConfigurationCounter > 0) return
+            if (mIsBusy) return
 
             mIsBusy = true
 
@@ -277,51 +267,8 @@ class CameraActivity : AppCompatActivity() {
 
                 val bitmap = Bitmap.createBitmap(colors, 0, bmpWidth, bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
 
-                var highlightsStatus = HIGHLIGHTS_STATUS_OK
-
-                var valuesCounter = 0
-                var index = values.size - 1
-
-                //check for over exposed
-                while (index >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_START_INDEX) {
-                    valuesCounter += values[index]
-                    index--
-                }
-
-                if (valuesCounter >= Settings.PROTECT_HIGHLIGHTS_OVER_EXPOSED_THRESHOLD) {
-                    highlightsStatus = HIGHLIGHTS_STATUS_OVER_EXPOSED
-                    Log.i("HIGH_LIGHTS", "Over exposed, counter=${valuesCounter}")
-                } else {
-                    //check for under exposed
-                    while (index >= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_START_INDEX) {
-                        valuesCounter += values[index]
-                        index--
-                    }
-
-                    if (valuesCounter <= Settings.PROTECT_HIGHLIGHTS_UNDER_EXPOSED_THRESHOLD) {
-                        highlightsStatus = HIGHLIGHTS_STATUS_UNDER_EXPOSED
-                        Log.i("HIGH_LIGHTS", "Under exposed, counter=${valuesCounter}")
-                    }
-                }
-
                 runOnUiThread {
-                    if (0 == mCameraWaitConfigurationCounter) {
-                        mBinding.imgHistogram.setImageBitmap(bitmap)
-
-                        if (Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode && HIGHLIGHTS_STATUS_OK != highlightsStatus) {
-                            val newSpeedValue = mCameraInfo.getSpeed(
-                                settings.speedValue,
-                                if (HIGHLIGHTS_STATUS_OVER_EXPOSED == highlightsStatus) -1 else 1
-                            )
-
-                            if (newSpeedValue != settings.speedValue && newSpeedValue <= Settings.PROTECT_HIGHLIGHTS_MAX_SPEED) {
-                                settings.speedValue = newSpeedValue
-                                showSpeed(newSpeedValue)
-                                setupCapturePreviewRequest()
-                            }
-                        }
-                    }
-
+                    mBinding.imgHistogram.setImageBitmap(bitmap)
                     mIsBusy = false
                 }
             }
@@ -826,34 +773,15 @@ class CameraActivity : AppCompatActivity() {
         mCameraInfo = mCameraList[0]
 
         mBinding.txtIso.setOnMoveYAxisListener {
-            settings.isoMode = 1 - settings.isoMode
+            settings.isoMode = if (settings.isoMode > 0) 0 else 1
             giveHapticFeedback(mBinding.txtIso)
-
-            if (Settings.ISO_MODE_MANUAL != settings.isoMode && Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode) {
-                settings.speedMode = Settings.SPEED_MODE_MANUAL
-            }
-
             updateSliders()
         }
 
         mBinding.txtIso.setOnMoveXAxisListener { trackIso(it) }
 
         mBinding.txtSpeed.setOnMoveYAxisListener {
-            if (it < 0) {
-                settings.speedMode--
-                if (settings.speedMode < Settings.SPEED_MODE_AUTO) {
-                    settings.speedMode =
-                        if (Settings.ISO_MODE_MANUAL == settings.isoMode) Settings.SPEED_MODE_PROTECT_HIGHLIGHTS
-                        else Settings.SPEED_MODE_MANUAL
-                }
-            } else {
-                settings.speedMode++
-                if (settings.speedMode > Settings.SPEED_MODE_PROTECT_HIGHLIGHTS ||
-                    (Settings.ISO_MODE_MANUAL != settings.isoMode && Settings.SPEED_MODE_PROTECT_HIGHLIGHTS == settings.speedMode) ) {
-                    settings.speedMode = Settings.SPEED_MODE_AUTO
-                }
-            }
-
+            settings.speedMode = if (settings.speedMode > 0) 0 else 1
             giveHapticFeedback(mBinding.txtSpeed)
             updateSliders()
         }
@@ -1470,8 +1398,6 @@ class CameraActivity : AppCompatActivity() {
     /** Specific preview or take photo options */
     @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
-        mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER + 100
-
         if (mPhotoInProgress) return
 
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
@@ -1666,7 +1592,5 @@ class CameraActivity : AppCompatActivity() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
-        mCameraWaitConfigurationCounter = CAMERA_WAIT_CONFIGURATION_COUNTER
     }
 }
