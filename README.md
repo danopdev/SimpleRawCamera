@@ -56,10 +56,4 @@ Currently always AUTO.
 
 ## TODO
 
-* Exposure:
-  * Try to adjust exposure (except for full manual mode) to avoid burning highlights
-
-* Focus:
-  * Add face detection
-
 * White balance (not supported yet)
