@@ -615,6 +615,12 @@ class CameraActivity : AppCompatActivity() {
         if (INTENT_SELECT_FOLDER == requestCode && RESULT_OK == resultCode && null != intent) {
             val data = intent.data
             if (data is Uri) {
+                try {
+                    contentResolver.takePersistableUriPermission(data,  Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                } catch(e: Exception) {
+                    e.printStackTrace()
+                }
+
                 mSaveFolder = DocumentFile.fromTreeUri(applicationContext, data)
                 settings.saveUri = data.toString()
                 settings.saveProperties()
