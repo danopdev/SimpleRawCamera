@@ -214,16 +214,9 @@ class CameraActivity : AppCompatActivity() {
                     var index = line * rowStride
                     for (column in 0 until imageW) {
                         var yValue = yBytes[index].toInt()
-
                         if (yValue < 0) yValue += 256
-
-                        when {
-                            yValue < 5 -> yValue = 0
-                            yValue >= 250 -> yValue = 245
-                            else -> yValue -= 5
-                        }
-
-                        values[(HISTOGRAM_BITMAP_WIDTH - 1) * yValue / 245]++
+                        var valueIndex = HISTOGRAM_BITMAP_WIDTH * yValue / 256
+                        values[valueIndex]++
                         index++
                     }
                 }
@@ -240,7 +233,9 @@ class CameraActivity : AppCompatActivity() {
 
                 for (x in values.indices) {
                     val value = values[x]
-                    val fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+                    var fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
+                    if (0 == fill && value > 0)
+                        fill = 1
 
                     var y = 0
                     while (y <= fill) {
