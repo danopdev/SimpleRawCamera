@@ -489,7 +489,7 @@ class CameraActivity : AppCompatActivity() {
 
         return Triple(
             suggestedIso,
-            mSpeedMeasuredValue,
+            speedValue,
             calculateExpDeviation(mIsoMeasuredValue, mSpeedMeasuredValue, suggestedIso, speedValue)
         )
     }
