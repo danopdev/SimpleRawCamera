@@ -395,6 +395,8 @@ class CameraActivity : AppCompatActivity() {
             mBinding.txtExpDelta.visibility = if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
+            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_TARGET, "Target - ISO ${captureEA.first}, Speed ${getSpeedStr(captureEA.second)} (${captureEA.second})")
+
             if (Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) return
 
             if (Settings.ISO_MODE_AUTO == settings.isoMode) showIso(captureEA.first)
