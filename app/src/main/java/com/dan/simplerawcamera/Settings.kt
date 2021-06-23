@@ -78,6 +78,7 @@ class Settings( private val activity: Activity) {
     var flashMode: Int = FLASH_MODE_OFF
     var enableHapticFeedback = true
     var useLocation = true
+    var edgeEnhancement = true;
 
     init {
         loadProperties()

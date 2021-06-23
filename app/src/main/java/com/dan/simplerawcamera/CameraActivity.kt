@@ -1415,7 +1415,7 @@ class CameraActivity : AppCompatActivity() {
 
             if (photoMode) {
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
-                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, if(settings.edgeEnhancement) CaptureRequest.EDGE_MODE_HIGH_QUALITY else CaptureRequest.EDGE_MODE_OFF)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
                 captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(false))
@@ -1477,7 +1477,7 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
 
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
-                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.EDGE_MODE, if(settings.edgeEnhancement) CaptureRequest.EDGE_MODE_FAST else CaptureRequest.EDGE_MODE_OFF)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
                 captureRequestBuilder.set(
