@@ -36,10 +36,6 @@ android {
             if (file('keystore.config').exists()) {
                 signingConfig signingConfigs.'default'
             }
-
-            //minifyEnabled true
-            //shrinkResources true
-            //proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
         release {
             minifyEnabled true
