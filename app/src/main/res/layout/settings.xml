@@ -214,14 +214,6 @@
                 </LinearLayout>
 
                 <Switch
-                    android:id="@+id/switchEdgeEnhancement"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp"
-                    android:text="Edge enhancement:" />
-
-                <Switch
                     android:id="@+id/switchHapticFeedback"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -42,7 +42,6 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
         binding.switchShowDebugInfo.isChecked = cameraActivity.settings.showDebugInfo
         binding.switchLocation.isChecked = cameraActivity.settings.useLocation
         binding.switchHapticFeedback.isChecked = cameraActivity.settings.enableHapticFeedback
-        binding.switchEdgeEnhancement.isChecked = cameraActivity.settings.edgeEnhancement
 
         binding.btnSelectFolder.setOnClickListener {
             cameraActivity.startSelectFolder()
@@ -59,7 +58,6 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
             cameraActivity.settings.showDebugInfo = binding.switchShowDebugInfo.isChecked
             cameraActivity.settings.useLocation = binding.switchLocation.isChecked
             cameraActivity.settings.enableHapticFeedback = binding.switchHapticFeedback.isChecked
-            cameraActivity.settings.edgeEnhancement = binding.switchEdgeEnhancement.isChecked
 
             cameraActivity.settings.saveProperties()
 
