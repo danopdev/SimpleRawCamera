@@ -1,5 +1,13 @@
 # SimpleRawCamera
 
+* [Screenshots](#screenshots)
+* [Exposure](#exposure)
+* [Focus](#focus)
+* [White balance](#white-balance)
+* [Output modes](#output-modes)
+* [Photo mode](#photo-mode)
+* [Helpers](#helpers)
+
 Simple photo camera inspired from real camera look.
 It use Camera2 API and supports only cameras with full AE / focus control.
 
@@ -7,7 +15,12 @@ It use Camera2 API and supports only cameras with full AE / focus control.
 
 Tested only on my LG G6 smartphone.
 
-## Exposure
+## Screeshots ##
+Normal Mode | Timer Mode
+--- | ---
+![Normal Mode](doc/img/main.jpg) | ![Timer Mode](doc/img/timer-mode.jpg) 
+
+## Exposure ##
 
 It support only ISO & Speed (as most smart phone cameras have fixed aperture).
 
@@ -18,7 +31,9 @@ Supported modes:
   * Manual ISO with automatic Speed
   * Manual Speed with automatic ISO (WARNING: the ISO range is limited and it may not be possible to have one for the specified speed)
 
-## Focus
+**NOTE for semi-automatic modes:** My camera supports only full automatic or full manual, but the aperture is fixed so I only have to deal with speed and ISO. To get them I use full autmatic mode for the preview and when I took the photo I calculate the automatic parameter based on the last automatic values and the fixed parameter.
+
+## Focus ##
 
 Supported modes:
 * Automatic (continuous)
@@ -27,33 +42,30 @@ Supported modes:
   * Select using the slider
   * Click to focus
 
-## Flash
+## Flash ##
 
-* Flash (not supported yet)
+* Flash
   * OFF
   * ON (only on the first photo for continuous photo)
   * Continuous flash (torch)
 
-## White balance
+## White balance ##
 
-Not supported yet.
-Currently always AUTO.
+Not supported yet. Currently always AUTO.
 
-## Output modes
+My smartphoto white balance looks fine and if really needed I change it in post using Free Lightroom Lobile.
+## Output modes ##
 
 * JPEG
 * RAW/DNG
 * JPEG + RAW/DNG
 
-## Photo mode
+## Photo mode ##
 
 * Single shot
 * Continuous
+* Timer mode: allow to take photo based on a times
 
-## Helpers
+## Helpers ##
 * Show rule of third grid
 * Show frame for another radio than the sensor
-
-## TODO
-
-* White balance (not supported yet)
