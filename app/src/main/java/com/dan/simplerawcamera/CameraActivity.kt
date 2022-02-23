@@ -871,6 +871,14 @@ class CameraActivity : AppCompatActivity() {
             updateSliders()
         }
 
+        mBinding.switch4X.isChecked = false
+        mBinding.switch4X.setOnCheckedChangeListener { _, isChecked ->
+            giveHapticFeedback(mBinding.switchSequences)
+            val scale = if (isChecked) 4.0f else 1.0f
+            mBinding.surfaceView.scaleX = scale
+            mBinding.surfaceView.scaleY = scale
+        }
+
         mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
             override fun onOrientationChanged(orientation: Int) {
                 val screenOrientation = (orientation + 45) / 90 * 90 //round to 90°
