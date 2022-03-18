@@ -15,7 +15,7 @@ class Settings( private val activity: Activity) {
         const val EXP_STEPS_PER_1EV = 2
 
         const val SPEED_MANUAL_MIN_PREVIEW = 15625000L // 1/64 sec
-        const val SPEED_MAX_MANUAL = 8000000000L // 8 sec
+        const val SPEED_MAX_MANUAL = 64000000000L // 64 sec
         const val SPEED_DEFAULT_MANUAL = 7812500L // 1/128
 
         const val ISO_MODE_AUTO = 0
