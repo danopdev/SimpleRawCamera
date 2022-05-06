@@ -79,7 +79,7 @@ class CameraActivity : AppCompatActivity() {
 
         const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
 
-        val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
+        private val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
 
         fun getMemInfo(): Pair<Long, Long> {
             val info = Runtime.getRuntime()
@@ -215,7 +215,7 @@ class CameraActivity : AppCompatActivity() {
                     for (column in 0 until imageW) {
                         var yValue = yBytes[index].toInt()
                         if (yValue < 0) yValue += 256
-                        var valueIndex = HISTOGRAM_BITMAP_WIDTH * yValue / 256
+                        val valueIndex = HISTOGRAM_BITMAP_WIDTH * yValue / 256
                         values[valueIndex]++
                         index++
                     }
@@ -356,6 +356,7 @@ class CameraActivity : AppCompatActivity() {
 
     /** Preview callback */
     private val mCameraCaptureSessionPreviewCaptureCallback = object: CameraCaptureSession.CaptureCallback() {
+        @SuppressLint("SetTextI18n")
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
 
@@ -388,6 +389,7 @@ class CameraActivity : AppCompatActivity() {
 
             val captureEA = getCaptureEA()
             mBinding.txtExpDelta.visibility = if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
+            @SuppressLint("SetTextI18n")
             mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
             mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_TARGET, "Target - ISO ${captureEA.first}, Speed ${getSpeedStr(captureEA.second)} (${captureEA.second})")
@@ -939,6 +941,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showIso(value: Int) {
+        @SuppressLint("SetTextI18n")
         mBinding.txtIso.text = "$value ISO (${Settings.ISO_MODE_TO_STRING[settings.isoMode]})"
     }
 
@@ -1015,6 +1018,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun showSpeed(speed: Long) {
+        @SuppressLint("SetTextI18n")
         mBinding.txtSpeed.text = "${getSpeedStr(speed)} (${Settings.SPEED_MODE_TO_STRING[settings.speedMode]})"
     }
 
@@ -1022,18 +1026,21 @@ class CameraActivity : AppCompatActivity() {
         if (mCameraInfo.focusAllowManual) {
             when(settings.focusType) {
                 Settings.FOCUS_TYPE_HYPERFOCAL -> {
+                    @SuppressLint("SetTextI18n")
                     mBinding.txtFocus.text = "Focus: Hyperfocal"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.INVISIBLE
                 }
 
                 Settings.FOCUS_TYPE_MANUAL -> {
+                    @SuppressLint("SetTextI18n")
                     mBinding.txtFocus.text = "Focus: Manual"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.VISIBLE
                 }
 
                 else -> {
+                    @SuppressLint("SetTextI18n")
                     mBinding.txtFocus.text = "Focus: Auto"
                     mBinding.txtFocus.visibility = View.VISIBLE
                     mBinding.seekBarFocus.visibility = View.INVISIBLE
@@ -1060,14 +1067,17 @@ class CameraActivity : AppCompatActivity() {
         }
 
     private fun updateSequenceDelayStart() {
+        @SuppressLint("SetTextI18n")
         mBinding.txtSequenceDelayStart.text = "Delay start: ${getSecondsText(settings.sequenceDelayStart)}"
     }
 
     private fun updateSequenceDelayBetween() {
+        @SuppressLint("SetTextI18n")
         mBinding.txtSequenceDelayBetween.text = "Delay between: ${getSecondsText(settings.sequenceDelayBetween)}"
     }
 
     private fun updateSequenceNumberOfPhotos() {
+        @SuppressLint("SetTextI18n")
         mBinding.txtSequenceNumberOfPhotos.text = "Number of photos: ${getNumberOfPhotosText(settings.sequenceNumberOfPhotos)}"
     }
 
@@ -1307,6 +1317,7 @@ class CameraActivity : AppCompatActivity() {
         mSelectCameraTimer?.cancel()
         mSelectCameraTimer = null
 
+        @SuppressLint("SetTextI18n")
         mBinding.txtCamera.text = "${index+1}"
 
         if (async) {
