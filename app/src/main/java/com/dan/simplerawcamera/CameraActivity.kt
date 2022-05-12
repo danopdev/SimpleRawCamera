@@ -876,9 +876,7 @@ class CameraActivity : AppCompatActivity() {
         mBinding.switch4X.isChecked = false
         mBinding.switch4X.setOnCheckedChangeListener { _, isChecked ->
             giveHapticFeedback(mBinding.switchSequences)
-            val scale = if (isChecked) 4.0f else 1.0f
-            mBinding.surfaceView.scaleX = scale
-            mBinding.surfaceView.scaleY = scale
+            setupCapturePreviewRequest()
         }
 
         mOrientationEventListener = object: OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
@@ -1450,19 +1448,6 @@ class CameraActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
-                when( settings.takePhotoModes ) {
-                    Settings.PHOTO_TYPE_DNG -> {
-                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
-                    }
-                    Settings.PHOTO_TYPE_JPEG -> {
-                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
-                    }
-                    else -> {
-                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
-                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
-                    }
-                }
-
                 mLocation = if (settings.useLocation) {
                     mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 } else {
@@ -1484,6 +1469,21 @@ class CameraActivity : AppCompatActivity() {
                         CaptureRequest.NOISE_REDUCTION_MODE_OFF
                     }
                 )
+
+                captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight))
+
+                when( settings.takePhotoModes ) {
+                    Settings.PHOTO_TYPE_DNG -> {
+                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                    }
+                    Settings.PHOTO_TYPE_JPEG -> {
+                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                    }
+                    else -> {
+                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                    }
+                }
 
                 mCaptureRequest = captureRequestBuilder.build()
             } else {
@@ -1511,6 +1511,17 @@ class CameraActivity : AppCompatActivity() {
         }
 
         if (photoMode) return
+
+        if (mBinding.switch4X.isChecked) {
+            val croppedWidth = mCameraInfo.resolutionWidth / 4
+            val croppedHeight = mCameraInfo.resolutionHeight / 4
+            val croppedLeft = (mCameraInfo.resolutionWidth - croppedWidth) / 2
+            val croppedTop = (mCameraInfo.resolutionHeight - croppedHeight) / 2
+            val croppedRect = Rect( croppedLeft, croppedTop, croppedLeft + croppedWidth - 1, croppedTop + croppedHeight - 1 )
+            captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, croppedRect)
+        } else {
+            captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight))
+        }
 
         captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(true))
         captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
