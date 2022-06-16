@@ -32,10 +32,9 @@ import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.concurrent.schedule
 import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.math.log2
@@ -75,21 +74,9 @@ class CameraActivity : AppCompatActivity() {
         const val FOCUS_STATE_SEARCHING = 2
         const val FOCUS_STATE_LOCKED = 3
 
-        const val MEMORY_RETRY_TIMEOUT = 250L //ms
-
         const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
 
         private val FILE_NAME_DATE_FORMAT = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
-
-        fun getMemInfo(): Pair<Long, Long> {
-            val info = Runtime.getRuntime()
-            val usedSize = (info.totalMemory() - info.freeMemory()) / (1024L * 1024L)
-            val maxSize = info.maxMemory() / (1024L * 1024L)
-            val freeSize = maxSize - usedSize
-            return Pair(freeSize, maxSize)
-        }
-
-        fun getFreeMemInfo(): Long = getMemInfo().first
 
         /** Get photo name */
         fun getPhotoBaseFileName(timestamp: Long): String = FILE_NAME_DATE_FORMAT.format(Date(timestamp))
@@ -175,9 +162,6 @@ class CameraActivity : AppCompatActivity() {
     private var mSaveFolder: DocumentFile? = null
 
     private var mLocation: Location? = null
-
-    private val mSaveAsyncMQ = mutableListOf<Triple<String, String, ByteArray>>()
-    private var mSaveAsyncBusy = false
 
     private var mOrientationEventListener: OrientationEventListener? = null
     private var mScreenOrientation: Int = 0
@@ -1125,61 +1109,27 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveAsyncNextItem() {
-        mBinding.frameView.updateDebugMemInfo()
-
-        if(!mSaveAsyncBusy && mSaveAsyncMQ.isNotEmpty()) {
-            mSaveAsyncBusy = true
-            mBinding.frameView.showSavePhotosIcon(true)
-            val item = mSaveAsyncMQ.get(0)
-            mSaveAsyncMQ.removeAt(0)
-
-            GlobalScope.launch(Dispatchers.IO) {
-                val fileName = item.first
-                val mimeType = item.second
-                val byteArray = item.third
-                var failed = true
-
-                try {
-                    mSaveFolder?.let { saveFolder ->
-                        saveFolder.createFile(mimeType, fileName)?.let { newFile ->
-                            contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
-                                outputStream.write(byteArray)
-                                outputStream.close()
-                                failed = false
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-
-                mSaveAsyncBusy = false
-                runOnUiThread {
-                    if (failed) mBinding.frameView.showSaveError()
-                    saveAsyncNextItem()
+    private fun createAndSave( fileName: String, mimeType: String, saveCallback: (outputStream: OutputStream) -> Unit ) {
+        mSaveFolder?.let { saveFolder ->
+            saveFolder.createFile(mimeType, fileName)?.let { newFile ->
+                contentResolver.openOutputStream(newFile.uri)?.let { outputStream ->
+                    saveCallback.invoke( outputStream )
+                    outputStream.close()
                 }
             }
-        } else if(!mSaveAsyncBusy) {
-            mBinding.frameView.showSavePhotosIcon(false)
         }
-    }
-
-    private fun saveAsync(fileName: String, mimeType: String, byteArray: ByteArray) {
-        mSaveAsyncMQ.add(Triple(fileName, mimeType, byteArray))
-        saveAsyncNextItem()
     }
 
     private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
         Log.i("TAKE_PHOTO", "DNG: Save starts")
         try {
-            val outputStream = ByteArrayOutputStream()
             val dngCreator = DngCreator(mCameraInfo.cameraCharacteristics, captureResult)
             mLocation?.let { dngCreator.setLocation(it) }
             dngCreator.setOrientation(mPhotoExifOrientation)
-            dngCreator.writeImage(outputStream, image)
-            saveAsync("$mPhotoFileNameBase.dng", "image/x-adobe-dng", outputStream.toByteArray())
-        } catch (e: Exception) {
+            createAndSave( "$mPhotoFileNameBase.dng", "image/x-adobe-dng" ) { outputStream ->
+                dngCreator.writeImage(outputStream, image)
+            }
+       } catch (e: Exception) {
             e.printStackTrace()
         }
         Log.i("TAKE_PHOTO", "DNG: Save ends")
@@ -1188,12 +1138,12 @@ class CameraActivity : AppCompatActivity() {
     private fun saveJpeg(image: Image) {
         Log.i("TAKE_PHOTO", "JPEG: Save starts")
         try {
-            val outputStream = ByteArrayOutputStream()
             val buffer = image.planes[0].buffer
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
-            outputStream.write(bytes)
-            saveAsync("$mPhotoFileNameBase.jpg", "image/jpeg", outputStream.toByteArray())
+            createAndSave( "$mPhotoFileNameBase.jpg", "image/jpeg" ) { outputStream ->
+                outputStream.write(bytes)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1219,8 +1169,6 @@ class CameraActivity : AppCompatActivity() {
     /** Start taking a photo */
     private fun takePhoto(newFile: Boolean = false, start: Boolean = false) {
         runOnUiThread {
-            mBinding.frameView.updateDebugMemInfo()
-
             if (start) {
                 if (!mSequenceStarted) {
                     mPhotoCounter = 0
@@ -1267,41 +1215,24 @@ class CameraActivity : AppCompatActivity() {
             val cameraCaptureSession = mCameraCaptureSession
 
             if (takeNewPhoto && null != captureRequestPhoto && null != cameraCaptureSession) {
-                var minMem =
-                    when (settings.takePhotoModes) {
-                        Settings.PHOTO_TYPE_DNG -> mCameraInfo.estimatedDngSize * 2
-                        Settings.PHOTO_TYPE_JPEG -> mCameraInfo.estimatedJpegSize
-                        else -> mCameraInfo.estimatedDngSize * 2 + mCameraInfo.estimatedJpegSize
-                    }
-                minMem = 1 + minMem / (1024 * 1024) //convert to MB
+                Log.i("TAKE_PHOTO", "New photo")
 
-                if (mSaveAsyncMQ.isNotEmpty() && minMem > getFreeMemInfo()) {
-                    Log.i("TAKE_PHOTO", "Not enough memory")
-                    mPhotoTakeMask = PHOTO_TAKE_OUT_OF_MEMORY
-                    Timer("Out of memory", false).schedule(MEMORY_RETRY_TIMEOUT) {
-                        mPhotoTakeMask = 0
-                        takePhoto(true)
-                    }
-                } else {
-                    Log.i("TAKE_PHOTO", "New photo")
+                mPhotoInProgress = true
 
-                    mPhotoInProgress = true
-
-                    mPhotoTakeMask = when (settings.takePhotoModes) {
-                        Settings.PHOTO_TYPE_DNG -> PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                        Settings.PHOTO_TYPE_JPEG -> PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
-                        else -> PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
-                    }
-
-                    mPhotoTimestamp = System.currentTimeMillis()
-                    mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
-
-                    cameraCaptureSession.capture(
-                        captureRequestPhoto,
-                        mCameraCaptureSessionPhotoCaptureCallback,
-                        getWorkerHandler()
-                    )
+                mPhotoTakeMask = when (settings.takePhotoModes) {
+                    Settings.PHOTO_TYPE_DNG -> PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
+                    Settings.PHOTO_TYPE_JPEG -> PHOTO_TAKE_JPEG or PHOTO_TAKE_COMPLETED
+                    else -> PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG or PHOTO_TAKE_COMPLETED
                 }
+
+                mPhotoTimestamp = System.currentTimeMillis()
+                mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
+
+                cameraCaptureSession.capture(
+                    captureRequestPhoto,
+                    mCameraCaptureSessionPhotoCaptureCallback,
+                    getWorkerHandler()
+                )
             } else {
                 mPhotoInProgress = false
                 setupCapturePreviewRequest()

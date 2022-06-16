@@ -131,10 +131,6 @@ class FrameView : View {
         mSavePhotoErrorIcon.bounds = Rect(PHOTO_ICON_X + PHOTO_ICON_WIDTH, PHOTO_ICON_X, PHOTO_ICON_X + 2 * PHOTO_ICON_WIDTH, PHOTO_ICON_Y + PHOTO_ICON_HEIGHT)
 
         DrawableCompat.setTint(mSavePhotoErrorIcon, Color.RED)
-
-        timer(null, false, 1000, 1000) {
-            updateDebugMemInfo()
-        }
     }
 
     /** Sequence: show the delay until the next sequence photo */
@@ -257,11 +253,6 @@ class FrameView : View {
             mShowFocusZone = false
             invalidate()
         }
-    }
-
-    fun updateDebugMemInfo() {
-        val memInfo = CameraActivity.getMemInfo()
-        setDebugInfo(DEBUG_INFO_MEM, "Mem: ${memInfo.first} MB / ${memInfo.second} MB")
     }
 
     @SuppressLint("DrawAllocation", "UseCompatLoadingForDrawables")
