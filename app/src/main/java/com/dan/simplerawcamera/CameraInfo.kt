@@ -49,7 +49,8 @@ class CameraInfo(
                         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
                         val keys = characteristics.keys
 
-                        if ((characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int) < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
+                        val level = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int
+                        if (level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL && level < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
 
                         val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
 
