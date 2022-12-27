@@ -630,17 +630,16 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun handleRequestPermissions(grantResults: IntArray) {
-        if (grantResults.size < PERMISSIONS.size)
+        if (grantResults.size < PERMISSIONS.size) {
+            fatalError("Permissions are mandatory !")
             return
+        }
 
-        var allowedAll = grantResults.size >= PERMISSIONS.size
-
-        if (grantResults.size >= PERMISSIONS.size) {
-            for ( result in grantResults ) {
-                if (result != PackageManager.PERMISSION_GRANTED ) {
-                    allowedAll = false
-                    break
-                }
+        var allowedAll = true
+        for ( result in grantResults ) {
+            if (result != PackageManager.PERMISSION_GRANTED ) {
+                allowedAll = false
+                break
             }
         }
 
@@ -858,7 +857,7 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mBinding.switch4X.isChecked = false
-        mBinding.switch4X.setOnCheckedChangeListener { _, isChecked ->
+        mBinding.switch4X.setOnCheckedChangeListener { _, _ ->
             giveHapticFeedback(mBinding.switchSequences)
             setupCapturePreviewRequest()
         }
