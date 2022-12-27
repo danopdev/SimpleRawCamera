@@ -10,12 +10,15 @@ import android.graphics.*
 import android.hardware.SensorManager
 import android.hardware.camera2.*
 import android.hardware.camera2.params.MeteringRectangle
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.location.Location
 import android.location.LocationManager
 import android.media.ExifInterface
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
@@ -67,7 +70,6 @@ class CameraActivity : AppCompatActivity() {
         const val PHOTO_TAKE_COMPLETED = 1
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
-        const val PHOTO_TAKE_OUT_OF_MEMORY = 8
 
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
@@ -411,16 +413,42 @@ class CameraActivity : AppCompatActivity() {
             mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
 
             try {
-                cameraDevice.createCaptureSession(
-                    mutableListOf(
+                val outputSurfaces = listOf(
                         mBinding.surfaceView.holder.surface,
                         mImageReaderHisto.surface,
                         mImageReaderJpeg.surface,
                         mImageReaderDng.surface,
-                    ),
-                    mCameraCaptureSessionStateCallback,
-                    getWorkerHandler()
-                )
+                    )
+
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                    cameraDevice.createCaptureSession(
+                        outputSurfaces,
+                        mCameraCaptureSessionStateCallback,
+                        getWorkerHandler()
+                    )
+                } else {
+                    val outputConfigs = mutableListOf<OutputConfiguration>()
+
+                    outputSurfaces.map {
+                        outputConfigs.add(OutputConfiguration(it))
+                    }
+
+                    val physicalId = mCameraInfo.physicalId
+                    if (null != physicalId) {
+                        outputConfigs.forEach {
+                            it.setPhysicalCameraId(physicalId)
+                        }
+                    }
+
+                    val sessionConfiguration = SessionConfiguration(
+                        SessionConfiguration.SESSION_REGULAR,
+                        outputConfigs,
+                        applicationContext.mainExecutor,
+                        mCameraCaptureSessionStateCallback
+                    )
+
+                    cameraDevice.createCaptureSession(sessionConfiguration)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -577,13 +605,6 @@ class CameraActivity : AppCompatActivity() {
                 or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                 or View.SYSTEM_UI_FLAG_FULLSCREEN)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun showSystemUI() {
-        window.decorView.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {

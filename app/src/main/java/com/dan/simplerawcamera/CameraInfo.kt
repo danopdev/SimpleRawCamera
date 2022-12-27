@@ -5,7 +5,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
-import android.util.Log
+import android.os.Build
 import android.util.Range
 import android.util.Rational
 
@@ -13,9 +13,9 @@ import android.util.Rational
  Contains camera characteristics (don't need to query again)
  */
 class CameraInfo(
-    val cameraManager: CameraManager,
-    val cameraCharacteristics: CameraCharacteristics,
     val id: String,
+    val physicalId: String?,
+    val cameraCharacteristics: CameraCharacteristics,
     val resolutionWidth: Int,
     val resolutionHeight: Int,
     val isoRange: Range<Int>,
@@ -25,7 +25,6 @@ class CameraInfo(
     val focusRange: Range<Float>,
     val focusHyperfocalDistance: Float,
     val focusAllowManual: Boolean,
-    val focusAllowFaceDetection: Boolean,
     val hasFlash: Boolean,
     val sensorOrientation: Int,
     val streamConfigurationMap: StreamConfigurationMap,
@@ -33,6 +32,61 @@ class CameraInfo(
 ) {
 
     companion object {
+
+        private fun getCameraInfo(cameraId: String, physicalId: String?, characteristics: CameraCharacteristics): CameraInfo? {
+            val level = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int
+            if (level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL && level < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) return null
+
+            val keys = characteristics.keys
+
+            val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
+            val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
+            val exposureCompensationRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
+            val exposureCompensationStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
+            val exposureCompensationMultiplyFactor = exposureCompensationStep.denominator / Settings.EXP_STEPS_PER_1EV
+            val exposureCompensationRange = Range(
+                exposureCompensationRangeFull.lower / exposureCompensationMultiplyFactor,
+                exposureCompensationRangeFull.upper / exposureCompensationMultiplyFactor
+            )
+
+            val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
+            val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
+            val focusRange = Range(0f, focusMinDistance)
+            val focusMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) as Int
+
+            val hasFlash =
+                if (CameraCharacteristics.FLASH_INFO_AVAILABLE in keys)
+                    characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) as Boolean
+                else
+                    false
+
+            val resolutionRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) as Rect
+            val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) as Int
+            val streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
+
+            val supportLensStabilisation =
+                (characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION) as IntArray)
+                    .contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
+
+            return CameraInfo(
+                cameraId,
+                physicalId,
+                characteristics,
+                resolutionRect.width(),
+                resolutionRect.height(),
+                isoRange,
+                speedRange,
+                exposureCompensationRange,
+                exposureCompensationMultiplyFactor,
+                focusRange,
+                focusHyperfocalDistance,
+                focusMaxRegions >= 1,
+                hasFlash,
+                sensorOrientation,
+                streamConfigurationMap,
+                supportLensStabilisation
+            )
+        }
 
         /**
          List all available and valid (for this application) cameras.
@@ -44,76 +98,25 @@ class CameraInfo(
                 val cameraIds = cameraManager.cameraIdList
 
                 for (cameraId in cameraIds) {
-
                     try {
                         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                        val keys = characteristics.keys
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                            val physicalCameraIds = characteristics.physicalCameraIds
+                            if (physicalCameraIds.size >= 1) {
+                                physicalCameraIds.forEach { physicalCameraId ->
+                                    if (null != physicalCameraId ) {
+                                        getCameraInfo(
+                                            cameraId,
+                                            physicalCameraId,
+                                            cameraManager.getCameraCharacteristics(physicalCameraId)
+                                        )?.apply { validCameras.add(this) }
+                                    }
+                                }
+                                continue
+                            }
+                        }
 
-                        val level = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int
-                        if (level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL && level < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) continue
-
-                        val isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE) as Range<Int>
-
-                        val speedRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE) as Range<Long>
-
-                        val aeMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE) as Int
-                        Log.i("CAM $cameraId", "aeMaxRegions: $aeMaxRegions")
-
-                        val faceMax = characteristics.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT) as Int
-                        val faceModes = characteristics.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES) as IntArray
-                        var str = ""
-                        faceModes.forEach { str += " $it" }
-                        Log.i("CAM $cameraId", "faceMax: $faceMax")
-                        Log.i("CAM $cameraId", "faceModes: $str")
-
-                        val exposureCompensationRangeFull = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE) as Range<Int>
-                        val exposureCompensationStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP) as Rational
-                        val exposureCompensationMultiplyFactor = exposureCompensationStep.denominator / Settings.EXP_STEPS_PER_1EV
-                        val exposureCompensationRange = Range(
-                            exposureCompensationRangeFull.lower / exposureCompensationMultiplyFactor,
-                            exposureCompensationRangeFull.upper / exposureCompensationMultiplyFactor
-                        )
-
-                        val focusMinDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) as Float
-                        val focusHyperfocalDistance = characteristics.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE) as Float
-                        val focusRange = Range(0f, focusMinDistance)
-                        val focusMaxRegions = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) as Int
-
-                        val hasFlash =
-                            if (CameraCharacteristics.FLASH_INFO_AVAILABLE in keys)
-                                characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) as Boolean
-                            else
-                                false
-
-                        val resolutionRect = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE) as Rect
-                        val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) as Int
-                        val streamConfigurationMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP) as StreamConfigurationMap
-
-                        val supportLensStabilisation =
-                            (characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION) as IntArray)
-                                .contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
-
-                        validCameras.add(
-                            CameraInfo(
-                                cameraManager,
-                                characteristics,
-                                cameraId,
-                                resolutionRect.width(),
-                                resolutionRect.height(),
-                                isoRange,
-                                speedRange,
-                                exposureCompensationRange,
-                                exposureCompensationMultiplyFactor,
-                                focusRange,
-                                focusHyperfocalDistance,
-                                focusMaxRegions >= 1,
-                                faceMax >= 1,
-                                hasFlash,
-                                sensorOrientation,
-                                streamConfigurationMap,
-                                supportLensStabilisation
-                            )
-                        )
+                        getCameraInfo(cameraId, null, characteristics)?.apply { validCameras.add(this) }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -190,8 +193,6 @@ class CameraInfo(
     }
 
     val areDimensionsSwapped = sensorOrientation == 0 || sensorOrientation == 180
-    val estimatedDngSize = resolutionWidth *  resolutionWidth * 2 + 100000
-    val estimatedJpegSize = estimatedDngSize / 3
     val speedSteps = getSpeedStepsArray(speedRange)
     val isoSteps = getIsoStepsArray(isoRange)
 
