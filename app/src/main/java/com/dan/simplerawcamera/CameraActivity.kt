@@ -18,9 +18,7 @@ import android.media.ExifInterface
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -34,6 +32,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
@@ -145,7 +144,6 @@ class CameraActivity : AppCompatActivity() {
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
     private var mCaptureRequest: CaptureRequest? = null
     private var mCaptureModeIsPhoto = false
-    private var mCurrentPhotoCaptureResult: TotalCaptureResult? = null
 
     private var mPhotoButtonPressed = false
     private var mPhotoTakeMask = 0
@@ -157,8 +155,6 @@ class CameraActivity : AppCompatActivity() {
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
     private lateinit var mImageReaderDng: ImageReader
-    private var mImageDng: Image? = null
-    private var mImageJpeg: Image? = null
 
     private var mIsoMeasuredValue = 100
     private var mSpeedMeasuredValue = 7812500L // 1/128
@@ -211,7 +207,7 @@ class CameraActivity : AppCompatActivity() {
 
             val rowStride = yPlane.rowStride
 
-            GlobalScope.launch(Dispatchers.Main) {
+            GlobalScope.launch(Dispatchers.Default) {
                 val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
                 for (line in 0 until imageH) {
                     var index = line * rowStride
@@ -280,32 +276,6 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    /** JPEG Reader Listener */
-    private val mImageReaderJpegListener =
-        ImageReader.OnImageAvailableListener { imageReader ->
-            Log.i("TAKE_PHOTO", "JPEG: Received")
-
-            imageReader?.acquireLatestImage()?.let{
-                mImageJpeg = it
-            }
-
-            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
-            if (0 == mPhotoTakeMask) takePhoto(true)
-        }
-
-    /** DNG Reader Listener */
-    private val mImageReaderDngListener =
-        ImageReader.OnImageAvailableListener { imageReader ->
-            Log.i("TAKE_PHOTO", "DNG: Received")
-
-            imageReader?.acquireLatestImage()?.let{
-                mImageDng = it
-            }
-
-            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
-            if (0 == mPhotoTakeMask) takePhoto(true)
-        }
-
     /** Surface for preview */
     private val mSurfaceHolderCallback = object: SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
@@ -349,11 +319,14 @@ class CameraActivity : AppCompatActivity() {
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
-            super.onCaptureCompleted(session, request, result)
+            //super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
-            mCurrentPhotoCaptureResult = result
-            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_COMPLETED.inv()
-            if (0 == mPhotoTakeMask) takePhoto(true)
+
+            saveImage( mImageReaderJpeg, result )
+            saveImage( mImageReaderDng, result )
+
+            mPhotoTakeMask = mPhotoTakeMask and (PHOTO_TAKE_COMPLETED or PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG).inv()
+            takePhoto(true)
         }
     }
 
@@ -391,16 +364,20 @@ class CameraActivity : AppCompatActivity() {
             }
 
             val captureEA = getCaptureEA()
-            mBinding.txtExpDelta.visibility = if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
-            @SuppressLint("SetTextI18n")
-            mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
+            runOnUiThread {
+                mBinding.txtExpDelta.visibility =
+                    if (captureEA.third < -0.1 || captureEA.third > 0.1) View.VISIBLE else View.INVISIBLE
+                @SuppressLint("SetTextI18n")
+                mBinding.txtExpDelta.text = "%.2f".format(captureEA.third)
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_TARGET, "Target - ISO ${captureEA.first}, Speed ${getSpeedStr(captureEA.second)} (${captureEA.second})")
+                mBinding.frameView.setDebugInfo(
+                    FrameView.DEBUG_INFO_TARGET,
+                    "Target - ISO ${captureEA.first}, Speed ${getSpeedStr(captureEA.second)} (${captureEA.second})"
+                )
 
-            if (Settings.ISO_MODE_AUTO != settings.isoMode && Settings.SPEED_MODE_AUTO != settings.speedMode) return
-
-            if (Settings.ISO_MODE_AUTO == settings.isoMode) showIso(captureEA.first)
-            if (Settings.SPEED_MODE_AUTO == settings.speedMode) showSpeed(captureEA.second)
+                if (Settings.ISO_MODE_AUTO == settings.isoMode) showIso(captureEA.first)
+                if (Settings.SPEED_MODE_AUTO == settings.speedMode) showSpeed(captureEA.second)
+            }
         }
     }
 
@@ -434,41 +411,41 @@ class CameraActivity : AppCompatActivity() {
                         mBinding.surfaceView.holder.surface,
                         mImageReaderHisto.surface,
                         mImageReaderJpeg.surface,
-                        mImageReaderDng.surface,
+                        mImageReaderDng.surface
                     )
 
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                    cameraDevice.createCaptureSession(
-                        outputSurfaces,
-                        mCameraCaptureSessionStateCallback,
-                        getWorkerHandler()
-                    )
-                } else {
-                    val outputConfigs = mutableListOf<OutputConfiguration>()
+                val outputConfigs = mutableListOf<OutputConfiguration>()
 
-                    outputSurfaces.map {
-                        outputConfigs.add(OutputConfiguration(it))
-                    }
-
-                    val physicalId = mCameraInfo.physicalId
-                    if (null != physicalId) {
-                        outputConfigs.forEach {
-                            it.setPhysicalCameraId(physicalId)
-                        }
-                    }
-
-                    val sessionConfiguration = SessionConfiguration(
-                        SessionConfiguration.SESSION_REGULAR,
-                        outputConfigs,
-                        applicationContext.mainExecutor,
-                        mCameraCaptureSessionStateCallback
-                    )
-
-                    cameraDevice.createCaptureSession(sessionConfiguration)
+                outputSurfaces.map {
+                    outputConfigs.add(OutputConfiguration(1, it))
                 }
+
+                val physicalId = mCameraInfo.physicalId
+                if (null != physicalId) {
+                    outputConfigs.forEach {
+                        it.setPhysicalCameraId(physicalId)
+                    }
+                }
+
+                val sessionConfiguration = SessionConfiguration(
+                    SessionConfiguration.SESSION_REGULAR,
+                    outputConfigs,
+                    Dispatchers.Default.asExecutor(),
+                    mCameraCaptureSessionStateCallback
+                )
+
+                cameraDevice.createCaptureSession(sessionConfiguration)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun callSafe(f: ()->Unit) {
+        try {
+            f()
+        } catch(e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -576,9 +553,6 @@ class CameraActivity : AppCompatActivity() {
             sequenceStart()
         }
     }
-
-    /** There is not specific thread for the camera (currently I have problems) but maybe one-day */
-    private fun getWorkerHandler(): Handler? { return null }
 
     private fun getPhotoOrientation(): Int = (mScreenOrientation + mCameraInfo.sensorOrientation) % 360
 
@@ -739,7 +713,7 @@ class CameraActivity : AppCompatActivity() {
             mBinding.txtCamera.visibility = View.INVISIBLE
         }
 
-        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, getWorkerHandler())
+        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, null)
 
         setContentView(mBinding.root)
 
@@ -1191,6 +1165,20 @@ class CameraActivity : AppCompatActivity() {
         saveAsyncNextItem()
     }
 
+    private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult) {
+        val image = imageReader.acquireLatestImage() ?: return
+
+        callSafe {
+            if (image.format == ImageFormat.JPEG) {
+                saveJpeg(image)
+            } else {
+                saveDng(image, captureResult)
+            }
+        }
+
+        callSafe{ image.close() }
+    }
+
     private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
         Log.i("TAKE_PHOTO", "DNG: Save starts")
         try {
@@ -1252,32 +1240,12 @@ class CameraActivity : AppCompatActivity() {
             var takeNewPhoto = start
 
             if (newFile) {
-                val realNewFile = null != mImageJpeg || null != mImageDng
-
-                if (realNewFile) {
-                    mPhotoCounter++
-                    mBinding.frameView.showCounter(mPhotoCounter)
-                }
-
-                mImageJpeg?.let { image ->
-                    saveJpeg(image)
-                    image.close()
-                    mImageJpeg = null
-                }
-
-                mImageDng?.let { image ->
-                    mCurrentPhotoCaptureResult?.let{ captureResult ->
-                        saveDng(image, captureResult)
-                    }
-                    image.close()
-                    mImageDng = null
-                }
-
-                mCurrentPhotoCaptureResult = null
+                mPhotoCounter++
+                mBinding.frameView.showCounter(mPhotoCounter)
 
                 takeNewPhoto = settings.continuousMode && mPhotoButtonPressed && !mSequenceStarted
 
-                if (realNewFile && mSequenceStarted) {
+                if (mSequenceStarted) {
                     sequencePhotoTaken()
                 }
             }
@@ -1301,7 +1269,7 @@ class CameraActivity : AppCompatActivity() {
                     mPhotoTakeMask = PHOTO_TAKE_OUT_OF_MEMORY
                     Timer("Out of memory", false).schedule(MEMORY_RETRY_TIMEOUT) {
                         mPhotoTakeMask = 0
-                        takePhoto(true)
+                        takePhoto(false)
                     }
                 } else {
                     Log.i("TAKE_PHOTO", "New photo")
@@ -1317,10 +1285,10 @@ class CameraActivity : AppCompatActivity() {
                     mPhotoTimestamp = System.currentTimeMillis()
                     mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
-                    cameraCaptureSession.capture(
+                    cameraCaptureSession.captureSingleRequest(
                         captureRequestPhoto,
-                        mCameraCaptureSessionPhotoCaptureCallback,
-                        getWorkerHandler()
+                        Dispatchers.Default.asExecutor(),
+                        mCameraCaptureSessionPhotoCaptureCallback
                     )
                 }
             } else {
@@ -1363,28 +1331,25 @@ class CameraActivity : AppCompatActivity() {
         set.applyTo(mBinding.layoutView)
 
         mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
-        mImageReaderJpeg.setOnImageAvailableListener(mImageReaderJpegListener, getWorkerHandler())
-
         mImageReaderDng = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
-        mImageReaderDng.setOnImageAvailableListener(mImageReaderDngListener, getWorkerHandler())
 
         updateSliders()
 
         mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: opening")
-        mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, getWorkerHandler())
+        mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, null)
     }
 
     private fun closeCamera() {
         val cameraCaptureSession = mCameraCaptureSession
         if (null != cameraCaptureSession) {
-            cameraCaptureSession.stopRepeating()
-            cameraCaptureSession.close()
+            callSafe{ cameraCaptureSession.stopRepeating() }
+            callSafe{ cameraCaptureSession.close() }
             mCameraCaptureSession = null
         }
 
         val cameraDevice = mCameraDevice
         if (null != cameraDevice) {
-            cameraDevice.close()
+            callSafe{ cameraDevice.close() }
             mCameraDevice = null
         }
 
@@ -1638,10 +1603,10 @@ class CameraActivity : AppCompatActivity() {
         }
 
         try {
-            cameraCaptureSession.setRepeatingRequest(
+            cameraCaptureSession.setSingleRepeatingRequest(
                 captureRequestBuilder.build(),
-                mCameraCaptureSessionPreviewCaptureCallback,
-                getWorkerHandler()
+                Dispatchers.Default.asExecutor(),
+                mCameraCaptureSessionPreviewCaptureCallback
             )
         } catch (e: Exception) {
             e.printStackTrace()
