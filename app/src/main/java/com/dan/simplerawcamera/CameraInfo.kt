@@ -193,6 +193,8 @@ class CameraInfo(
     }
 
     val areDimensionsSwapped = sensorOrientation == 0 || sensorOrientation == 180
+    val estimatedDngSize = resolutionWidth *  resolutionWidth * 2 + 100000
+    val estimatedJpegSize = estimatedDngSize / 3
     val speedSteps = getSpeedStepsArray(speedRange)
     val isoSteps = getIsoStepsArray(isoRange)
 

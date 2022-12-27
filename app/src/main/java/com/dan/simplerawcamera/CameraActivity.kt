@@ -71,6 +71,7 @@ class CameraActivity : AppCompatActivity() {
         const val PHOTO_TAKE_COMPLETED = 1
         const val PHOTO_TAKE_JPEG = 2
         const val PHOTO_TAKE_DNG = 4
+        const val PHOTO_TAKE_OUT_OF_MEMORY = 8
 
         const val FOCUS_STATE_MANUAL = 0
         const val FOCUS_STATE_CLICK = 1
