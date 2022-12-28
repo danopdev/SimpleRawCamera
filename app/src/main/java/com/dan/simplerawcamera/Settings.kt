@@ -45,10 +45,6 @@ class Settings( private val activity: Activity) {
         const val FLASH_MODE_ON = 1
         const val FLASH_MODE_TORCH = 2
 
-        const val NOISE_REDUCTION_DISABLED = 0
-        const val NOISE_REDUCTION_JPEG_ONLY = 1
-        const val NOISE_REDUCTION_ENABLED = 2
-
         val SEQUENCE_DELAY_START_OPTIONS = arrayOf(2, 5, 10)
         val SEQUENCE_DELAY_BETWEEN_OPTIONS = arrayOf(0, 1, 5, 10, 30, 60, 120, 300, 600)
         val SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(1, 3, 5, 10, 0)
@@ -69,7 +65,7 @@ class Settings( private val activity: Activity) {
     var frameType: Int = FRAME_TYPE_NONE
     var continuousMode: Boolean = true
     var takePhotoModes: Int = PHOTO_TYPE_JPEG_DNG
-    var noiseReduction: Int = NOISE_REDUCTION_JPEG_ONLY
+    var noiseReduction: Boolean = true
     var sequenceDelayStart: Int = 2
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
@@ -91,21 +87,58 @@ class Settings( private val activity: Activity) {
         }
     }
 
+    private fun fixProperties() {
+        if (!CameraInfo.supportDng) {
+            takePhotoModes = PHOTO_TYPE_JPEG
+        } else if (!CameraInfo.supportJpeg) {
+            takePhotoModes = PHOTO_TYPE_DNG
+        }
+    }
+
+    private fun callSafe(f: ()->Unit ) {
+        try {
+            f()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun loadProperties() {
         val preferences = activity.getPreferences(Context.MODE_PRIVATE)
 
         forEachSettingProperty { property ->
-            when( property.returnType ) {
-                Boolean::class.createType() -> property.setter.call( this, preferences.getBoolean( property.name, property.getter.call(this) as Boolean ) )
-                Int::class.createType() -> property.setter.call( this, preferences.getInt( property.name, property.getter.call(this) as Int ) )
-                Long::class.createType() -> property.setter.call( this, preferences.getLong( property.name, property.getter.call(this) as Long ) )
-                Float::class.createType() -> property.setter.call( this, preferences.getFloat( property.name, property.getter.call(this) as Float ) )
-                String::class.createType() -> property.setter.call( this, preferences.getString( property.name, property.getter.call(this) as String ) )
+            callSafe {
+                when (property.returnType) {
+                    Boolean::class.createType() -> property.setter.call(
+                        this,
+                        preferences.getBoolean(property.name, property.getter.call(this) as Boolean)
+                    )
+                    Int::class.createType() -> property.setter.call(
+                        this,
+                        preferences.getInt(property.name, property.getter.call(this) as Int)
+                    )
+                    Long::class.createType() -> property.setter.call(
+                        this,
+                        preferences.getLong(property.name, property.getter.call(this) as Long)
+                    )
+                    Float::class.createType() -> property.setter.call(
+                        this,
+                        preferences.getFloat(property.name, property.getter.call(this) as Float)
+                    )
+                    String::class.createType() -> property.setter.call(
+                        this,
+                        preferences.getString(property.name, property.getter.call(this) as String)
+                    )
+                }
             }
         }
+
+        fixProperties()
    }
 
     fun saveProperties() {
+        fixProperties()
+
         val preferences = activity.getPreferences(Context.MODE_PRIVATE)
         val editor = preferences.edit()
 
@@ -119,7 +152,7 @@ class Settings( private val activity: Activity) {
             }
         }
 
-        editor.commit()
+        editor.apply()
     }
 
     fun getArrayValue( value: Int, delta: Int, array: Array<Int> ): Int {

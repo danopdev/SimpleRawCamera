@@ -31,11 +31,15 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
         dialog.window?.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         val binding = SettingsBinding.inflate( inflater )
 
-        binding.spinnerPhotoModes.setSelection( cameraActivity.settings.takePhotoModes )
-        binding.spinnerNoiseReductionModes.setSelection( cameraActivity.settings.noiseReduction )
+        if (!CameraInfo.supportDng || !CameraInfo.supportJpeg) {
+            binding.spinnerPhotoModes.visibility = View.GONE
+        }
+
+        binding.spinnerPhotoModes.setSelection(cameraActivity.settings.takePhotoModes)
+        binding.switchNoiseReduction.isChecked = cameraActivity.settings.noiseReduction
         binding.switchContinuousMode.isChecked = cameraActivity.settings.continuousMode
         binding.switchShowGrid.isChecked = cameraActivity.settings.showGrid
         binding.spinnerShowFraming.setSelection( cameraActivity.settings.frameType )
@@ -50,8 +54,11 @@ class SettingsDialog(private val cameraActivity: CameraActivity, private val lis
         binding.btnCancel.setOnClickListener { dismiss() }
 
         binding.btnOK.setOnClickListener {
-            cameraActivity.settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
-            cameraActivity.settings.noiseReduction = binding.spinnerNoiseReductionModes.selectedItemPosition
+            if (CameraInfo.supportDng && CameraInfo.supportJpeg) {
+                cameraActivity.settings.takePhotoModes = binding.spinnerPhotoModes.selectedItemPosition
+            }
+
+            cameraActivity.settings.noiseReduction = binding.switchNoiseReduction.isChecked
             cameraActivity.settings.continuousMode = binding.switchContinuousMode.isChecked
             cameraActivity.settings.showGrid = binding.switchShowGrid.isChecked
             cameraActivity.settings.frameType = binding.spinnerShowFraming.selectedItemPosition

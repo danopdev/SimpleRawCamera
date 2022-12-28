@@ -33,9 +33,21 @@ class CameraInfo(
 
     companion object {
 
+        private val BLACKLIST_JPEG = listOf(
+            Pair("Google", "Pixel 6a")
+        )
+
+        private val BLACKLIST_DNG = listOf<Pair<String,String>>(
+        )
+
+        private val device = Pair(Build.MANUFACTURER, Build.MODEL)
+
+        val supportJpeg: Boolean = !BLACKLIST_JPEG.contains(device)
+        val supportDng: Boolean = !BLACKLIST_DNG.contains(device)
+
         private fun getCameraInfo(cameraId: String, physicalId: String?, characteristics: CameraCharacteristics): CameraInfo? {
             val level = characteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL) as Int
-            if (level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL && level < CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) return null
+            if (level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL && level != CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3) return null
 
             val keys = characteristics.keys
 
@@ -94,26 +106,26 @@ class CameraInfo(
         fun getValidCameras(cameraManager: CameraManager): ArrayList<CameraInfo> {
             val validCameras = ArrayList<CameraInfo>()
 
+            if (!supportJpeg && !supportDng) return validCameras
+
             try {
                 val cameraIds = cameraManager.cameraIdList
 
                 for (cameraId in cameraIds) {
                     try {
                         val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                            val physicalCameraIds = characteristics.physicalCameraIds
-                            if (physicalCameraIds.size >= 1) {
-                                physicalCameraIds.forEach { physicalCameraId ->
-                                    if (null != physicalCameraId ) {
-                                        getCameraInfo(
-                                            cameraId,
-                                            physicalCameraId,
-                                            cameraManager.getCameraCharacteristics(physicalCameraId)
-                                        )?.apply { validCameras.add(this) }
-                                    }
+                        val physicalCameraIds = characteristics.physicalCameraIds
+                        if (physicalCameraIds.size >= 1) {
+                            physicalCameraIds.forEach { physicalCameraId ->
+                                if (null != physicalCameraId ) {
+                                    getCameraInfo(
+                                        cameraId,
+                                        physicalCameraId,
+                                        cameraManager.getCameraCharacteristics(physicalCameraId)
+                                    )?.apply { validCameras.add(this) }
                                 }
-                                continue
                             }
+                            continue
                         }
 
                         getCameraInfo(cameraId, null, characteristics)?.apply { validCameras.add(this) }
