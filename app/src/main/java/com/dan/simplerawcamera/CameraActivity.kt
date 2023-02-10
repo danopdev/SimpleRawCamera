@@ -588,9 +588,20 @@ class CameraActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        mSelectCameraTimer?.cancel()
+        mSelectCameraTimer = null
+
+        sequenceStop()
+
         mOrientationEventListener?.disable()
         closeCamera()
         settings.saveProperties()
+
+        mBinding.frameView.hideFocusZone()
+        mBinding.frameView.showCounter(0)
+        mBinding.frameView.showSavePhotosIcon(false)
+        mBinding.frameView.showTakePhotoIcon(false)
+
         super.onPause()
     }
 
