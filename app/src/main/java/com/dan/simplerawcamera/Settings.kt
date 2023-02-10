@@ -46,7 +46,7 @@ class Settings( private val activity: Activity) {
         const val FLASH_MODE_TORCH = 2
 
         val SEQUENCE_DELAY_START_OPTIONS = arrayOf(2, 5, 10)
-        val SEQUENCE_DELAY_BETWEEN_OPTIONS = arrayOf(0, 1, 5, 10, 30, 60, 120, 300, 600)
+        val SEQUENCE_DELAY_BETWEEN_OPTIONS = arrayOf(0, 1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 90, 120, 150, 300, 600)
         val SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(1, 3, 5, 10, 0)
 
         val FLASH_MODES = arrayOf("OFF", "ON", "Torch")
