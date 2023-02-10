@@ -191,6 +191,14 @@ class CameraActivity : AppCompatActivity() {
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var mIsBusy = false
+        private var yBytes = ByteArray(0)
+        private val bmpWidth = HISTOGRAM_BITMAP_WIDTH + 2
+        private val bmpHeight = HISTOGRAM_BITMAP_HEIGHT + 2
+        private val color = Color.rgb(192, 192, 192)
+        private val colorBorder = Color.rgb(64, 64, 64)
+        private val colors = IntArray(bmpWidth * bmpHeight)
+        private val bitmap = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+        private val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
 
         private fun genHistogram(image: Image) {
             if (mIsBusy) return
@@ -202,13 +210,18 @@ class CameraActivity : AppCompatActivity() {
 
             val yPlane = image.planes[0]
             val yPlaneBuffer = yPlane.buffer
-            val yBytes = ByteArray(yPlaneBuffer.capacity())
+            
+            if (yBytes.size < yPlaneBuffer.capacity()) {
+                yBytes = ByteArray(yPlaneBuffer.capacity())
+            }
+            
             yPlaneBuffer.get(yBytes)
 
             val rowStride = yPlane.rowStride
 
             GlobalScope.launch(Dispatchers.Default) {
-                val values = IntArray(HISTOGRAM_BITMAP_WIDTH)
+                values.fill(0)
+
                 for (line in 0 until imageH) {
                     var index = line * rowStride
                     for (column in 0 until imageW) {
@@ -225,29 +238,19 @@ class CameraActivity : AppCompatActivity() {
                     maxHeight = max(maxHeight, value)
                 maxHeight++
 
-                val bmpWidth = HISTOGRAM_BITMAP_WIDTH + 2
-                val bmpHeight = HISTOGRAM_BITMAP_HEIGHT + 2
-                val color = Color.rgb(192, 192, 192)
-                val colors = IntArray(bmpWidth * bmpHeight)
-
+                colors.fill(0)
                 for (x in values.indices) {
                     val value = values[x]
                     var fill = HISTOGRAM_BITMAP_HEIGHT - 1 - (HISTOGRAM_BITMAP_HEIGHT - 1) * value / maxHeight
                     if (0 == fill && value > 0)
                         fill = 1
 
-                    var y = 0
-                    while (y <= fill) {
-                        colors[x + 1 + (y + 1) * bmpWidth] = 0
-                        y++
-                    }
+                    var y = fill + 1
                     while (y < HISTOGRAM_BITMAP_HEIGHT) {
                         colors[x + 1 + (y + 1) * bmpWidth] = color
                         y++
                     }
                 }
-
-                val colorBorder = Color.rgb(64, 64, 64)
 
                 for( x in 0 until bmpWidth) {
                     colors[x] = colorBorder
@@ -259,9 +262,8 @@ class CameraActivity : AppCompatActivity() {
                     colors[bmpWidth - 1 + y * bmpWidth] = colorBorder
                 }
 
-                val bitmap = Bitmap.createBitmap(colors, 0, bmpWidth, bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
-
                 runOnUiThread {
+                    bitmap.setPixels(colors, 0, bmpWidth, 0, 0, bmpWidth, bmpHeight)
                     mBinding.imgHistogram.setImageBitmap(bitmap)
                     mIsBusy = false
                 }
@@ -300,15 +302,16 @@ class CameraActivity : AppCompatActivity() {
 
             mCameraCaptureSession = session
 
-            val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-            captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
-            captureRequestBuilder.addTarget(mImageReaderHisto.surface)
+            callSafe {
+                val captureRequestBuilder =
+                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
+                captureRequestBuilder.addTarget(mImageReaderHisto.surface)
 
-            setupCaptureInitRequest(captureRequestBuilder)
-
-            mCaptureRequestBuilder = captureRequestBuilder
-
-            setupCapturePreviewRequest(true)
+                setupCaptureInitRequest(captureRequestBuilder)
+                mCaptureRequestBuilder = captureRequestBuilder
+                setupCapturePreviewRequest(true)
+            }
         }
     }
 
@@ -339,7 +342,12 @@ class CameraActivity : AppCompatActivity() {
             val isoMeasuredValue = result.get(CaptureResult.SENSOR_SENSITIVITY) as Int
             val speedMeasuredValue = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) as Long
 
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_MEASURED, "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})")
+            runOnUiThread {
+                mBinding.frameView.setDebugInfo(
+                    FrameView.DEBUG_INFO_MEASURED,
+                    "Measured - ISO ${isoMeasuredValue}, Speed ${getSpeedStr(speedMeasuredValue)} (${speedMeasuredValue})"
+                )
+            }
 
             mIsoMeasuredValue = isoMeasuredValue
             mSpeedMeasuredValue = speedMeasuredValue
@@ -389,7 +397,9 @@ class CameraActivity : AppCompatActivity() {
 
         @Suppress("DEPRECATION")
         override fun onOpened(cameraDevice: CameraDevice) {
-            mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: open")
+            runOnUiThread {
+                mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: open")
+            }
 
             mCameraDevice = cameraDevice
 
@@ -504,7 +514,9 @@ class CameraActivity : AppCompatActivity() {
 
         mSequenceTimer = timer(null, false, msDelay, msDelay) {
             mSequencePhotoDelayCounter--
-            mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
+            runOnUiThread {
+                mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
+            }
             if (mSequencePhotoDelayCounter <= 0) {
                 mSequenceTimer?.cancel()
                 mSequenceTimer = null
@@ -1149,8 +1161,8 @@ class CameraActivity : AppCompatActivity() {
                     e.printStackTrace()
                 }
 
-                mSaveAsyncBusy = false
                 runOnUiThread {
+                    mSaveAsyncBusy = false
                     if (failed) mBinding.frameView.showSaveError()
                     saveAsyncNextItem()
                 }
@@ -1161,8 +1173,10 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun saveAsync(fileName: String, mimeType: String, byteArray: ByteArray) {
-        mSaveAsyncMQ.add(Triple(fileName, mimeType, byteArray))
-        saveAsyncNextItem()
+        runOnUiThread {
+            mSaveAsyncMQ.add(Triple(fileName, mimeType, byteArray))
+            saveAsyncNextItem()
+        }
     }
 
     private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult) {
@@ -1285,11 +1299,13 @@ class CameraActivity : AppCompatActivity() {
                     mPhotoTimestamp = System.currentTimeMillis()
                     mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
-                    cameraCaptureSession.captureSingleRequest(
-                        captureRequestPhoto,
-                        Dispatchers.Default.asExecutor(),
-                        mCameraCaptureSessionPhotoCaptureCallback
-                    )
+                    callSafe {
+                        cameraCaptureSession.captureSingleRequest(
+                            captureRequestPhoto,
+                            Dispatchers.Default.asExecutor(),
+                            mCameraCaptureSessionPhotoCaptureCallback
+                        )
+                    }
                 }
             } else {
                 mPhotoInProgress = false
@@ -1336,7 +1352,10 @@ class CameraActivity : AppCompatActivity() {
         updateSliders()
 
         mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: opening")
-        mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, null)
+
+        callSafe {
+            mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, null)
+        }
     }
 
     private fun closeCamera() {
@@ -1414,7 +1433,7 @@ class CameraActivity : AppCompatActivity() {
         if (photoMode != mCaptureModeIsPhoto || force) {
             mCaptureModeIsPhoto = photoMode
 
-            cameraCaptureSession.stopRepeating()
+            callSafe{ cameraCaptureSession.stopRepeating() }
 
             if (photoMode) {
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
