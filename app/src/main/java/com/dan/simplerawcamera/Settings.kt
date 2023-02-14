@@ -48,6 +48,7 @@ class Settings( private val activity: Activity) {
         val SEQUENCE_DELAY_START_OPTIONS = arrayOf(2, 5, 10)
         val SEQUENCE_DELAY_BETWEEN_OPTIONS = arrayOf(0, 1, 5, 10, 15, 20, 25, 30, 40, 50, 60, 90, 120, 150, 300, 600)
         val SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(1, 3, 5, 10, 0)
+        val SEQUENCE_KEEP_PHOTOS_1_FOR_N_MAX = 9 //9 = every 10 photos
 
         val FLASH_MODES = arrayOf("OFF", "ON", "Torch")
     }
@@ -69,6 +70,7 @@ class Settings( private val activity: Activity) {
     var sequenceDelayStart: Int = 2
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
+    var sequenceKeepPhotos: Int = 0
     var showSequence: Boolean = false
     var showDebugInfo: Boolean = false
     var flashMode: Int = FLASH_MODE_OFF

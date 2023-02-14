@@ -769,6 +769,20 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
+        mBinding.txtSequenceKeepPhotos.setOnMoveXAxisListener { steps ->
+            var newValue = settings.sequenceKeepPhotos + steps
+            if (newValue < 0) {
+                newValue = 0
+            } else if (newValue > Settings.SEQUENCE_KEEP_PHOTOS_1_FOR_N_MAX) {
+                newValue = Settings.SEQUENCE_KEEP_PHOTOS_1_FOR_N_MAX
+            }
+            if (newValue != settings.sequenceKeepPhotos) {
+                settings.sequenceKeepPhotos = newValue
+                giveHapticFeedback(mBinding.txtSequenceKeepPhotos)
+                updateSequenceKeepPhotos()
+            }
+        }
+
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
         mBinding.txtFlash.setOnMoveYAxisListener { steps ->
@@ -1097,6 +1111,14 @@ class CameraActivity : AppCompatActivity() {
         mBinding.txtSequenceNumberOfPhotos.text = "Number of photos: ${getNumberOfPhotosText(settings.sequenceNumberOfPhotos)}"
     }
 
+    private fun updateSequenceKeepPhotos() {
+        @SuppressLint("SetTextI18n")
+        mBinding.txtSequenceKeepPhotos.text = if (0 == settings.sequenceKeepPhotos)
+            "Keep all photos"
+        else
+            "Keep 1 photo every ${settings.sequenceKeepPhotos + 1} photos"
+    }
+
     private fun updateFlashMode() {
         if (mCameraInfo.hasFlash) {
             mBinding.txtFlash.text = Settings.FLASH_MODES[settings.flashMode]
@@ -1193,11 +1215,13 @@ class CameraActivity : AppCompatActivity() {
     private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult) {
         val image = imageReader.acquireLatestImage() ?: return
 
-        callSafe {
-            if (image.format == ImageFormat.JPEG) {
-                saveJpeg(image)
-            } else {
-                saveDng(image, captureResult)
+        if (!mSequenceStarted || (mPhotoCounter % (settings.sequenceKeepPhotos + 1)) == 0) {
+            callSafe {
+                if (image.format == ImageFormat.JPEG) {
+                    saveJpeg(image)
+                } else {
+                    saveDng(image, captureResult)
+                }
             }
         }
 
