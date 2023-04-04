@@ -13,7 +13,7 @@
         android:padding="16dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="100dp"
             android:layout_height="match_parent"
             android:orientation="vertical">
 
@@ -75,24 +75,31 @@
 
             </LinearLayout>
 
-            <ImageView
-                android:id="@+id/imageView"
+            <TextView
+                android:id="@+id/txtPhotoModeLabel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:tint="@color/teal_200"
-                app:srcCompat="@android:drawable/ic_lock_idle_alarm" />
+                android:paddingTop="6dp"
+                android:text="Photo Mode"
+                android:textAlignment="center"
+                android:textAppearance="@style/TextAppearance.AppCompat.Small"
+                android:textColor="@color/teal_200" />
 
-            <Switch
-                android:id="@+id/switchSequences"
+            <com.dan.simplerawcamera.SensitiveTextView
+                android:id="@+id/txtPhotoMode"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:showText="false"
-                android:textOff=" "
-                android:thumbTint="@color/teal_200" />
+                android:layout_marginBottom="3dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"
+                android:text="Photo"
+                android:textAlignment="center"
+                android:textColor="@color/teal_200"
+                android:textStyle="bold" />
 
             <ImageButton
                 android:id="@+id/btnSettings"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:srcCompat="@android:drawable/ic_menu_manage" />
 

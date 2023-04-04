@@ -77,6 +77,10 @@ class CameraActivity : AppCompatActivity() {
         const val FOCUS_STATE_SEARCHING = 2
         const val FOCUS_STATE_LOCKED = 3
 
+        const val PHOTO_MODE_PHOTO = 0
+        const val PHOTO_MODE_SEQUENCE = 1
+        const val PHOTO_MODE_MAX = 2
+
         const val MEMORY_RETRY_TIMEOUT = 250L //ms
 
         const val SELECT_CAMERA_ASYNC_DELAY = 250L //ms
@@ -151,6 +155,8 @@ class CameraActivity : AppCompatActivity() {
     private var mPhotoFileNameBase = ""
     private var mPhotoCounter = 0
     private var mPhotoInProgress = false
+
+    private var mPhotoMode = PHOTO_MODE_PHOTO
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
     private lateinit var mImageReaderJpeg: ImageReader
@@ -740,8 +746,6 @@ class CameraActivity : AppCompatActivity() {
 
         setContentView(mBinding.root)
 
-        mBinding.switchSequences.isChecked = settings.showSequence
-
         mBinding.txtSequenceDelayStart.setOnMoveXAxisListener { steps ->
             val newValue = settings.getArrayValue( settings.sequenceDelayStart, steps, Settings.SEQUENCE_DELAY_START_OPTIONS )
             if (newValue != settings.sequenceDelayStart) {
@@ -789,7 +793,7 @@ class CameraActivity : AppCompatActivity() {
             moveTaskToBack(true)
         }
 
-        mBinding.txtFlash.setOnMoveYAxisListener { steps ->
+        mBinding.txtFlash.setOnMoveXAxisListener { steps ->
             if (mCameraInfo.hasFlash) {
                 var newValue = settings.flashMode + steps
                 while (newValue < 0) newValue += Settings.FLASH_MODES.size
@@ -803,12 +807,25 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
-        mBinding.txtCamera.setOnMoveYAxisListener { steps ->
+        mBinding.txtCamera.setOnMoveXAxisListener { steps ->
             val newCameraIndex =
                 if (steps < 0) (settings.cameraIndex - 1 + mCameraList.size) % mCameraList.size
                 else (settings.cameraIndex + 1) % mCameraList.size
             giveHapticFeedback(mBinding.txtCamera)
             selectCamera(newCameraIndex, true)
+        }
+
+        mBinding.txtPhotoMode.setOnMoveXAxisListener { steps ->
+            var newValue = mPhotoMode + steps
+            while (newValue < 0) newValue += PHOTO_MODE_MAX
+            newValue %= PHOTO_MODE_MAX
+
+            if (newValue != mPhotoMode) {
+                mPhotoMode = newValue
+                giveHapticFeedback(mBinding.txtPhotoMode)
+                sequenceStop()
+                updateSliders()
+            }
         }
 
         mCameraInfo = mCameraList[0]
@@ -831,7 +848,7 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.txtExpCompensation.setOnMoveXAxisListener { trackExpCompensation(it) }
 
-        mBinding.txtFocus.setOnMoveYAxisListener { steps ->
+        mBinding.txtFocus.setOnMoveXAxisListener { steps ->
             if (mCameraInfo.focusAllowManual) {
                 var newFocusType = settings.focusType + (if (steps < 0) -1 else 1)
                 if (newFocusType < 0) {
@@ -902,16 +919,9 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
-        mBinding.switchSequences.setOnCheckedChangeListener { _, isChecked ->
-            settings.showSequence = isChecked
-            giveHapticFeedback(mBinding.switchSequences)
-            sequenceStop()
-            updateSliders()
-        }
-
         mBinding.switch4X.isChecked = false
         mBinding.switch4X.setOnCheckedChangeListener { _, _ ->
-            giveHapticFeedback(mBinding.switchSequences)
+            giveHapticFeedback(mBinding.switch4X)
             setupCapturePreviewRequest()
         }
 
@@ -1134,6 +1144,13 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    private fun updatePhotoMode() {
+        mBinding.txtPhotoMode.text = when(mPhotoMode) {
+            PHOTO_MODE_SEQUENCE -> "Sequence"
+            else -> "Photo"
+        }
+    }
+
     private fun updateSliders() {
         mBinding.txtExpCompensation.visibility = if (Settings.ISO_MODE_AUTO == settings.isoMode || Settings.SPEED_MODE_AUTO == settings.speedMode) View.VISIBLE else View.INVISIBLE
 
@@ -1148,8 +1165,9 @@ class CameraActivity : AppCompatActivity() {
         updateSequenceDelayBetween()
         updateSequenceNumberOfPhotos()
         updateFlashMode()
+        updatePhotoMode()
 
-        if (settings.showSequence) {
+        if (PHOTO_MODE_SEQUENCE == mPhotoMode) {
             mBinding.layoutSequences.visibility = View.VISIBLE
 
             if (mSequenceStarted) {
@@ -1270,7 +1288,7 @@ class CameraActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "Button pressed: $mPhotoButtonPressed")
 
         if (pressed) {
-            if (settings.showSequence) {
+            if (PHOTO_MODE_SEQUENCE == mPhotoMode) {
                 sequenceToggle()
             } else {
                 takePhoto(false, true)

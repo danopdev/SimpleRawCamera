@@ -71,7 +71,6 @@ class Settings( private val activity: Activity) {
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
     var sequenceKeepPhotos: Int = 0
-    var showSequence: Boolean = false
     var showDebugInfo: Boolean = false
     var flashMode: Int = FLASH_MODE_OFF
     var enableHapticFeedback = true
