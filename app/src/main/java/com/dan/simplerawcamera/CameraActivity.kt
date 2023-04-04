@@ -1235,7 +1235,10 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult) {
-        val image = imageReader.acquireLatestImage() ?: return
+        var imageOrNull: Image? = null
+
+        callSafe { imageOrNull = imageReader.acquireLatestImage() }
+        val image = imageOrNull ?: return
 
         if (!mSequenceStarted || (mPhotoCounter % (settings.sequenceKeepPhotos + 1)) == 0) {
             callSafe {
@@ -1510,6 +1513,8 @@ class CameraActivity : AppCompatActivity() {
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
 
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
+
                 mLocation = if (settings.useLocation) {
                     mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
                 } else {
@@ -1551,6 +1556,7 @@ class CameraActivity : AppCompatActivity() {
                 mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, false)
+                captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
 
                 captureRequestBuilder.removeTarget(mImageReaderDng.surface)
                 captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
