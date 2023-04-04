@@ -785,6 +785,10 @@ class CameraActivity : AppCompatActivity() {
 
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
+        mBinding.btnExit.setOnClickListener {
+            moveTaskToBack(true)
+        }
+
         mBinding.txtFlash.setOnMoveYAxisListener { steps ->
             if (mCameraInfo.hasFlash) {
                 var newValue = settings.flashMode + steps

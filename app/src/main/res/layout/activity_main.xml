@@ -17,6 +17,12 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
+            <ImageButton
+                android:id="@+id/btnExit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:srcCompat="?attr/homeAsUpIndicator" />
+
             <TextView
                 android:id="@+id/txtFlashLabel"
                 android:layout_width="match_parent"
