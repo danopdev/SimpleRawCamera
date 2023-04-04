@@ -79,7 +79,8 @@ class CameraActivity : AppCompatActivity() {
 
         const val PHOTO_MODE_PHOTO = 0
         const val PHOTO_MODE_SEQUENCE = 1
-        const val PHOTO_MODE_MAX = 2
+        const val PHOTO_MODE_MACRO = 2
+        const val PHOTO_MODE_MAX = 3
 
         const val MEMORY_RETRY_TIMEOUT = 250L //ms
 
@@ -513,40 +514,59 @@ class CameraActivity : AppCompatActivity() {
         )
     }
 
+    private fun sequenceTakeNextPhotoNow() {
+        mSequenceTimer?.cancel()
+        mSequenceTimer = null
+        runOnUiThread {
+            if (mSequenceStarted) {
+                takePhoto(false, true)
+            }
+        }
+    }
+
     private fun sequenceTakeNextPhotoAfterDelay(delay: Int) {
-        val msDelay = if (delay <= 0) 100L else 1000L
         mSequencePhotoDelayCounter = delay
         mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
 
+        if (delay < 0) {
+            sequenceTakeNextPhotoNow()
+            return
+        }
+
+        val msDelay = if (delay <= 0) 100L else 1000L
         mSequenceTimer = timer(null, false, msDelay, msDelay) {
             mSequencePhotoDelayCounter--
             runOnUiThread {
                 mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
             }
             if (mSequencePhotoDelayCounter <= 0) {
-                mSequenceTimer?.cancel()
-                mSequenceTimer = null
-                runOnUiThread {
-                    if (mSequenceStarted) {
-                        takePhoto(false, true)
-                    }
-                }
+                sequenceTakeNextPhotoNow()
             }
         }
     }
 
     private fun sequencePhotoTaken() {
         Log.i("TAKE_PHOTO", "mSequenceStarted: ${mSequenceStarted}, mPhotoCounter: $mPhotoCounter")
-        if (mSequenceStarted) {
-            if (settings.sequenceNumberOfPhotos in 1..mPhotoCounter) {
-                sequenceStop()
+        if (!mSequenceStarted) return
+
+        if (PHOTO_MODE_SEQUENCE == mPhotoMode) {
+            if (settings.sequenceNumberOfPhotos > 0 && mPhotoCounter >= settings.sequenceNumberOfPhotos ) {
+                sequenceOrMacroStop()
             } else {
                 sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayBetween)
             }
+            return
+        }
+
+        //PHOTO_MODE_MACRO
+        if (mPhotoCounter >= settings.macroNumberOfPhotos) {
+            sequenceOrMacroStop()
+        } else {
+            sequenceTakeNextPhotoAfterDelay(0)
         }
     }
 
-    private fun sequenceStop() {
+    private fun sequenceOrMacroStop() {
         mSequenceTimer?.cancel()
         mSequenceTimer = null
         mSequenceStarted = false
@@ -556,19 +576,19 @@ class CameraActivity : AppCompatActivity() {
         updateSliders()
     }
 
-    private fun sequenceStart() {
+    private fun sequenceOrMacroStart() {
         mSequenceStarted = true
         mPhotoCounter = 0
         mBinding.frameView.showCounter(mPhotoCounter)
         updateSliders()
-        sequenceTakeNextPhotoAfterDelay(settings.sequenceDelayStart)
+        sequenceTakeNextPhotoAfterDelay(if (PHOTO_MODE_MACRO == mPhotoMode) settings.macroDelayStart else settings.sequenceDelayStart)
     }
 
-    private fun sequenceToggle() {
+    private fun sequenceOrMacroToggle() {
         if (mSequenceStarted) {
-            sequenceStop()
+            sequenceOrMacroStop()
         } else {
-            sequenceStart()
+            sequenceOrMacroStart()
         }
     }
 
@@ -597,7 +617,7 @@ class CameraActivity : AppCompatActivity() {
         mSelectCameraTimer?.cancel()
         mSelectCameraTimer = null
 
-        sequenceStop()
+        sequenceOrMacroStop()
 
         mOrientationEventListener?.disable()
         closeCamera()
@@ -787,6 +807,24 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
+        mBinding.txtMacroDelayStart.setOnMoveXAxisListener { steps ->
+            val newValue = settings.getArrayValue( settings.macroDelayStart, steps, Settings.MACRO_DELAY_START_OPTIONS )
+            if (newValue != settings.macroDelayStart) {
+                giveHapticFeedback(mBinding.txtMacroDelayStart)
+                settings.macroDelayStart = newValue
+                updateMacroDelayStart()
+            }
+        }
+
+        mBinding.txtMacroNumberOfPhotos.setOnMoveXAxisListener { steps ->
+            val newValue = settings.getArrayValue( settings.macroNumberOfPhotos, steps, Settings.MACRO_NUMBER_OF_PHOTOS_OPTIONS )
+            if (newValue != settings.macroNumberOfPhotos) {
+                settings.macroNumberOfPhotos = newValue
+                giveHapticFeedback(mBinding.txtMacroNumberOfPhotos)
+                updateMacroNumberOfPhotos()
+            }
+        }
+
         mBinding.surfaceView.holder.addCallback(mSurfaceHolderCallback)
 
         mBinding.btnExit.setOnClickListener {
@@ -820,10 +858,14 @@ class CameraActivity : AppCompatActivity() {
             while (newValue < 0) newValue += PHOTO_MODE_MAX
             newValue %= PHOTO_MODE_MAX
 
+            if (PHOTO_MODE_MACRO == newValue && !mCameraInfo.focusAllowManual) {
+                newValue = if (steps < 0) PHOTO_MODE_SEQUENCE else PHOTO_MODE_PHOTO
+            }
+
             if (newValue != mPhotoMode) {
                 mPhotoMode = newValue
                 giveHapticFeedback(mBinding.txtPhotoMode)
-                sequenceStop()
+                sequenceOrMacroStop()
                 updateSliders()
             }
         }
@@ -1100,6 +1142,8 @@ class CameraActivity : AppCompatActivity() {
     private fun getSecondsText(value: Int) =
         if (1 == value)
             "1 second"
+        else if (0 == value)
+            "immediately"
         else
             "$value seconds"
 
@@ -1133,6 +1177,16 @@ class CameraActivity : AppCompatActivity() {
             "Keep 1 photo every ${settings.sequenceKeepPhotos + 1} photos"
     }
 
+    private fun updateMacroDelayStart() {
+        @SuppressLint("SetTextI18n")
+        mBinding.txtMacroDelayStart.text = "Delay start: ${getSecondsText(settings.macroDelayStart)}"
+    }
+
+    private fun updateMacroNumberOfPhotos() {
+        @SuppressLint("SetTextI18n")
+        mBinding.txtMacroNumberOfPhotos.text = "Number of photos: ${getNumberOfPhotosText(settings.macroNumberOfPhotos)}"
+    }
+
     private fun updateFlashMode() {
         if (mCameraInfo.hasFlash) {
             mBinding.txtFlash.text = Settings.FLASH_MODES[settings.flashMode]
@@ -1145,8 +1199,13 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun updatePhotoMode() {
+        if (PHOTO_MODE_MACRO == mPhotoMode && !mCameraInfo.focusAllowManual) {
+            mPhotoMode = PHOTO_MODE_PHOTO
+        }
+
         mBinding.txtPhotoMode.text = when(mPhotoMode) {
             PHOTO_MODE_SEQUENCE -> "Sequence"
+            PHOTO_MODE_MACRO -> "Macro"
             else -> "Photo"
         }
     }
@@ -1164,27 +1223,42 @@ class CameraActivity : AppCompatActivity() {
         updateSequenceDelayStart()
         updateSequenceDelayBetween()
         updateSequenceNumberOfPhotos()
+        updateSequenceKeepPhotos()
+        updateMacroDelayStart()
+        updateMacroNumberOfPhotos()
         updateFlashMode()
         updatePhotoMode()
 
         if (PHOTO_MODE_SEQUENCE == mPhotoMode) {
-            mBinding.layoutSequences.visibility = View.VISIBLE
-
             if (mSequenceStarted) {
                 mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
                 mBinding.txtSequenceDelayStart.isEnabled = false
                 mBinding.txtSequenceDelayBetween.isEnabled = false
                 mBinding.txtSequenceNumberOfPhotos.isEnabled = false
+                mBinding.txtSequenceKeepPhotos.isEnabled = false
             } else {
                 mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.BLUE)
                 mBinding.txtSequenceDelayStart.isEnabled = true
                 mBinding.txtSequenceDelayBetween.isEnabled = true
                 mBinding.txtSequenceNumberOfPhotos.isEnabled = true
+                mBinding.txtSequenceKeepPhotos.isEnabled = true
+            }
+        } else if (PHOTO_MODE_MACRO == mPhotoMode) {
+            if (mSequenceStarted) {
+                mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.GRAY)
+                mBinding.txtMacroDelayStart.isEnabled = false
+                mBinding.txtMacroNumberOfPhotos.isEnabled = false
+            } else {
+                mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.GREEN)
+                mBinding.txtMacroDelayStart.isEnabled = true
+                mBinding.txtMacroNumberOfPhotos.isEnabled = true
             }
         } else {
-            mBinding.layoutSequences.visibility = View.GONE
             mBinding.btnPhoto.backgroundTintList = ColorStateList.valueOf(Color.RED)
         }
+
+        mBinding.layoutSequences.visibility = if (PHOTO_MODE_SEQUENCE == mPhotoMode) View.VISIBLE else View.GONE
+        mBinding.layoutMacro.visibility = if (PHOTO_MODE_MACRO == mPhotoMode) View.VISIBLE else View.GONE
     }
 
     private fun saveAsyncNextItem() {
@@ -1291,8 +1365,8 @@ class CameraActivity : AppCompatActivity() {
         Log.i("TAKE_PHOTO", "Button pressed: $mPhotoButtonPressed")
 
         if (pressed) {
-            if (PHOTO_MODE_SEQUENCE == mPhotoMode) {
-                sequenceToggle()
+            if (PHOTO_MODE_SEQUENCE == mPhotoMode || PHOTO_MODE_MACRO == mPhotoMode) {
+                sequenceOrMacroToggle()
             } else {
                 takePhoto(false, true)
             }
@@ -1548,6 +1622,13 @@ class CameraActivity : AppCompatActivity() {
                         captureRequestBuilder.addTarget(mImageReaderDng.surface)
                         captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
                     }
+                }
+
+                if (mCameraInfo.focusAllowManual && PHOTO_MODE_MACRO == mPhotoMode) {
+                    val distance = mCameraInfo.focusRange.lower +
+                            (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) * mPhotoCounter / (settings.macroNumberOfPhotos - 1)
+                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                 }
 
                 mCaptureRequest = captureRequestBuilder.build()

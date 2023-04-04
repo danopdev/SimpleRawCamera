@@ -50,6 +50,9 @@ class Settings( private val activity: Activity) {
         val SEQUENCE_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(1, 3, 5, 10, 0)
         val SEQUENCE_KEEP_PHOTOS_1_FOR_N_MAX = 9 //9 = every 10 photos
 
+        val MACRO_DELAY_START_OPTIONS = arrayOf(0, 1, 2, 3)
+        val MACRO_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(3, 4, 5, 6, 7, 8, 9, 10)
+
         val FLASH_MODES = arrayOf("OFF", "ON", "Torch")
     }
 
@@ -71,6 +74,8 @@ class Settings( private val activity: Activity) {
     var sequenceDelayBetween: Int = 0
     var sequenceNumberOfPhotos: Int = 0
     var sequenceKeepPhotos: Int = 0
+    var macroDelayStart: Int = 1
+    var macroNumberOfPhotos: Int = MACRO_NUMBER_OF_PHOTOS_OPTIONS[0]
     var showDebugInfo: Boolean = false
     var flashMode: Int = FLASH_MODE_OFF
     var enableHapticFeedback = true

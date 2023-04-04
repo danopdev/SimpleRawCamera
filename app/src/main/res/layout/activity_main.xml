@@ -207,6 +207,44 @@
 
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:id="@+id/layoutMacro"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="fill_horizontal"
+                        android:orientation="vertical"
+                        android:paddingStart="64dp"
+                        android:paddingEnd="64dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent">
+
+                        <com.dan.simplerawcamera.SensitiveTextView
+                            android:id="@+id/txtMacroDelayStart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="3dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="Delay start: 1 second"
+                            android:textAlignment="center"
+                            android:textColor="@color/teal_200"
+                            android:textStyle="bold" />
+
+                        <com.dan.simplerawcamera.SensitiveTextView
+                            android:id="@+id/txtMacroNumberOfPhotos"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="3dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:text="Number of photos: 3"
+                            android:textAlignment="center"
+                            android:textColor="@color/teal_200"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
