@@ -528,14 +528,9 @@ class CameraActivity : AppCompatActivity() {
         mSequencePhotoDelayCounter = delay
         mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
 
-        if (delay < 0) {
-            sequenceTakeNextPhotoNow()
-            return
-        }
-
-        val msDelay = if (delay <= 0) 100L else 1000L
+        val msDelay = if (delay <= 0) 10L else 1000L
         mSequenceTimer = timer(null, false, msDelay, msDelay) {
-            mSequencePhotoDelayCounter--
+            if (mSequencePhotoDelayCounter > 0) mSequencePhotoDelayCounter--
             runOnUiThread {
                 mBinding.frameView.setSequencePhotoDelay(mSequencePhotoDelayCounter)
             }
@@ -1382,7 +1377,7 @@ class CameraActivity : AppCompatActivity() {
                 if (!mSequenceStarted) {
                     mPhotoCounter = 0
                 }
-                setupCapturePhotoRequest()
+                setupCapturePhotoRequest(PHOTO_MODE_MACRO == mPhotoMode)
             }
 
             var takeNewPhoto = start
@@ -1443,7 +1438,10 @@ class CameraActivity : AppCompatActivity() {
                 }
             } else {
                 mPhotoInProgress = false
-                setupCapturePreviewRequest()
+
+                if (!mSequenceStarted || PHOTO_MODE_MACRO != mPhotoMode) {
+                    setupCapturePreviewRequest()
+                }
             }
         }
     }
