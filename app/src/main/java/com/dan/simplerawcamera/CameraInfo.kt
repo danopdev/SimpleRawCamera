@@ -1,5 +1,6 @@
 package com.dan.simplerawcamera
 
+import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -8,6 +9,7 @@ import android.hardware.camera2.params.StreamConfigurationMap
 import android.os.Build
 import android.util.Range
 import android.util.Rational
+import android.util.Size
 
 /**
  Contains camera characteristics (don't need to query again)
@@ -16,8 +18,8 @@ class CameraInfo(
     val id: String,
     val physicalId: String?,
     val cameraCharacteristics: CameraCharacteristics,
-    val resolutionWidth: Int,
-    val resolutionHeight: Int,
+    val rawSize: Size,
+    val jpegSize: Size,
     val isoRange: Range<Int>,
     val speedRange: Range<Long>,
     val exposureCompensationRange: Range<Int>,
@@ -33,8 +35,8 @@ class CameraInfo(
 
     companion object {
 
-        private val BLACKLIST_JPEG = listOf(
-            Pair("Google", "Pixel 6a")
+        private val BLACKLIST_JPEG = listOf<Pair<String,String>>(
+            //Pair("Google", "Pixel 6a")
         )
 
         private val BLACKLIST_DNG = listOf<Pair<String,String>>(
@@ -80,12 +82,15 @@ class CameraInfo(
                 (characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION) as IntArray)
                     .contains(CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON)
 
+            val jpegSize = streamConfigurationMap.getOutputSizes(ImageFormat.JPEG)[0]
+            val rawSize = Size(resolutionRect.width(), resolutionRect.height())
+
             return CameraInfo(
                 cameraId,
                 physicalId,
                 characteristics,
-                resolutionRect.width(),
-                resolutionRect.height(),
+                rawSize,
+                jpegSize,
                 isoRange,
                 speedRange,
                 exposureCompensationRange,
@@ -205,7 +210,7 @@ class CameraInfo(
     }
 
     val areDimensionsSwapped = sensorOrientation == 0 || sensorOrientation == 180
-    val estimatedDngSize = resolutionWidth *  resolutionWidth * 2 + 100000
+    val estimatedDngSize = rawSize.width *  rawSize.height * 2 + 100000
     val estimatedJpegSize = estimatedDngSize / 3
     val speedSteps = getSpeedStepsArray(speedRange)
     val isoSteps = getIsoStepsArray(isoRange)

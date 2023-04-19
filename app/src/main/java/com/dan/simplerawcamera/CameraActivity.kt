@@ -19,6 +19,8 @@ import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
 import android.util.Size
 import android.view.*
@@ -30,13 +32,11 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import com.dan.simplerawcamera.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.asExecutor
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.Executor
 import kotlin.concurrent.schedule
 import kotlin.concurrent.timer
 import kotlin.math.abs
@@ -147,7 +147,6 @@ class CameraActivity : AppCompatActivity() {
     private var mCameraDevice: CameraDevice? = null
     private var mCameraCaptureSession: CameraCaptureSession? = null
     private var mCaptureRequestBuilder: CaptureRequest.Builder? = null
-    private var mCaptureRequest: CaptureRequest? = null
     private var mCaptureModeIsPhoto = false
 
     private var mPhotoButtonPressed = false
@@ -160,8 +159,8 @@ class CameraActivity : AppCompatActivity() {
     private var mPhotoMode = PHOTO_MODE_PHOTO
 
     private val mImageReaderHisto = ImageReader.newInstance(100, 100, ImageFormat.YUV_420_888, 1)
-    private lateinit var mImageReaderJpeg: ImageReader
-    private lateinit var mImageReaderDng: ImageReader
+    private var mImageReaderJpeg: ImageReader? = null
+    private var mImageReaderDng: ImageReader? = null
 
     private var mIsoMeasuredValue = 100
     private var mSpeedMeasuredValue = 7812500L // 1/128
@@ -194,6 +193,10 @@ class CameraActivity : AppCompatActivity() {
     private var mSequenceStarted = false
     private var mSequenceTimer: Timer? = null
     private var mSequencePhotoDelayCounter = 0
+
+    private val mThread = HandlerThread("Background handler")
+    private lateinit var mHandler: Handler
+    private val mExecutor =  Executor { command -> mHandler.post(command) }
 
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
@@ -297,6 +300,7 @@ class CameraActivity : AppCompatActivity() {
         }
 
         override fun surfaceDestroyed(holder: SurfaceHolder) {
+            mSurfaceIsCreated = false
         }
     }
 
@@ -310,8 +314,7 @@ class CameraActivity : AppCompatActivity() {
             mCameraCaptureSession = session
 
             callSafe {
-                val captureRequestBuilder =
-                    cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                val captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
                 captureRequestBuilder.addTarget(mImageReaderHisto.surface)
 
@@ -329,11 +332,11 @@ class CameraActivity : AppCompatActivity() {
             request: CaptureRequest,
             result: TotalCaptureResult
         ) {
-            //super.onCaptureCompleted(session, request, result)
+            super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
 
-            saveImage( mImageReaderJpeg, result )
-            saveImage( mImageReaderDng, result )
+            mImageReaderJpeg?.let { saveImage( it, result ) }
+            mImageReaderDng?.let { saveImage( it, result ) }
 
             mPhotoTakeMask = mPhotoTakeMask and (PHOTO_TAKE_COMPLETED or PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG).inv()
             takePhoto(true)
@@ -404,36 +407,39 @@ class CameraActivity : AppCompatActivity() {
 
         @Suppress("DEPRECATION")
         override fun onOpened(cameraDevice: CameraDevice) {
-            runOnUiThread {
-                mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: open")
-            }
-
             mCameraDevice = cameraDevice
 
             val sizes = mCameraInfo.streamConfigurationMap.getOutputSizes(ImageFormat.YUV_420_888)
             if (null == sizes || sizes.isEmpty()) throw Exception("No sizes available")
             val previewSize = getBestResolution(
                 mBinding.surfaceView.width,
-                mCameraInfo.resolutionWidth.toFloat() / mCameraInfo.resolutionHeight,
+                mCameraInfo.rawSize.width.toFloat() / mCameraInfo.rawSize.height,
                 sizes
             )
 
             mRotatedPreviewWidth = if (mCameraInfo.areDimensionsSwapped) previewSize.height else previewSize.width
             mRotatedPreviewHeight = if (mCameraInfo.areDimensionsSwapped) previewSize.width else previewSize.height
 
-            mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
+            runOnUiThread {
+                mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: open")
+                mBinding.surfaceView.holder.setFixedSize(mRotatedPreviewWidth, mRotatedPreviewHeight)
+            }
 
             try {
-                val outputSurfaces = listOf(
+                val outputSurfaces = mutableListOf(
                         mBinding.surfaceView.holder.surface,
-                        mImageReaderHisto.surface,
-                        mImageReaderJpeg.surface,
-                        mImageReaderDng.surface
+                        mImageReaderHisto.surface
                     )
+
+                mImageReaderJpeg = createImageReader( mCameraInfo.jpegSize, ImageFormat.JPEG)
+                mImageReaderDng = createImageReader(mCameraInfo.rawSize, ImageFormat.RAW_SENSOR)
+
+                mImageReaderJpeg?.let { outputSurfaces.add(it.surface) }
+                mImageReaderDng?.let { outputSurfaces.add(it.surface) }
 
                 val outputConfigs = mutableListOf<OutputConfiguration>()
 
-                outputSurfaces.map {
+                outputSurfaces.forEach {
                     outputConfigs.add(OutputConfiguration(1, it))
                 }
 
@@ -447,7 +453,7 @@ class CameraActivity : AppCompatActivity() {
                 val sessionConfiguration = SessionConfiguration(
                     SessionConfiguration.SESSION_REGULAR,
                     outputConfigs,
-                    Dispatchers.Default.asExecutor(),
+                    mExecutor,
                     mCameraCaptureSessionStateCallback
                 )
 
@@ -757,7 +763,9 @@ class CameraActivity : AppCompatActivity() {
             mBinding.txtCamera.visibility = View.INVISIBLE
         }
 
-        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, null)
+        mThread.start()
+        mHandler = Handler(mThread.looper)
+        mImageReaderHisto.setOnImageAvailableListener(mImageReaderHistoListener, mHandler)
 
         setContentView(mBinding.root)
 
@@ -1395,10 +1403,10 @@ class CameraActivity : AppCompatActivity() {
 
             mBinding.frameView.showTakePhotoIcon(takeNewPhoto)
 
-            val captureRequestPhoto = mCaptureRequest
+            val captureRequestBuilder = mCaptureRequestBuilder
             val cameraCaptureSession = mCameraCaptureSession
 
-            if (takeNewPhoto && null != captureRequestPhoto && null != cameraCaptureSession) {
+            if (takeNewPhoto && null != captureRequestBuilder && null != cameraCaptureSession) {
                 var minMem =
                     when (settings.takePhotoModes) {
                         Settings.PHOTO_TYPE_DNG -> mCameraInfo.estimatedDngSize * 2
@@ -1429,10 +1437,10 @@ class CameraActivity : AppCompatActivity() {
                     mPhotoFileNameBase = getPhotoBaseFileName(mPhotoTimestamp)
 
                     callSafe {
-                        cameraCaptureSession.captureSingleRequest(
-                            captureRequestPhoto,
-                            Dispatchers.Default.asExecutor(),
-                            mCameraCaptureSessionPhotoCaptureCallback
+                        cameraCaptureSession.capture(
+                            captureRequestBuilder.build(),
+                            mCameraCaptureSessionPhotoCaptureCallback,
+                            mHandler
                         )
                     }
                 }
@@ -1444,6 +1452,17 @@ class CameraActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun closeImageReader( imageReader: ImageReader? ) {
+        if (null == imageReader) return
+        callSafe {
+            imageReader.close()
+        }
+    }
+
+    private fun createImageReader( size: Size, format: Int ): ImageReader {
+        return ImageReader.newInstance(size.width, size.height, format, 2)
     }
 
     /** Select the camera */
@@ -1466,27 +1485,30 @@ class CameraActivity : AppCompatActivity() {
             return
         }
 
+        closeCamera()
+
         mPhotoInProgress = false
         settings.cameraIndex = index
         mCameraInfo = mCameraList[index]
         mFocusState = FOCUS_STATE_MANUAL
 
-        closeCamera()
-
         val set = ConstraintSet()
         set.clone(mBinding.layoutView)
-        set.setDimensionRatio(mBinding.layoutWithRatio.id, "${mCameraInfo.resolutionWidth}:${mCameraInfo.resolutionHeight}")
+        set.setDimensionRatio(mBinding.layoutWithRatio.id, "${mCameraInfo.rawSize.width}:${mCameraInfo.rawSize.height}")
         set.applyTo(mBinding.layoutView)
 
-        mImageReaderJpeg = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.JPEG, 1)
-        mImageReaderDng = ImageReader.newInstance(mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight, ImageFormat.RAW_SENSOR, 1)
+        closeImageReader(mImageReaderJpeg)
+        closeImageReader(mImageReaderDng)
+
+        mImageReaderJpeg = null
+        mImageReaderDng = null
 
         updateSliders()
 
         mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: opening")
 
         callSafe {
-            mCameraManager.openCamera(mCameraInfo.id, mCameraDeviceStateCallback, null)
+            mCameraManager.openCamera(mCameraInfo.id, mExecutor, mCameraDeviceStateCallback)
         }
     }
 
@@ -1504,7 +1526,6 @@ class CameraActivity : AppCompatActivity() {
             mCameraDevice = null
         }
 
-        mCaptureRequestBuilder = null
         mCaptureRequestBuilder = null
 
         mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_CAMERA_STATE, "Camera: closed")
@@ -1541,7 +1562,6 @@ class CameraActivity : AppCompatActivity() {
         }
 
         captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
-        captureRequestBuilder.set(CaptureRequest.JPEG_THUMBNAIL_SIZE, null)
     }
 
     private fun setupCapturePhotoRequest(force: Boolean = false) {
@@ -1556,6 +1576,9 @@ class CameraActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun setupCaptureRequest(photoMode: Boolean, force: Boolean) {
         if (mPhotoInProgress) return
+
+        val imageReaderDng = mImageReaderDng ?: return
+        val imageReaderJpeg = mImageReaderJpeg ?: return
 
         val captureRequestBuilder = mCaptureRequestBuilder ?: return
         val cameraCaptureSession = mCameraCaptureSession ?: return
@@ -1607,38 +1630,48 @@ class CameraActivity : AppCompatActivity() {
                     }
                 )
 
-                captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight))
+                captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.rawSize.width, mCameraInfo.rawSize.height))
 
                 when( settings.takePhotoModes ) {
                     Settings.PHOTO_TYPE_DNG -> {
-                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
+                        captureRequestBuilder.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON)
+                        captureRequestBuilder.addTarget(imageReaderDng.surface)
                     }
                     Settings.PHOTO_TYPE_JPEG -> {
-                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                        captureRequestBuilder.addTarget(imageReaderJpeg.surface)
                     }
                     else -> {
-                        captureRequestBuilder.addTarget(mImageReaderDng.surface)
-                        captureRequestBuilder.addTarget(mImageReaderJpeg.surface)
+                        captureRequestBuilder.set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE, CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON)
+                        captureRequestBuilder.addTarget(imageReaderJpeg.surface)
+                        captureRequestBuilder.addTarget(imageReaderDng.surface)
                     }
                 }
 
-                if (mCameraInfo.focusAllowManual && PHOTO_MODE_MACRO == mPhotoMode) {
-                    val distance = mCameraInfo.focusRange.lower +
-                            (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) * mPhotoCounter / (settings.macroNumberOfPhotos - 1)
-                    captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
-                    captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                if (mCameraInfo.focusAllowManual) {
+                    if( PHOTO_MODE_MACRO == mPhotoMode) {
+                        val distance = mCameraInfo.focusRange.lower +
+                                (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) * mPhotoCounter / (settings.macroNumberOfPhotos - 1)
+                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                    } else if (Settings.FOCUS_TYPE_HYPERFOCAL == settings.focusType) {
+                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, mCameraInfo.focusHyperfocalDistance)
+                    } else if (Settings.FOCUS_TYPE_MANUAL == settings.focusType && FOCUS_STATE_MANUAL == mFocusState) {
+                            val distance = mCameraInfo.focusRange.lower + (100 - mBinding.seekBarFocus.progress) * (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) / 100
+                            captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                            captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
+                    } else {
+                        captureRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_IDLE)
+                    }
                 }
-
-                mCaptureRequest = captureRequestBuilder.build()
             } else {
                 mLocation = null
-                mCaptureRequest = null
 
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, false)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
 
-                captureRequestBuilder.removeTarget(mImageReaderDng.surface)
-                captureRequestBuilder.removeTarget(mImageReaderJpeg.surface)
+                captureRequestBuilder.removeTarget(imageReaderDng.surface)
+                captureRequestBuilder.removeTarget(imageReaderJpeg.surface)
 
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
@@ -1658,18 +1691,17 @@ class CameraActivity : AppCompatActivity() {
         if (photoMode) return
 
         if (mBinding.switch4X.isChecked) {
-            val croppedWidth = mCameraInfo.resolutionWidth / 4
-            val croppedHeight = mCameraInfo.resolutionHeight / 4
-            val croppedLeft = (mCameraInfo.resolutionWidth - croppedWidth) / 2
-            val croppedTop = (mCameraInfo.resolutionHeight - croppedHeight) / 2
+            val croppedWidth = mCameraInfo.rawSize.width / 4
+            val croppedHeight = mCameraInfo.rawSize.height / 4
+            val croppedLeft = (mCameraInfo.rawSize.width - croppedWidth) / 2
+            val croppedTop = (mCameraInfo.rawSize.height - croppedHeight) / 2
             val croppedRect = Rect( croppedLeft, croppedTop, croppedLeft + croppedWidth - 1, croppedTop + croppedHeight - 1 )
             captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, croppedRect)
         } else {
-            captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.resolutionWidth, mCameraInfo.resolutionHeight))
+            captureRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, Rect(0, 0, mCameraInfo.rawSize.width, mCameraInfo.rawSize.height))
         }
 
         captureRequestBuilder.set(CaptureRequest.FLASH_MODE, getFlashModeValue(true))
-        captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
 
         if (mCameraInfo.focusAllowManual) {
             when(settings.focusType) {
@@ -1681,13 +1713,13 @@ class CameraActivity : AppCompatActivity() {
                 Settings.FOCUS_TYPE_MANUAL -> {
                     if (mFocusClick) {
                         mFocusClick = false
-                        val delta = mCameraInfo.resolutionWidth * FOCUS_REGION_SIZE_PERCENT / 100
-                        val x = mCameraInfo.resolutionWidth * mFocusClickPosition.x / 100
-                        val y = mCameraInfo.resolutionWidth * mFocusClickPosition.y / 100
+                        val delta = mCameraInfo.rawSize.width * FOCUS_REGION_SIZE_PERCENT / 100
+                        val x = mCameraInfo.rawSize.width * mFocusClickPosition.x / 100
+                        val y = mCameraInfo.rawSize.height * mFocusClickPosition.y / 100
                         val x1 = max(0, x - delta)
                         val y1 = max(0, y - delta)
-                        val x2 = min(mCameraInfo.resolutionWidth, x + delta)
-                        val y2 = min(mCameraInfo.resolutionHeight, y + delta)
+                        val x2 = min(mCameraInfo.rawSize.width, x + delta)
+                        val y2 = min(mCameraInfo.rawSize.height, y + delta)
 
                         if (y2 > y1 && x2 > x1) {
                             mFocusState = FOCUS_STATE_CLICK
@@ -1762,10 +1794,10 @@ class CameraActivity : AppCompatActivity() {
         }
 
         try {
-            cameraCaptureSession.setSingleRepeatingRequest(
+            cameraCaptureSession.setRepeatingRequest(
                 captureRequestBuilder.build(),
-                Dispatchers.Default.asExecutor(),
-                mCameraCaptureSessionPreviewCaptureCallback
+                mCameraCaptureSessionPreviewCaptureCallback,
+                mHandler
             )
         } catch (e: Exception) {
             e.printStackTrace()
