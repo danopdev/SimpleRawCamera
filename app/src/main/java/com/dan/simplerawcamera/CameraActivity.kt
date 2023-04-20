@@ -198,6 +198,10 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var mHandler: Handler
     private val mExecutor =  Executor { command -> mHandler.post(command) }
 
+    private val mImageReaderJpegListener = ImageReader.OnImageAvailableListener { imageReader ->
+        imageReader?.let { saveImage(imageReader) }
+    }
+
     /** Generate histogram */
     private val mImageReaderHistoListener = object: ImageReader.OnImageAvailableListener {
         private var mIsBusy = false
@@ -335,11 +339,19 @@ class CameraActivity : AppCompatActivity() {
             super.onCaptureCompleted(session, request, result)
             Log.i("TAKE_PHOTO", "onCaptureCompleted")
 
-            mImageReaderJpeg?.let { saveImage( it, result ) }
             mImageReaderDng?.let { saveImage( it, result ) }
 
-            mPhotoTakeMask = mPhotoTakeMask and (PHOTO_TAKE_COMPLETED or PHOTO_TAKE_JPEG or PHOTO_TAKE_DNG).inv()
-            takePhoto(true)
+            mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_COMPLETED.inv()
+            checkTakePhotoFished()
+        }
+
+        override fun onCaptureSequenceCompleted(
+            session: CameraCaptureSession,
+            sequenceId: Int,
+            frameNumber: Long
+        ) {
+            super.onCaptureSequenceCompleted(session, sequenceId, frameNumber)
+            Log.i("TAKE_PHOTO", "onCaptureSequenceCompleted")
         }
     }
 
@@ -1311,7 +1323,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult) {
+    private fun saveImage(imageReader: ImageReader, captureResult: TotalCaptureResult? = null) {
         var imageOrNull: Image? = null
 
         callSafe { imageOrNull = imageReader.acquireLatestImage() }
@@ -1320,14 +1332,23 @@ class CameraActivity : AppCompatActivity() {
         if (!mSequenceStarted || (mPhotoCounter % (settings.sequenceKeepPhotos + 1)) == 0) {
             callSafe {
                 if (image.format == ImageFormat.JPEG) {
+                    Log.i("TAKE_PHOTO", "JPEG Done")
                     saveJpeg(image)
+                    mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_JPEG.inv()
                 } else {
-                    saveDng(image, captureResult)
+                    Log.i("TAKE_PHOTO", "DNG Done")
+                    if (null != captureResult) saveDng(image, captureResult)
+                    mPhotoTakeMask = mPhotoTakeMask and PHOTO_TAKE_DNG.inv()
                 }
             }
         }
 
         callSafe{ image.close() }
+        checkTakePhotoFished()
+    }
+
+    private fun checkTakePhotoFished() {
+        if (0 == mPhotoTakeMask) takePhoto(true)
     }
 
     private fun saveDng(image: Image, captureResult: TotalCaptureResult) {
@@ -1462,7 +1483,13 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun createImageReader( size: Size, format: Int ): ImageReader {
-        return ImageReader.newInstance(size.width, size.height, format, 2)
+        val imageReader = ImageReader.newInstance(size.width, size.height, format, 1)
+
+        if (ImageFormat.JPEG == format) {
+            imageReader.setOnImageAvailableListener(mImageReaderJpegListener, mHandler)
+        }
+
+        return imageReader
     }
 
     /** Select the camera */
