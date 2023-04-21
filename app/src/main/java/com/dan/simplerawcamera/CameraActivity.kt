@@ -1678,6 +1678,7 @@ class CameraActivity : AppCompatActivity() {
                     if( PHOTO_MODE_MACRO == mPhotoMode) {
                         val distance = mCameraInfo.focusRange.lower +
                                 (mCameraInfo.focusRange.upper - mCameraInfo.focusRange.lower) * mPhotoCounter / (settings.macroNumberOfPhotos - 1)
+                        Log.i("TAKE_PHOTO", "Macro focus - min: ${mCameraInfo.focusRange.lower}, max: ${mCameraInfo.focusRange.upper}, counter: $mPhotoCounter / ${settings.macroNumberOfPhotos}, distance: $distance")
                         captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                         captureRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance)
                     } else if (Settings.FOCUS_TYPE_HYPERFOCAL == settings.focusType) {
