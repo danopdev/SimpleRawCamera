@@ -1617,6 +1617,9 @@ class CameraActivity : AppCompatActivity() {
 
             callSafe{ cameraCaptureSession.stopRepeating() }
 
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+
             if (photoMode) {
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
@@ -1634,8 +1637,6 @@ class CameraActivity : AppCompatActivity() {
                     mBinding.frameView.setDebugInfo(FrameView.DEBUG_INFO_PREVIEW, "Preview - Auto")
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
-
-                captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, true)
 
                 mLocation = if (settings.useLocation) {
                     mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
@@ -1696,7 +1697,6 @@ class CameraActivity : AppCompatActivity() {
                 mLocation = null
 
                 captureRequestBuilder.set(CaptureRequest.CONTROL_AE_LOCK, false)
-                captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
 
                 captureRequestBuilder.removeTarget(imageReaderDng.surface)
                 captureRequestBuilder.removeTarget(imageReaderJpeg.surface)
