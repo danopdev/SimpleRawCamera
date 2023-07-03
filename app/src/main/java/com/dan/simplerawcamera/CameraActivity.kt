@@ -322,7 +322,6 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.addTarget(mBinding.surfaceView.holder.surface)
                 captureRequestBuilder.addTarget(mImageReaderHisto.surface)
 
-                setupCaptureInitRequest(captureRequestBuilder)
                 mCaptureRequestBuilder = captureRequestBuilder
                 setupCapturePreviewRequest(true)
             }
@@ -1582,15 +1581,6 @@ class CameraActivity : AppCompatActivity() {
         return false
     }
 
-    /** Called once when the camera is selected (common to preview & take photo) */
-    private fun setupCaptureInitRequest(captureRequestBuilder: CaptureRequest.Builder) {
-        if (mCameraInfo.supportLensStabilisation) {
-            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
-        }
-
-        captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
-    }
-
     private fun setupCapturePhotoRequest(force: Boolean = false) {
         setupCaptureRequest(true, force)
     }
@@ -1617,11 +1607,16 @@ class CameraActivity : AppCompatActivity() {
 
             callSafe{ cameraCaptureSession.stopRepeating() }
 
+            captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
 
             if (photoMode) {
+                captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)
+
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_HIGH_QUALITY)
+                captureRequestBuilder.set(CaptureRequest.DISTORTION_CORRECTION_MODE, CaptureRequest.DISTORTION_CORRECTION_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_STILL_CAPTURE)
@@ -1702,6 +1697,8 @@ class CameraActivity : AppCompatActivity() {
                 captureRequestBuilder.removeTarget(imageReaderJpeg.surface)
 
                 captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.COLOR_CORRECTION_MODE, CaptureRequest.COLOR_CORRECTION_MODE_FAST)
+                captureRequestBuilder.set(CaptureRequest.DISTORTION_CORRECTION_MODE, CaptureRequest.DISTORTION_CORRECTION_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_FAST)
                 captureRequestBuilder.set(CaptureRequest.CONTROL_CAPTURE_INTENT, CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW)
