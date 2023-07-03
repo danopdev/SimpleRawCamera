@@ -14,7 +14,7 @@ import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.location.Location
 import android.location.LocationManager
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.media.Image
 import android.media.ImageReader
 import android.net.Uri
