@@ -13,12 +13,14 @@ It use Camera2 API and supports only cameras with full AE / focus control.
 
 ![Main View](doc/img/help.jpg)
 
-Tested only on my LG G6 smartphone.
+Tested only on the following smartphones:
+* LG G6
+* Google Pixel 6a
 
 ## Screeshots ##
-Normal Mode | Timer Mode
---- | ---
-![Normal Mode](doc/img/main.jpg) | ![Timer Mode](doc/img/timer-mode.jpg) 
+| Normal Mode                        | Timer Mode |
+|------------------------------------| --- |
+| ![Normal Mode](doc/img/main.jpg)   | ![Timer Mode](doc/img/timer-mode.jpg)  |
 
 ## Exposure ##
 
