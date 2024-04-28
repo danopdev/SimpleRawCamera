@@ -15,4 +15,15 @@
         <item>JPEG &amp; DNG</item>
     </string-array>
 
+    <string-array name="white_balance_modes">
+        <item>Auto</item>
+        <item>Incandescent</item>
+        <item>Fluorescent</item>
+        <item>Warm Fluorescent</item>
+        <item>Daylight</item>
+        <item>Cloudy Daylight</item>
+        <item>Twilight</item>
+        <item>Shade</item>
+    </string-array>
+
 </resources>

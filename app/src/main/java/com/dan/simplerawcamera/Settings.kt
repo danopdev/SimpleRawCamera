@@ -54,6 +54,17 @@ class Settings( private val activity: Activity) {
         val MACRO_NUMBER_OF_PHOTOS_OPTIONS = arrayOf(3, 4, 5, 6, 7, 8, 9, 10)
 
         val FLASH_MODES = arrayOf("OFF", "ON", "Torch")
+
+        val WB_MODES = arrayOf(
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_AUTO,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_INCANDESCENT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_FLUORESCENT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_WARM_FLUORESCENT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_DAYLIGHT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_TWILIGHT,
+            android.hardware.camera2.CaptureResult.CONTROL_AWB_MODE_SHADE
+        )
     }
 
     var saveUri: String = ""
@@ -80,6 +91,7 @@ class Settings( private val activity: Activity) {
     var flashMode: Int = FLASH_MODE_OFF
     var enableHapticFeedback = true
     var useLocation = true
+    var whiteBalance = 0
 
     init {
         loadProperties()
@@ -171,5 +183,11 @@ class Settings( private val activity: Activity) {
         else if (index >= array.size) index = array.size-1
 
         return array[index]
+    }
+
+    fun getWBMode(availableModes: IntArray): Int {
+        val whiteBalance = this.whiteBalance;
+        val mode = if (whiteBalance < WB_MODES.size) WB_MODES[whiteBalance] else WB_MODES[0]
+        return if (availableModes.contains(mode)) mode else WB_MODES[0]
     }
 }

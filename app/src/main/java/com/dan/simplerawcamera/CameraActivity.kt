@@ -1609,7 +1609,9 @@ class CameraActivity : AppCompatActivity() {
 
             captureRequestBuilder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE, CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON)
             captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_LOCK, false)
-            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
+
+            val wbMode = settings.getWBMode(mCameraInfo.wbModes)
+            captureRequestBuilder.set(CaptureRequest.CONTROL_AWB_MODE, wbMode)
 
             if (photoMode) {
                 captureRequestBuilder.set(CaptureRequest.JPEG_QUALITY, 90)

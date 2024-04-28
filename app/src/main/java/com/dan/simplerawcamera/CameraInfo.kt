@@ -30,7 +30,8 @@ class CameraInfo(
     val hasFlash: Boolean,
     val sensorOrientation: Int,
     val streamConfigurationMap: StreamConfigurationMap,
-    val supportLensStabilisation: Boolean
+    val supportLensStabilisation: Boolean,
+    val wbModes: IntArray
 ) {
 
     companion object {
@@ -85,6 +86,8 @@ class CameraInfo(
             val jpegSize = streamConfigurationMap.getOutputSizes(ImageFormat.JPEG)[0]
             val rawSize = Size(resolutionRect.width(), resolutionRect.height())
 
+            val wbModes = characteristics.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES) as IntArray
+
             return CameraInfo(
                 cameraId,
                 physicalId,
@@ -101,7 +104,8 @@ class CameraInfo(
                 hasFlash,
                 sensorOrientation,
                 streamConfigurationMap,
-                supportLensStabilisation
+                supportLensStabilisation,
+                wbModes
             )
         }
 
