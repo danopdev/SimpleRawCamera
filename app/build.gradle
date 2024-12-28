@@ -25,8 +25,8 @@ android {
         applicationId "com.dan.simplerawcamera"
         minSdkVersion 28
         targetSdkVersion 30
-        versionCode 14
-        versionName '2.14'
+        versionCode 15
+        versionName '2.15'
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
