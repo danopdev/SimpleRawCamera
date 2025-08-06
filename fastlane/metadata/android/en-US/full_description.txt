@@ -1,0 +1,1 @@
+<p><i>SimpleRawCamera</i> is a simple photo camera inspired from real camera look. It use Camera2 API and supports only cameras with full AE / focus control.</p>
