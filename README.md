@@ -1,6 +1,7 @@
 # SimpleRawCamera
 
 * [Screenshots](#screenshots)
+* [Download](#download)
 * [Exposure](#exposure)
 * [Focus](#focus)
 * [White balance](#white-balance)
@@ -17,10 +18,23 @@ Tested only on the following smartphones:
 * LG G6
 * Google Pixel 6a
 
-## Screeshots ##
+## Screenshots ##
 | Normal Mode                        | Timer Mode |
 |------------------------------------| --- |
 | ![Normal Mode](doc/img/main.jpg)   | ![Timer Mode](doc/img/timer-mode.jpg)  |
+
+## Download ##
+
+<table>
+  <tr>
+    <td valign="middle">
+      <a href="https://apt.izzysoft.de/fdroid/index/apk/com.dan.simplerawcamera"><img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder_nofont.png" height="54" alt="Get it at IzzyOnDroid"></a>
+    </td>
+    <td valign="top">
+      <a href="https://github.com/danopdev/SimpleRawCamera/releases/latest"><img src="https://raw.githubusercontent.com/Kunzisoft/Github-badge/main/get-it-on-github.png" height="80" alt="Get it on GitHub"></a>
+    </td>
+  </tr>
+</table>
 
 ## Exposure ##
 
